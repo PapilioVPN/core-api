@@ -1,9 +1,22 @@
 """Volume table discovered by Papilio."""
 
 from papilio.infra.db.table import BaseTable
+from sqlalchemy import Index, text
 
 from src.apps.shop.volumes.domain.models.records import VolumeModel
 
 
 class VolumeTable(VolumeModel, BaseTable, table=True):
-    pass
+    __table_args__ = (
+        Index(
+            "uq_volumes_terms",
+            "mode",
+            "size_bytes",
+            "min_bytes",
+            "max_bytes",
+            "step_bytes",
+            unique=True,
+            postgresql_nulls_not_distinct=True,
+            postgresql_where=text("is_canonical"),
+        ),
+    )

@@ -31,7 +31,7 @@ class Durations(IDChecks[DurationModel]):
         Returns:
             The stored duration with its identity and creation time.
         """
-        duration = await self.repo.create(
+        duration = await self.repo.save(
             DurationModel(days=data.days, starts_on=data.starts_on)
         )
         return duration
@@ -61,8 +61,11 @@ class Durations(IDChecks[DurationModel]):
         Returns:
             The selected page in ID order and the total number of definitions.
         """
-        page = await self.repo.get_paged(
+        page = await self.repo.list(
             limit=query.per_page,
             offset=(query.page - 1) * query.per_page,
+            days=query.days,
+            min_days=query.min_days,
+            max_days=query.max_days,
         )
         return page

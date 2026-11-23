@@ -17,3 +17,6 @@ class DurationCreate(BaseDTO):
 class DurationList(BaseDTO):
     page: PageType = 1
     per_page: PerPageType = 20
+    days: Annotated[IntType, Field(gt=0)] | None = None
+    min_days: Annotated[IntType, Field(gt=0)] | None = None
+    max_days: Annotated[IntType, Field(gt=0)] | None = None

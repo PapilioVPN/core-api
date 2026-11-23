@@ -1,5 +1,6 @@
 """Exercise reusable volume definitions through the administrator API."""
 
+from asyncio import gather
 from typing import cast
 
 import pytest
@@ -46,9 +47,14 @@ async def test_volumes(app: FastAPI, client: AsyncClient) -> None:
         "Authorization": f"Bearer {login.json()['data']['access_token']}"
     }
     fixed = {"mode": "fixed", "size_bytes": 50 * 1024**3}
-    created = await client.post(url, json=fixed, headers=headers)
+    created, repeated = await gather(
+        client.post(url, json=fixed, headers=headers),
+        client.post(url, json=fixed, headers=headers),
+    )
     assert created.status_code == 201, created.text
+    assert repeated.status_code == 201, repeated.text
     row = created.json()["data"]
+    assert repeated.json()["data"] == row
     assert row["mode"] == "fixed"
     assert row["size_bytes"] == fixed["size_bytes"]
     path = f"{url}/{row['id']}"

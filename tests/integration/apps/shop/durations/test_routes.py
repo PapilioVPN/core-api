@@ -51,6 +51,11 @@ async def test_durations(app: FastAPI, client: AsyncClient) -> None:
     first = created.json()["data"]
     assert first["days"] == 30 and first["starts_on"] == "ready"
     path = f"{url}/{first['id']}"
+    repeated = await client.post(
+        url, json={"days": 30, "starts_on": "ready"}, headers=headers
+    )
+    assert repeated.status_code == 201, repeated.text
+    assert repeated.json()["data"] == first
 
     created = await client.post(
         url, json={"days": 45, "starts_on": "ready"}, headers=headers

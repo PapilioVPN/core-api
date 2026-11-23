@@ -34,5 +34,6 @@ VolumeCreate = FixedVolume | CustomVolume
 
 class VolumeList(BaseDTO):
     mode: VolumeMode | None = None
+    size_bytes: Annotated[BigIntType, Field(gt=0)] | None = None
     page: PageType = 1
     per_page: PerPageType = 20

@@ -28,7 +28,7 @@ class Volumes(IDChecks[VolumeModel]):
         Returns:
             The stored volume with its identity and creation time.
         """
-        volume = await self.repo.create(VolumeModel(**data.to_row()))
+        volume = await self.repo.save(VolumeModel(**data.to_row()))
         return volume
 
     async def get_by_id(self, id: int) -> VolumeModel:
@@ -60,5 +60,6 @@ class Volumes(IDChecks[VolumeModel]):
             limit=query.per_page,
             offset=(query.page - 1) * query.per_page,
             mode=query.mode,
+            size_bytes=query.size_bytes,
         )
         return page
