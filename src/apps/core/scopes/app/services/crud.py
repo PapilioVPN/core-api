@@ -13,7 +13,7 @@ from src.apps.core.scopes.domain.dtos.records import (
     ScopeUpdate,
 )
 from src.apps.core.scopes.domain.models.records import ScopeModel
-from src.apps.core.scopes.infra.pg.repositories.records import (
+from src.apps.core.scopes.infra.pg.repositories.crud import (
     ScopeRepository,
 )
 

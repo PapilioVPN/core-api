@@ -17,7 +17,7 @@ from src.apps.core.users.domain.dtos.records import (
 )
 from src.apps.core.users.domain.models.records import UserModel
 from src.apps.core.users.domain.results.access import UserAccess
-from src.apps.core.users.infra.pg.repositories.records import (
+from src.apps.core.users.infra.pg.repositories.crud import (
     UserRepository,
 )
 

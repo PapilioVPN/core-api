@@ -19,9 +19,9 @@ from src.apps.core.users.app.interfaces.services import (
     IUserProfileService,
     IUserService,
 )
+from src.apps.core.users.app.services.crud import UserService
 from src.apps.core.users.app.services.profile import UserProfileService
-from src.apps.core.users.app.services.records import UserService
-from src.apps.core.users.infra.pg.repositories.records import (
+from src.apps.core.users.infra.pg.repositories.crud import (
     UserRepository,
 )
 

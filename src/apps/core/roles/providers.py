@@ -16,14 +16,14 @@ from src.apps.core.roles.app.interfaces.services import (
     IRoleService,
 )
 from src.apps.core.roles.app.queries.records import RoleQuery
-from src.apps.core.roles.app.services.records import RoleService
+from src.apps.core.roles.app.services.crud import RoleService
 from src.apps.core.roles.app.services.role_scopes import (
     RoleScopeService,
 )
-from src.apps.core.roles.infra.pg.repositories.reader import RoleReader
-from src.apps.core.roles.infra.pg.repositories.records import (
+from src.apps.core.roles.infra.pg.repositories.crud import (
     RoleRepository,
 )
+from src.apps.core.roles.infra.pg.repositories.reader import RoleReader
 from src.apps.core.roles.infra.pg.repositories.role_scopes import (
     RoleScopeRepository,
 )

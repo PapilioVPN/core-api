@@ -14,7 +14,7 @@ from src.apps.core.roles.domain.dtos.records import (
     RoleUpdate,
 )
 from src.apps.core.roles.domain.models.records import RoleModel
-from src.apps.core.roles.infra.pg.repositories.records import (
+from src.apps.core.roles.infra.pg.repositories.crud import (
     RoleRepository,
 )
 
