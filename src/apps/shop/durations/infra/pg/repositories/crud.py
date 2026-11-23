@@ -4,10 +4,11 @@ from papilio.infra.db.repositories.backends.postgresql import (
     PGIdentifiedRepository,
 )
 from papilio.schemas.results import PagedType
-from sqlalchemy import select, true
+from sqlalchemy import text, true
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import col
 
+from src.apps.shop.durations.domain.enums.start import DurationStart
 from src.apps.shop.durations.domain.models.records import DurationModel
 from src.apps.shop.durations.infra.pg.tables import DurationTable
 
@@ -15,42 +16,49 @@ from src.apps.shop.durations.infra.pg.tables import DurationTable
 class DurationRepository(PGIdentifiedRepository[DurationModel]):
     table = DurationTable
 
-    async def save(self, data: DurationModel) -> DurationModel:
-        """Insert one definition or return its existing canonical row.
+    async def insert(self, data: DurationModel) -> DurationModel | None:
+        """Try to insert a canonical duration.
 
         Args:
             data: Validated validity rule, with no identity assigned.
 
         Returns:
-            The canonical row under the shared terms, with its original ID.
+            The new row, or None if its terms already have a canonical row.
         """
         table = self.table
         stmt = (
             insert(table)
             .values(data.to_row())
-            .on_conflict_do_nothing()
+            .on_conflict_do_nothing(
+                index_elements=[col(table.days), col(table.starts_on)],
+                index_where=text("is_canonical"),
+            )
             .returning(table)
         )
         result = await self.uow.execute(stmt)
         duration = result.scalar_one_or_none()
-        if duration is None:
-            stmt = select(table).where(
-                col(table.is_canonical) == true(),
-                col(table.days) == data.days,
-                col(table.starts_on) == data.starts_on,
-            )
-            result = await self.uow.execute(stmt)
-            duration = result.scalar_one()
+        return duration
+
+    async def find_by_terms(
+        self, days: int, starts_on: DurationStart
+    ) -> DurationModel | None:
+        """Read the canonical row for an exact duration and start event."""
+        table = self.table
+        duration = await self.get_one(
+            col(table.is_canonical) == true(),
+            col(table.days) == days,
+            col(table.starts_on) == starts_on,
+        )
         return duration
 
     async def list(
         self,
         *,
         limit: int,
-        offset: int,
-        days: int | None,
-        min_days: int | None,
-        max_days: int | None,
+        offset: int = 0,
+        days: int | None = None,
+        min_days: int | None = None,
+        max_days: int | None = None,
     ) -> PagedType[DurationModel]:
         """Read an ID-ordered page with optional duration filters.
 

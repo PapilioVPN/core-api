@@ -16,7 +16,12 @@ class ServiceRepository(PGPersistenceRepository[ServiceModel]):
     table = ServiceTable
 
     async def list(
-        self, *, limit: int, offset: int, q: str | None, is_active: bool | None
+        self,
+        *,
+        limit: int,
+        offset: int = 0,
+        q: str | None = None,
+        is_active: bool | None = None,
     ) -> PagedType[ServiceModel]:
         """Read matching services in priority and ID order.
 

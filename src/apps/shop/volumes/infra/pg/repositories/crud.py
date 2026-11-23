@@ -4,7 +4,7 @@ from papilio.infra.db.repositories.backends.postgresql import (
     PGIdentifiedRepository,
 )
 from papilio.schemas.results import PagedType
-from sqlalchemy import select, true
+from sqlalchemy import text, true
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import col
 
@@ -15,39 +15,44 @@ from src.apps.shop.volumes.infra.pg.tables import VolumeTable
 class VolumeRepository(PGIdentifiedRepository[VolumeModel]):
     table = VolumeTable
 
-    async def save(self, data: VolumeModel) -> VolumeModel:
-        """Insert one definition or return its existing canonical row.
+    async def insert(self, data: VolumeModel) -> VolumeModel | None:
+        """Try to insert a canonical volume.
 
         Args:
             data: Validated size in bytes, with no identity assigned.
 
         Returns:
-            The canonical row under the shared terms, with its original ID.
+            The new row, or None if that size already has a canonical row.
         """
         table = self.table
         stmt = (
             insert(table)
             .values(data.to_row())
-            .on_conflict_do_nothing()
+            .on_conflict_do_nothing(
+                index_elements=[col(table.size_bytes)],
+                index_where=text("is_canonical"),
+            )
             .returning(table)
         )
         result = await self.uow.execute(stmt)
         volume = result.scalar_one_or_none()
-        if volume is None:
-            stmt = select(table).where(
-                col(table.is_canonical) == true(),
-                col(table.size_bytes) == data.size_bytes,
-            )
-            result = await self.uow.execute(stmt)
-            volume = result.scalar_one()
+        return volume
+
+    async def find_by_size(self, size_bytes: int) -> VolumeModel | None:
+        """Read the canonical volume of an exact byte size, if stored."""
+        table = self.table
+        volume = await self.get_one(
+            col(table.is_canonical) == true(),
+            col(table.size_bytes) == size_bytes,
+        )
         return volume
 
     async def list(
         self,
         *,
         limit: int,
-        offset: int,
-        size_bytes: int | None,
+        offset: int = 0,
+        size_bytes: int | None = None,
     ) -> PagedType[VolumeModel]:
         """Read an ID-ordered page with an optional size filter.
 

@@ -33,9 +33,12 @@ class DurationCRUD(IDChecks[DurationModel]):
         Returns:
             The stored duration with its identity and creation time.
         """
-        duration = await self.repo.save(
+        duration = await self.repo.insert(
             DurationModel(days=data.days, starts_on=data.starts_on)
         )
+        if duration is None:
+            duration = await self.repo.find_by_terms(data.days, data.starts_on)
+        duration = self._check_for_existence("days", data.days, duration)
         return duration
 
     async def get_by_id(self, id: int) -> DurationModel:

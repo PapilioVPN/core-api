@@ -30,7 +30,14 @@ class VolumeCRUD(IDChecks[VolumeModel]):
         Returns:
             The stored volume with its identity and creation time.
         """
-        volume = await self.repo.save(VolumeModel(**data.to_row()))
+        volume = await self.repo.insert(
+            VolumeModel(size_bytes=data.size_bytes)
+        )
+        if volume is None:
+            volume = await self.repo.find_by_size(data.size_bytes)
+        volume = self._check_for_existence(
+            "size_bytes", data.size_bytes, volume
+        )
         return volume
 
     async def get_by_id(self, id: int) -> VolumeModel:
