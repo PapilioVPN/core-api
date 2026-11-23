@@ -4,7 +4,7 @@ from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter
 from papilio.api.responses.envelope import APIResponse
 
-from src.apps.core.system.app.interfaces.records import (
+from src.apps.core.system.app.interfaces.health import (
     IPublicHealthService,
 )
 from src.apps.core.system.routers.schemas.common import (

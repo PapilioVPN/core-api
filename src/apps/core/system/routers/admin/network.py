@@ -7,7 +7,7 @@ from papilio.api.responses.envelope import APIResponse
 from src.apps.core.auth.routers.dependencies.authorization import (
     require_admin,
 )
-from src.apps.core.system.app.interfaces.records import (
+from src.apps.core.system.app.interfaces.health import (
     INetworkHealthService,
 )
 from src.apps.core.system.routers.schemas.common import (

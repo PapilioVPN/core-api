@@ -2,7 +2,7 @@
 
 from dishka import Provider, Scope, provide
 
-from src.apps.core.system.app.interfaces import records as contracts
+from src.apps.core.system.app.interfaces import health as contracts
 from src.apps.core.system.app.services.info import PublicHealthService
 from src.apps.core.system.app.services.network import (
     NetworkHealthService,

@@ -1,6 +1,6 @@
 """Public health reports the measured PostgreSQL clock only."""
 
-from src.apps.core.system.app.interfaces.records import (
+from src.apps.core.system.app.interfaces.health import (
     IPostgresHealthService,
 )
 from src.apps.core.system.domain.results.services import (
