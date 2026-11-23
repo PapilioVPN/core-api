@@ -3,7 +3,7 @@
 from papilio.infra.db.tools.decorators import transactional
 
 from src.apps.core.auth.app.helpers.identity import admin_token_identity
-from src.apps.core.auth.app.services.sessions import SessionService
+from src.apps.core.auth.app.interfaces.services import ISessionService
 from src.apps.core.auth.app.validators.identity import (
     parse_admin_subject,
     require_session_id,
@@ -29,7 +29,7 @@ class TokenRefreshCommand:
         roles: IRoleQuery,
         tokens: ITokenService,
         uses: IRefreshUseService,
-        sessions: SessionService,
+        sessions: ISessionService,
     ) -> None:
         """Bind existing account, grants, credential and consumption owners.
 

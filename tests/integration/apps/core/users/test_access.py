@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from httpx import AsyncClient
 from papilio.errors.exceptions import ConflictException
 
-from src.apps.core.auth.app.services.sessions import SessionService
+from src.apps.core.auth.app.interfaces.services import ISessionService
 from src.apps.core.tokens.app.interfaces.services import ITokenService
 from src.apps.core.tokens.domain.models.tokens import TokenIdentity
 from src.apps.core.users.app.commands.owner import OwnerCommand
@@ -295,7 +295,7 @@ async def test_core_access(app: FastAPI, client: AsyncClient) -> None:
     assert (await client.get(sessions_url, headers=viewer_headers)).is_success
 
     async with container() as scope:
-        service = await scope.get(SessionService)
+        service = await scope.get(ISessionService)
         await service.create(
             profile["id"],
             uuid4(),
@@ -333,7 +333,7 @@ async def test_core_access(app: FastAPI, client: AsyncClient) -> None:
     assert len(page.json()["data"]) == 1
     assert page.json()["meta"]["total_items"] == 2
     async with container() as scope:
-        service = await scope.get(SessionService)
+        service = await scope.get(ISessionService)
         assert await service.remove_expired(limit=100) == 1
         assert await service.remove_expired(limit=100) == 0
     current_url = f"{sessions_url}/{current['id']}"

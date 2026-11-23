@@ -1,10 +1,14 @@
 """Administrator authentication contracts for HTTP and app consumers."""
 
+from datetime import datetime
 from typing import Protocol
+from uuid import UUID
 
-from src.apps.core.auth.domain.dtos.password import PasswordLogin
+from papilio.schemas.results import PagedType
+
+from src.apps.core.auth.domain.dtos.sessions import SessionList
 from src.apps.core.auth.domain.results.identity import AdminIdentity
-from src.apps.core.tokens.domain.results.issued import TokenPair
+from src.apps.core.auth.domain.results.sessions import SessionResult
 
 
 class IAdminIdentityService(Protocol):
@@ -23,23 +27,28 @@ class IAdminIdentityService(Protocol):
         ...
 
 
-class IPasswordLoginService(Protocol):
-    async def login(
-        self, data: PasswordLogin, *, user_agent: str | None
-    ) -> TokenPair:
-        """Authenticate an active administrator and issue credentials.
+class ISessionService(Protocol):
+    async def create(
+        self,
+        user_id: int,
+        id: UUID,
+        *,
+        expires_at: datetime,
+        user_agent: str | None,
+    ) -> None: ...
 
-        Args:
-            data: Mobile and raw password supplied by the caller.
-            user_agent: Optional client label recorded with the session.
+    async def require(self, user_id: int, id: UUID) -> None: ...
 
-        Returns:
-            Access and refresh credentials with actual UTC-aware expirations.
-            The account owner selects the administrator audience and assembles
-            role and active scope claims for the access credential only.
+    async def rotate(
+        self, user_id: int, id: UUID, *, expires_at: datetime
+    ) -> None: ...
 
-        Raises:
-            UnAuthorizedException: Credentials are invalid, the account has no
-                usable password hash, or its account/role is unavailable.
-        """
-        ...
+    async def list(
+        self, identity: AdminIdentity, query: SessionList
+    ) -> PagedType[SessionResult]: ...
+
+    async def revoke(self, user_id: int, id: UUID) -> bool: ...
+
+    async def revoke_others(self, user_id: int, id: UUID) -> int: ...
+
+    async def remove_expired(self, *, limit: int = 100) -> int: ...

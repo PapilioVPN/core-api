@@ -2,7 +2,7 @@
 
 from papilio.infra.db.tools.decorators import transactional
 
-from src.apps.core.auth.app.services.sessions import SessionService
+from src.apps.core.auth.app.interfaces.services import ISessionService
 from src.apps.core.auth.app.validators.identity import (
     parse_admin_subject,
     require_session_id,
@@ -21,7 +21,7 @@ class AdminIdentityService:
     def __init__(
         self,
         tokens: ITokenService,
-        sessions: SessionService,
+        sessions: ISessionService,
         users: IUserService,
         roles: IRoleQuery,
     ) -> None:

@@ -8,7 +8,8 @@ from fastapi import APIRouter, Depends, Query
 from papilio.api.responses.envelope import APIResponse
 from papilio.api.responses.meta import PagerMeta
 
-from src.apps.core.auth.app.services.sessions import SessionService
+from src.apps.core.auth.app.interfaces.commands import ISessionCommand
+from src.apps.core.auth.app.interfaces.services import ISessionService
 from src.apps.core.auth.domain.dtos.sessions import SessionList
 from src.apps.core.auth.domain.results.identity import AdminIdentity
 from src.apps.core.auth.routers.dependencies.identity import current_admin
@@ -29,7 +30,7 @@ CurrentAdmin = Annotated[AdminIdentity, Depends(current_admin)]
 async def get_sessions(
     identity: CurrentAdmin,
     query: Annotated[SessionList, Query()],
-    service: FromDishka[SessionService],
+    service: FromDishka[ISessionService],
 ) -> APIResponse[SessionOutput, PagerMeta]:
     """Read a page of active sessions, marking the current session."""
     page = await service.list(identity, query)
@@ -45,10 +46,10 @@ async def get_sessions(
 @router.delete("", response_model=APIResponse[RevokedOutput, None])
 async def delete_sessions(
     identity: CurrentAdmin,
-    service: FromDishka[SessionService],
+    command: FromDishka[ISessionCommand],
 ) -> APIResponse[RevokedOutput, None]:
     """Close all other active sessions and return their count."""
-    count = await service.revoke_others(identity)
+    count = await command.revoke_others(identity)
     return APIResponse[RevokedOutput, None].from_data(
         RevokedOutput(count=count)
     )
@@ -58,8 +59,8 @@ async def delete_sessions(
 async def delete_session(
     id: UUID,
     identity: CurrentAdmin,
-    service: FromDishka[SessionService],
+    command: FromDishka[ISessionCommand],
 ) -> APIResponse[None, None]:
     """Close one owned session, including the current session."""
-    await service.revoke_one(identity, id)
+    await command.revoke_one(identity, id)
     return APIResponse[None, None](success=True)

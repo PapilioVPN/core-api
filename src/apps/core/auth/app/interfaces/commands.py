@@ -1,8 +1,11 @@
-"""Administrator refresh and logout command contracts."""
+"""Administrator credential and session commands."""
 
 from typing import Protocol
+from uuid import UUID
 
+from src.apps.core.auth.domain.dtos.password import PasswordLogin
 from src.apps.core.auth.domain.dtos.refresh import TokenRefresh
+from src.apps.core.auth.domain.results.identity import AdminIdentity
 from src.apps.core.tokens.domain.results.issued import TokenPair
 
 
@@ -39,3 +42,33 @@ class ITokenLogoutCommand(Protocol):
             UnAuthorizedException: Credential verification fails.
         """
         ...
+
+
+class IPasswordLoginCommand(Protocol):
+    async def login(
+        self, data: PasswordLogin, *, user_agent: str | None
+    ) -> TokenPair:
+        """Authenticate an active administrator and issue credentials.
+
+        Args:
+            data: Mobile and raw password supplied by the caller.
+            user_agent: Optional client label recorded with the session.
+
+        Returns:
+            Access and refresh credentials with actual UTC-aware expirations.
+            The account owner selects the administrator audience and assembles
+            role and active scope claims for the access credential only.
+
+        Raises:
+            UnAuthorizedException: Credentials are invalid, the account has no
+                usable password hash, or its account/role is unavailable.
+        """
+        ...
+
+
+class ISessionCommand(Protocol):
+    async def revoke(self, user_id: int, id: UUID) -> bool: ...
+
+    async def revoke_one(self, identity: AdminIdentity, id: UUID) -> None: ...
+
+    async def revoke_others(self, identity: AdminIdentity) -> int: ...

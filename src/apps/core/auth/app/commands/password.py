@@ -5,7 +5,7 @@ from uuid import uuid4
 from papilio.security.passwords import PasswordHasher
 
 from src.apps.core.auth.app.helpers.identity import admin_token_identity
-from src.apps.core.auth.app.services.sessions import SessionService
+from src.apps.core.auth.app.interfaces.services import ISessionService
 from src.apps.core.auth.app.validators.password import (
     require_active_role,
     require_active_user,
@@ -19,14 +19,14 @@ from src.apps.core.tokens.domain.results.issued import TokenPair
 from src.apps.core.users.app.interfaces.services import IUserService
 
 
-class PasswordLoginService:
+class PasswordLoginCommand:
     def __init__(
         self,
         users: IUserService,
         roles: IRoleQuery,
         hasher: PasswordHasher,
         tokens: ITokenService,
-        sessions: SessionService,
+        sessions: ISessionService,
     ) -> None:
         """Bind account, role, native password and token owners.
 

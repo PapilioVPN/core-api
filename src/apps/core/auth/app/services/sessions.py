@@ -1,15 +1,11 @@
-"""Admin session lifetime and authenticated self-service policies."""
+"""Administrator session records and lifetime."""
 
 from datetime import UTC, datetime
 from uuid import UUID
 
-from papilio.errors.exceptions import NotFoundException
 from papilio.infra.db.tools.decorators import transactional
 from papilio.schemas.results import PagedType
 
-from src.apps.core.audit.app.interfaces.records import IAuditWriter
-from src.apps.core.audit.domain.dtos.event import AuditEvent
-from src.apps.core.audit.domain.enums.actions import AuditAction
 from src.apps.core.auth.app.validators.identity import session_unavailable
 from src.apps.core.auth.domain.dtos.sessions import SessionList
 from src.apps.core.auth.domain.models.sessions import SessionModel
@@ -21,18 +17,16 @@ from src.apps.core.auth.infra.pg.repositories.sessions import (
 
 
 class SessionService:
-    def __init__(self, repo: SessionRepository, audit: IAuditWriter) -> None:
+    def __init__(self, repo: SessionRepository) -> None:
         """Bind the session repository on the native request UoW.
 
         Args:
             repo: Owner of administrator session persistence.
-            audit: Audit writer on the same PostgreSQL UoW.
 
         Returns:
             None.
         """
         self.repo = repo
-        self.audit = audit
 
     @transactional
     async def create(
@@ -146,59 +140,25 @@ class SessionService:
             id: Session UUID.
 
         Returns:
-            True if the session was active and is now closed.
+            True if a live session was removed.
         """
         revoked = await self.repo.revoke(user_id, id, now=datetime.now(UTC))
-        if revoked:
-            await self.audit.record(
-                user_id, AuditEvent(AuditAction.SESSION_REVOKE, id)
-            )
         return revoked
 
-    async def revoke_one(self, identity: AdminIdentity, id: UUID) -> None:
-        """Close an owned session selected through the account API.
-
-        Args:
-            identity: Authenticated owner account and current session.
-            id: Target session UUID.
-
-        Returns:
-            None after closing the session.
-
-        Raises:
-            NotFoundException: No active owned session matches the UUID.
-        """
-        if not await self.revoke(identity.user_id, id):
-            raise NotFoundException(
-                message="Session not found",
-                message_code="session_not_found",
-                entity="Session",
-                identifier="id",
-                identifier_value=id,
-            )
-
     @transactional
-    async def revoke_others(self, identity: AdminIdentity) -> int:
-        """Close other active sessions for this account.
+    async def revoke_others(self, user_id: int, id: UUID) -> int:
+        """Close other active sessions for the same account.
 
         Args:
-            identity: Authenticated account and session to preserve.
+            user_id: Verified owner account.
+            id: Current session UUID to preserve.
 
         Returns:
-            Count of sessions closed.
+            Number of live sessions removed.
         """
         count = await self.repo.revoke_others(
-            identity.user_id, identity.session_id, now=datetime.now(UTC)
+            user_id, id, now=datetime.now(UTC)
         )
-        if count:
-            await self.audit.record(
-                identity.user_id,
-                AuditEvent(
-                    AuditAction.SESSION_REVOKE_OTHERS,
-                    identity.user_id,
-                    count=count,
-                ),
-            )
         return count
 
     @transactional
