@@ -2,14 +2,13 @@
 
 from typing import Annotated
 
-from dishka.integrations.fastapi import FromDishka
+from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Depends, Query
 from papilio.api.responses.envelope import APIResponse
 from papilio.api.responses.meta import PagerMeta
 from papilio.types.aliases import IdType
 
 from src.apps.core.auth.domain.results.identity import AdminIdentity
-from src.apps.core.auth.routers.credentials import CredentialRoute
 from src.apps.core.auth.routers.dependencies.authorization import (
     require_admin,
 )
@@ -34,7 +33,7 @@ from src.apps.core.users.routers.schemas.records import UserOutput
 
 router = APIRouter(
     prefix="/admin/users",
-    route_class=CredentialRoute,
+    route_class=DishkaRoute,
     dependencies=[Depends(require_admin("access"))],
 )
 

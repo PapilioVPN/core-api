@@ -1,6 +1,6 @@
 """Administrator password login through the shared application contract."""
 
-from dishka.integrations.fastapi import FromDishka
+from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter
 from papilio.api.responses.envelope import APIResponse
 
@@ -8,12 +8,11 @@ from src.apps.core.auth.app.interfaces.services import (
     IPasswordLoginService,
 )
 from src.apps.core.auth.domain.dtos.password import PasswordLogin
-from src.apps.core.auth.routers.credentials import CredentialRoute
 from src.apps.core.auth.routers.schemas.records import TokenPairOutput
 
 router = APIRouter(
     prefix="/admin/auth/tokens",
-    route_class=CredentialRoute,
+    route_class=DishkaRoute,
 )
 
 

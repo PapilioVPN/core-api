@@ -1,6 +1,6 @@
 """Refresh credentials authorize rotation independently of expired access."""
 
-from dishka.integrations.fastapi import FromDishka
+from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter
 from papilio.api.responses.envelope import APIResponse
 
@@ -9,12 +9,11 @@ from src.apps.core.auth.app.interfaces.commands import (
     ITokenRefreshCommand,
 )
 from src.apps.core.auth.domain.dtos.refresh import TokenRefresh
-from src.apps.core.auth.routers.credentials import CredentialRoute
 from src.apps.core.auth.routers.schemas.records import TokenPairOutput
 
 router = APIRouter(
     prefix="/admin/auth/refresh-tokens",
-    route_class=CredentialRoute,
+    route_class=DishkaRoute,
 )
 
 

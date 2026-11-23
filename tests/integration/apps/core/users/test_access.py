@@ -42,6 +42,14 @@ async def test_core_access(app: FastAPI, client: AsyncClient) -> None:
     )
     assert invalid.status_code == 422
     assert "hidden" not in invalid.text
+    assert invalid.json()["errors"][0]["loc"] == ["mobile"]
+    invalid_refresh = await client.post(
+        "/admin/auth/refresh-tokens",
+        json={"refresh_token": ["hidden-refresh"]},
+    )
+    assert invalid_refresh.status_code == 422
+    assert "hidden-refresh" not in invalid_refresh.text
+    assert invalid_refresh.json()["errors"][0]["loc"] == ["refresh_token"]
     login = await client.post(
         "/admin/auth/tokens",
         json={"mobile": owner.mobile, "password": owner.password},
