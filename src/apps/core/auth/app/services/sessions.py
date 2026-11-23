@@ -184,7 +184,7 @@ class SessionService:
         return count
 
     @transactional
-    async def remove_expired(self, *, limit: int) -> int:
+    async def remove_expired(self, *, limit: int = 100) -> int:
         """Delete one bounded batch of expired sessions.
 
         Args:

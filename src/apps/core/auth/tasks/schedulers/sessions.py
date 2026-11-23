@@ -4,16 +4,21 @@ from dishka import FromDishka
 from papilio_tasks.apps.schedulers import TaskRouter
 
 from src.apps.core.auth.app.services.sessions import SessionService
-from src.apps.core.auth.infra.broker.tasks import cleanup
+from src.apps.core.auth.infra.broker.config import BrokerConfig
+from src.apps.core.auth.infra.broker.tasks import cleanup_sessions
 
 router = TaskRouter()
 
 
-@router.task(
-    cleanup,
-    schedule=[{"schedule_id": "admin-sessions-cleanup", "interval": 60}],
-)
+@router.task(cleanup_sessions, schedule=BrokerConfig.cleanup_schedule)
 async def remove_expired(*, service: FromDishka[SessionService]) -> int:
-    """Delete at most 100 expired sessions and return the committed count."""
-    count = await service.remove_expired(limit=100)
+    """Delete one bounded batch of expired sessions.
+
+    Args:
+        service: Request-scoped session owner.
+
+    Returns:
+        Committed count of expired sessions removed.
+    """
+    count = await service.remove_expired()
     return count

@@ -7,21 +7,13 @@ from src.apps.core.tokens.app.interfaces.refresh import (
     IRefreshUseService,
 )
 from src.apps.core.tokens.domain.dtos.refresh import RefreshUseCleanup
-from src.apps.core.tokens.infra.broker.tasks import cleanup
+from src.apps.core.tokens.infra.broker.config import BrokerConfig
+from src.apps.core.tokens.infra.broker.tasks import cleanup_refresh
 
 router = TaskRouter()
 
 
-@router.task(
-    cleanup,
-    schedule=[
-        {
-            "schedule_id": "refresh-use-cleanup",
-            "interval": 60,
-            "kwargs": {"query": {"limit": 100}},
-        }
-    ],
-)
+@router.task(cleanup_refresh, schedule=BrokerConfig.cleanup_schedule)
 async def remove_expired(
     query: RefreshUseCleanup, *, service: FromDishka[IRefreshUseService]
 ) -> int:

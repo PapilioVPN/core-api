@@ -4,4 +4,4 @@ from papilio_tasks.apps.schedulers import Task
 
 from src.apps.core.tokens.domain.dtos.refresh import RefreshUseCleanup
 
-cleanup = Task[[RefreshUseCleanup], int](name="core.tokens.cleanup.v1")
+cleanup_refresh = Task[[RefreshUseCleanup], int](name="core.tokens.cleanup.v1")
