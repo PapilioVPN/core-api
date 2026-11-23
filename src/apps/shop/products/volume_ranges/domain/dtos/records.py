@@ -6,16 +6,14 @@ from papilio.schemas.inputs import BaseDTO
 from papilio.types.aliases import PageType, PerPageType
 from pydantic import model_validator
 
-from src.apps.shop.products.volume_ranges.domain.dtos.validators.bounds import (
-    validate_days,
-    validate_volume,
-)
 from src.apps.shop.products.volume_ranges.domain.types.records import (
     DayType,
     RateType,
     VolumeInput,
     VolumeType,
 )
+
+from .validators.bounds import validate_days, validate_volume
 
 
 class RangeWrite(BaseDTO):
