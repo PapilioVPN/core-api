@@ -3,7 +3,7 @@
 from typing import Protocol
 
 from src.apps.core.auth.domain.dtos.refresh import TokenRefresh
-from src.apps.core.tokens.domain.results.records import TokenPair
+from src.apps.core.tokens.domain.results.issued import TokenPair
 
 
 class ITokenRefreshCommand(Protocol):

@@ -15,7 +15,7 @@ from src.apps.core.auth.app.validators.password import (
 from src.apps.core.auth.domain.dtos.password import PasswordLogin
 from src.apps.core.roles.app.interfaces.queries import IRoleQuery
 from src.apps.core.tokens.app.interfaces.services import ITokenService
-from src.apps.core.tokens.domain.results.records import TokenPair
+from src.apps.core.tokens.domain.results.issued import TokenPair
 from src.apps.core.users.app.interfaces.services import IUserService
 
 

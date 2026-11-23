@@ -9,7 +9,7 @@ from src.apps.core.auth.app.interfaces.commands import (
     ITokenRefreshCommand,
 )
 from src.apps.core.auth.domain.dtos.refresh import TokenRefresh
-from src.apps.core.auth.routers.schemas.records import TokenPairOutput
+from src.apps.core.auth.routers.schemas.tokens import TokenPairOutput
 
 router = APIRouter(
     prefix="/admin/auth/refresh-tokens",

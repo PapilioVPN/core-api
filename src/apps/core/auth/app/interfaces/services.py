@@ -4,7 +4,7 @@ from typing import Protocol
 
 from src.apps.core.auth.domain.dtos.password import PasswordLogin
 from src.apps.core.auth.domain.results.identity import AdminIdentity
-from src.apps.core.tokens.domain.results.records import TokenPair
+from src.apps.core.tokens.domain.results.issued import TokenPair
 
 
 class IAdminIdentityService(Protocol):

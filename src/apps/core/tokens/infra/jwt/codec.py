@@ -12,7 +12,7 @@ from src.apps.core.tokens.domain.models.tokens import (
     TokenIdentity,
     VerifiedToken,
 )
-from src.apps.core.tokens.domain.results.records import IssuedToken
+from src.apps.core.tokens.domain.results.issued import IssuedToken
 from src.apps.core.tokens.infra.jwt.payload import PAYLOAD
 
 

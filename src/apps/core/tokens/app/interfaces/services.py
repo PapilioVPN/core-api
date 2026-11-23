@@ -6,7 +6,7 @@ from src.apps.core.tokens.domain.models.tokens import (
     TokenIdentity,
     VerifiedToken,
 )
-from src.apps.core.tokens.domain.results.records import TokenPair
+from src.apps.core.tokens.domain.results.issued import TokenPair
 
 
 class ITokenService(Protocol):
