@@ -1,0 +1,94 @@
+x-core: &core
+  image: ${CORE_IMAGE:?Run ./install.sh runtime}
+  pull_policy: never
+  restart: unless-stopped
+  environment:
+    PAPILIO_CONFIG: /app/config.yml
+  volumes:
+    - type: bind
+      source: ${CORE_STATE:?Run ./install.sh runtime}/config.yml
+      target: /app/config.yml
+      read_only: true
+      bind:
+        create_host_path: false
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+
+x-jobs: &jobs
+  <<: *core
+  profiles: [jobs]
+  healthcheck:
+    disable: true
+  depends_on:
+    api:
+      condition: service_healthy
+    nats:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: papiliovpn
+      POSTGRES_DB: papiliovpn
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    volumes: [postgres:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD, pg_isready, -h, 127.0.0.1, -U, papiliovpn, -d, papiliovpn]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:8-bookworm
+    restart: unless-stopped
+    command: [redis-server, --maxmemory, 64mb, --maxmemory-policy, allkeys-lru]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  api:
+    <<: *core
+    ports:
+      - "${CORE_BIND:-127.0.0.1}:${CORE_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  nats:
+    image: nats:2.11.8-alpine
+    profiles: [jobs]
+    restart: unless-stopped
+    command: [-js, -sd, /data, -m, "8222"]
+    volumes: [nats:/data]
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, "http://127.0.0.1:8222/healthz?js-enabled-only=true"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  scheduler:
+    <<: *jobs
+    command: [papilio_tasks, scheduler, worker, "src.entrypoints.scheduler:broker", --workers, "1"]
+
+  beat:
+    <<: *jobs
+    command: [papilio_tasks, scheduler, beat, "src.entrypoints.scheduler:beat"]
+
+  events:
+    <<: *jobs
+    command: [papilio_tasks, events, run, "src.entrypoints.events:app"]
+
+secrets:
+  db_password:
+    file: ${CORE_STATE:?Run ./install.sh runtime}/db.password
+
+volumes:
+  postgres:
+  nats:
