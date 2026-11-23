@@ -1,0 +1,361 @@
+{
+  "banks": [
+    {
+      "code": "IR-010",
+      "title": "بانک مرکزی جمهوری اسلامی ایران",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/cbi.svg",
+      "is_active": true,
+      "prefixes": [
+        "636795",
+        "636797"
+      ]
+    },
+    {
+      "code": "IR-011",
+      "title": "بانک صنعت و معدن",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/sanat-madan.svg",
+      "is_active": true,
+      "prefixes": [
+        "627961"
+      ]
+    },
+    {
+      "code": "IR-012",
+      "title": "بانک ملت",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/mellat.svg",
+      "is_active": true,
+      "prefixes": [
+        "610433",
+        "991975"
+      ]
+    },
+    {
+      "code": "IR-013",
+      "title": "بانک رفاه کارگران",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/refah.svg",
+      "is_active": true,
+      "prefixes": [
+        "589463"
+      ]
+    },
+    {
+      "code": "IR-014",
+      "title": "بانک مسکن",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/maskan.svg",
+      "is_active": true,
+      "prefixes": [
+        "628023"
+      ]
+    },
+    {
+      "code": "IR-015",
+      "title": "بانک سپه",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/sepah.svg",
+      "is_active": true,
+      "prefixes": [
+        "589210",
+        "604932"
+      ]
+    },
+    {
+      "code": "IR-016",
+      "title": "بانک کشاورزی",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/keshavarzi.svg",
+      "is_active": true,
+      "prefixes": [
+        "603770",
+        "639217"
+      ]
+    },
+    {
+      "code": "IR-017",
+      "title": "بانک ملی ایران",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/melli.svg",
+      "is_active": true,
+      "prefixes": [
+        "170019",
+        "603799"
+      ]
+    },
+    {
+      "code": "IR-018",
+      "title": "بانک تجارت",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/tejarat.svg",
+      "is_active": true,
+      "prefixes": [
+        "585983",
+        "627353"
+      ]
+    },
+    {
+      "code": "IR-019",
+      "title": "بانک صادرات ایران",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/saderat.svg",
+      "is_active": true,
+      "prefixes": [
+        "603769",
+        "903769"
+      ]
+    },
+    {
+      "code": "IR-020",
+      "title": "بانک توسعه صادرات ایران",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/tosee-saderat.svg",
+      "is_active": true,
+      "prefixes": [
+        "207177",
+        "627648"
+      ]
+    },
+    {
+      "code": "IR-021",
+      "title": "پست بانک ایران",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/post.svg",
+      "is_active": true,
+      "prefixes": [
+        "627760"
+      ]
+    },
+    {
+      "code": "IR-022",
+      "title": "بانک توسعه تعاون",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/tosee-taavon.svg",
+      "is_active": true,
+      "prefixes": [
+        "502908"
+      ]
+    },
+    {
+      "code": "IR-051",
+      "title": "موسسه اعتباری توسعه",
+      "icon_url": null,
+      "is_active": false,
+      "prefixes": [
+        "628157"
+      ]
+    },
+    {
+      "code": "IR-052",
+      "title": "بانک قوامین",
+      "icon_url": null,
+      "is_active": false,
+      "prefixes": [
+        "639599"
+      ]
+    },
+    {
+      "code": "IR-053",
+      "title": "بانک کارآفرین",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/karafarin.svg",
+      "is_active": true,
+      "prefixes": [
+        "502910",
+        "627488"
+      ]
+    },
+    {
+      "code": "IR-054",
+      "title": "بانک پارسیان",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/parsian.svg",
+      "is_active": true,
+      "prefixes": [
+        "622106",
+        "627884",
+        "639194"
+      ]
+    },
+    {
+      "code": "IR-055",
+      "title": "بانک اقتصاد نوین",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/eghtesad-novin.svg",
+      "is_active": true,
+      "prefixes": [
+        "627412"
+      ]
+    },
+    {
+      "code": "IR-056",
+      "title": "بانک سامان",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/saman.svg",
+      "is_active": true,
+      "prefixes": [
+        "621986",
+        "62198618",
+        "62198619"
+      ]
+    },
+    {
+      "code": "IR-057",
+      "title": "بانک پاسارگاد",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/pasargad.svg",
+      "is_active": true,
+      "prefixes": [
+        "502229",
+        "502249",
+        "639347"
+      ]
+    },
+    {
+      "code": "IR-058",
+      "title": "بانک سرمایه",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/sarmayeh.svg",
+      "is_active": true,
+      "prefixes": [
+        "639607"
+      ]
+    },
+    {
+      "code": "IR-059",
+      "title": "بانک سینا",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/sina.svg",
+      "is_active": true,
+      "prefixes": [
+        "639346"
+      ]
+    },
+    {
+      "code": "IR-060",
+      "title": "بانک قرض‌الحسنه مهر ایران",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/mehr-iran.svg",
+      "is_active": true,
+      "prefixes": [
+        "606373"
+      ]
+    },
+    {
+      "code": "IR-061",
+      "title": "بانک شهر",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/shahr.svg",
+      "is_active": true,
+      "prefixes": [
+        "502806",
+        "504706"
+      ]
+    },
+    {
+      "code": "IR-062",
+      "title": "بانک آینده",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/ayandeh.svg",
+      "is_active": false,
+      "prefixes": [
+        "636214"
+      ]
+    },
+    {
+      "code": "IR-063",
+      "title": "بانک انصار",
+      "icon_url": null,
+      "is_active": false,
+      "prefixes": [
+        "627381"
+      ]
+    },
+    {
+      "code": "IR-064",
+      "title": "بانک گردشگری",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/gardeshgari.svg",
+      "is_active": true,
+      "prefixes": [
+        "505416",
+        "505426"
+      ]
+    },
+    {
+      "code": "IR-065",
+      "title": "بانک حکمت ایرانیان",
+      "icon_url": null,
+      "is_active": false,
+      "prefixes": [
+        "636949"
+      ]
+    },
+    {
+      "code": "IR-066",
+      "title": "بانک دی",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/dey.svg",
+      "is_active": true,
+      "prefixes": [
+        "502938"
+      ]
+    },
+    {
+      "code": "IR-069",
+      "title": "بانک ایران زمین",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/iran-zamin.svg",
+      "is_active": true,
+      "prefixes": [
+        "505785"
+      ]
+    },
+    {
+      "code": "IR-070",
+      "title": "بانک قرض‌الحسنه رسالت",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/resalat.svg",
+      "is_active": true,
+      "prefixes": [
+        "504172"
+      ]
+    },
+    {
+      "code": "IR-073",
+      "title": "موسسه اعتباری کوثر",
+      "icon_url": null,
+      "is_active": false,
+      "prefixes": [
+        "505801"
+      ]
+    },
+    {
+      "code": "IR-075",
+      "title": "موسسه اعتباری ملل",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/melal.svg",
+      "is_active": true,
+      "prefixes": [
+        "606256"
+      ]
+    },
+    {
+      "code": "IR-078",
+      "title": "بانک خاورمیانه",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/khavarmianeh.svg",
+      "is_active": true,
+      "prefixes": [
+        "505809",
+        "585947"
+      ]
+    },
+    {
+      "code": "IR-079",
+      "title": "بانک مهر اقتصاد",
+      "icon_url": null,
+      "is_active": false,
+      "prefixes": [
+        "606737",
+        "639370"
+      ]
+    },
+    {
+      "code": "IR-080",
+      "title": "موسسه اعتباری نور",
+      "icon_url": "https://raw.githubusercontent.com/mehrnet/IranianBanks/eaaa56ee8a9a777271bc375df100182aab44558d/logos/svg/noor.svg",
+      "is_active": false,
+      "prefixes": [
+        "507677"
+      ]
+    },
+    {
+      "code": "IR-095",
+      "title": "بانک مشترک ایران و ونزوئلا",
+      "icon_url": null,
+      "is_active": true,
+      "prefixes": []
+    },
+    {
+      "code": "IR-CASPIAN",
+      "title": "موسسه اعتباری کاسپین",
+      "icon_url": null,
+      "is_active": false,
+      "prefixes": []
+    }
+  ]
+}
