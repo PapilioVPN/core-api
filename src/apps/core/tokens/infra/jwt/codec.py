@@ -13,12 +13,19 @@ from src.apps.core.tokens.domain.models.tokens import (
     VerifiedToken,
 )
 from src.apps.core.tokens.domain.results.records import IssuedToken
-from src.apps.core.tokens.infra.tokens.schemas.jwt import JWTPayload
+from src.apps.core.tokens.infra.jwt.payload import PAYLOAD
 
 
 class JWTCodec:
     def __init__(self, config: JWTConfig) -> None:
-        """Bind native JWT settings for application-owned credentials."""
+        """Bind native signing settings.
+
+        Args:
+            config: JWT signing key and algorithm.
+
+        Returns:
+            None.
+        """
         self.config = config
 
     def encode(
@@ -28,7 +35,16 @@ class JWTCodec:
         kind: TokenType,
         expires_in: timedelta,
     ) -> IssuedToken:
-        """Sign typed owner claims and return the exact wire expiration."""
+        """Sign typed owner claims with the exact wire expiration.
+
+        Args:
+            identity: Trusted subject, audience and optional session ID.
+            kind: Native access or refresh credential kind.
+            expires_in: Lifetime from issuance.
+
+        Returns:
+            Signed token and its aware UTC expiration.
+        """
         now = datetime.now(UTC).replace(microsecond=0)
         expires_at = now + expires_in
         claims: dict[str, JsonValue] = {
@@ -53,7 +69,19 @@ class JWTCodec:
     def decode(
         self, token: str, *, audience: str, kind: TokenType
     ) -> VerifiedToken:
-        """Verify the native credential and adapt the reference claim shape."""
+        """Verify the native credential and materialize its typed claims.
+
+        Args:
+            token: Untrusted encoded credential.
+            audience: Expected application audience.
+            kind: Required native access or refresh kind.
+
+        Returns:
+            Verified identity, token ID and aware UTC timestamps.
+
+        Raises:
+            UnAuthorizedException: The token or its claims are invalid.
+        """
         raw = decode_token(
             token,
             self.config.secret_key,
@@ -62,7 +90,7 @@ class JWTCodec:
             audience=audience,
         )
         try:
-            payload = JWTPayload.model_validate(raw)
+            payload = PAYLOAD.validate_python(raw)
             if (
                 payload.exp <= payload.iat
                 or payload.aud != audience

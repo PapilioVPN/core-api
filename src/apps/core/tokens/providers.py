@@ -7,10 +7,10 @@ from src.apps.core.tokens.app.interfaces.refresh import IRefreshUseService
 from src.apps.core.tokens.app.interfaces.services import ITokenService
 from src.apps.core.tokens.app.services.refresh import RefreshUseService
 from src.apps.core.tokens.app.services.tokens import TokenService
+from src.apps.core.tokens.infra.jwt.codec import JWTCodec
 from src.apps.core.tokens.infra.pg.repositories.refresh import (
     RefreshUseRepository,
 )
-from src.apps.core.tokens.infra.tokens.jwt import JWTCodec
 
 
 class TokensProvider(Provider):

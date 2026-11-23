@@ -10,7 +10,7 @@ from src.apps.core.tokens.domain.models.tokens import (
     VerifiedToken,
 )
 from src.apps.core.tokens.domain.results.records import TokenPair
-from src.apps.core.tokens.infra.tokens.jwt import JWTCodec
+from src.apps.core.tokens.infra.jwt.codec import JWTCodec
 
 
 class TokenService:
