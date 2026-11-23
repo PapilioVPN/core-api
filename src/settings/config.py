@@ -5,8 +5,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.settings.cli import CLIConfig
 
-MODULES = ("src.apps.core", "src.apps.catalog")
-
 
 class NatsConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)
@@ -26,7 +24,7 @@ class SchedulerConfig(BaseModel):
 
 class CoreSettings(Settings):
     app: AppConfig = AppConfig(
-        modules=list(MODULES), tables_path="infra.pg.tables"
+        modules=["src.apps.core"], tables_path="infra.pg.tables"
     )
     nats: NatsConfig | None = None
     scheduler: SchedulerConfig = Field(default_factory=SchedulerConfig)
@@ -34,8 +32,9 @@ class CoreSettings(Settings):
 
     @field_validator("app")
     @classmethod
-    def include_catalog(cls, app: AppConfig) -> AppConfig:
-        """Upgrade discovery for configs generated before the catalog."""
-        if app.modules == ["src.apps.core"]:
-            app = app.model_copy(update={"modules": list(MODULES)})
+    def remove_retired_catalog(cls, app: AppConfig) -> AppConfig:
+        """Ignore the retired root in existing installations' settings."""
+        if "src.apps.catalog" in app.modules:
+            modules = [m for m in app.modules if m != "src.apps.catalog"]
+            app = app.model_copy(update={"modules": modules})
         return app

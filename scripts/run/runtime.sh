@@ -28,9 +28,6 @@ case "${1:-up}" in
     logs) "${compose[@]}" --profile jobs logs --follow --tail 100 ;;
     status) "${compose[@]}" --profile jobs ps --all ;;
     migrate) "${compose[@]}" run --rm api alembic upgrade head ;;
-    seed)
-        "${compose[@]}" run --rm -T api python -m scripts.seeders.run "${@:2}"
-        ;;
     owner)
         tty=()
         if [[ ! -t 0 ]]; then
@@ -38,5 +35,5 @@ case "${1:-up}" in
         fi
         "${compose[@]}" run --rm "${tty[@]}" api papiliovpn-core users owner
         ;;
-    *) die 'Choose up, stop, logs, status, migrate, seed or owner.' ;;
+    *) die 'Choose up, stop, logs, status, migrate or owner.' ;;
 esac

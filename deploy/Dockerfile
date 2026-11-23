@@ -11,7 +11,6 @@ WORKDIR /app
 ENV PATH="/opt/venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 COPY --from=build /opt/venv /opt/venv
 COPY migrations ./migrations
-COPY scripts/seeders ./scripts/seeders
 COPY alembic.ini config.yml.sample ./
 COPY deploy/configure.py deploy/healthcheck.py ./
 USER 10001:10001

@@ -10,6 +10,13 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 from sqlmodel import SQLModel
 
+# Revision 0004 remains valid and its retired tables retain existing data.
+RETIRED_TABLES = {
+    "tbl_attributes",
+    "tbl_categories",
+    "tbl_category_attributes",
+}
+
 get_bootstrapper().boot_sqlmodels()
 database = get_settings().db
 if database is None:
@@ -17,7 +24,15 @@ if database is None:
 
 
 def migrate(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=SQLModel.metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=SQLModel.metadata,
+        include_name=lambda name, type_, _: (
+            type_ != "table"
+            or name not in RETIRED_TABLES
+            or name in SQLModel.metadata.tables
+        ),
+    )
     with context.begin_transaction():
         context.run_migrations()
 
