@@ -29,21 +29,13 @@ from src.apps.core.users.infra.pg.repositories.records import (
 class UserProvider(Provider):
     scope = Scope.REQUEST
 
-    repository = provide(UserRepository, scope=Scope.REQUEST)
-    owner = provide(OwnerCommand, scope=Scope.REQUEST)
-    service = provide(UserService, provides=IUserService, scope=Scope.REQUEST)
-    profile = provide(
-        UserProfileService, provides=IUserProfileService, scope=Scope.REQUEST
-    )
-    profile_command = provide(
-        UserProfileCommand, provides=IUserProfileCommand, scope=Scope.REQUEST
-    )
-    create_command = provide(
-        UserCreateCommand, provides=IUserCreateCommand, scope=Scope.REQUEST
-    )
-    role_command = provide(
-        UserRoleCommand, provides=IUserRoleCommand, scope=Scope.REQUEST
-    )
+    repository = provide(UserRepository)
+    owner = provide(OwnerCommand)
+    service = provide(UserService, provides=IUserService)
+    profile = provide(UserProfileService, provides=IUserProfileService)
+    profile_command = provide(UserProfileCommand, provides=IUserProfileCommand)
+    create_command = provide(UserCreateCommand, provides=IUserCreateCommand)
+    role_command = provide(UserRoleCommand, provides=IUserRoleCommand)
     password_command = provide(
-        UserPasswordCommand, provides=IUserPasswordCommand, scope=Scope.REQUEST
+        UserPasswordCommand, provides=IUserPasswordCommand
     )

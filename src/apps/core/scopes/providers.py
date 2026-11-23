@@ -12,7 +12,5 @@ from src.apps.core.scopes.infra.pg.repositories.records import (
 class ScopeProvider(Provider):
     scope = Scope.REQUEST
 
-    repository = provide(ScopeRepository, scope=Scope.REQUEST)
-    service = provide(
-        ScopeService, provides=IScopeService, scope=Scope.REQUEST
-    )
+    repository = provide(ScopeRepository)
+    service = provide(ScopeService, provides=IScopeService)

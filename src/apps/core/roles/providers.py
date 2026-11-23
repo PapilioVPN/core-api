@@ -32,19 +32,11 @@ from src.apps.core.roles.infra.pg.repositories.role_scopes import (
 class RoleProvider(Provider):
     scope = Scope.REQUEST
 
-    roles = provide(RoleRepository, scope=Scope.REQUEST)
-    assignments = provide(RoleScopeRepository, scope=Scope.REQUEST)
-    reader = provide(RoleReader, scope=Scope.REQUEST)
-    role_service = provide(
-        RoleService, provides=IRoleService, scope=Scope.REQUEST
-    )
-    assignment_service = provide(
-        RoleScopeService, provides=IRoleScopeService, scope=Scope.REQUEST
-    )
-    query = provide(RoleQuery, provides=IRoleQuery, scope=Scope.REQUEST)
-    command = provide(
-        RoleScopeCommand, provides=IRoleScopeCommand, scope=Scope.REQUEST
-    )
-    remove_command = provide(
-        RoleRemoveCommand, provides=IRoleRemoveCommand, scope=Scope.REQUEST
-    )
+    roles = provide(RoleRepository)
+    assignments = provide(RoleScopeRepository)
+    reader = provide(RoleReader)
+    role_service = provide(RoleService, provides=IRoleService)
+    assignment_service = provide(RoleScopeService, provides=IRoleScopeService)
+    query = provide(RoleQuery, provides=IRoleQuery)
+    command = provide(RoleScopeCommand, provides=IRoleScopeCommand)
+    remove_command = provide(RoleRemoveCommand, provides=IRoleRemoveCommand)
