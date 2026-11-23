@@ -24,7 +24,8 @@ class SchedulerConfig(BaseModel):
 
 class CoreSettings(Settings):
     app: AppConfig = AppConfig(
-        modules=["src.apps.core"], tables_path="infra.pg.tables"
+        modules=["src.apps.core", "src.apps.shop"],
+        tables_path="infra.pg.tables",
     )
     nats: NatsConfig | None = None
     scheduler: SchedulerConfig = Field(default_factory=SchedulerConfig)

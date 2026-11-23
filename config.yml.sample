@@ -2,7 +2,7 @@
 app:
   settings: src.settings.config.CoreSettings
   tables_path: infra.pg.tables
-  modules: [src.apps.core]
+  modules: [src.apps.core, src.apps.shop]
 run:
   entrypoint: src.entrypoints.api:app
   backend: uvicorn
