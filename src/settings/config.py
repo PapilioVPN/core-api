@@ -1,9 +1,11 @@
 """Papilio settings with the Core discovery root."""
 
 from papilio.core.config import AppConfig, Settings
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.settings.cli import CLIConfig
+
+MODULES = ("src.apps.core", "src.apps.catalog")
 
 
 class NatsConfig(BaseModel):
@@ -24,8 +26,16 @@ class SchedulerConfig(BaseModel):
 
 class CoreSettings(Settings):
     app: AppConfig = AppConfig(
-        modules=["src.apps.core"], tables_path="infra.pg.tables"
+        modules=list(MODULES), tables_path="infra.pg.tables"
     )
     nats: NatsConfig | None = None
     scheduler: SchedulerConfig = Field(default_factory=SchedulerConfig)
     cli: CLIConfig = Field(default_factory=CLIConfig)
+
+    @field_validator("app")
+    @classmethod
+    def include_catalog(cls, app: AppConfig) -> AppConfig:
+        """Upgrade discovery for configs generated before the catalog."""
+        if app.modules == ["src.apps.core"]:
+            app = app.model_copy(update={"modules": list(MODULES)})
+        return app
