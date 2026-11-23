@@ -20,7 +20,9 @@ class IUserCreateCommand(Protocol):
 
 
 class IUserRoleCommand(Protocol):
-    async def update(self, id: int, data: UserRoleUpdate) -> UserModel: ...
+    async def update(
+        self, id: int, data: UserRoleUpdate, *, actor_id: int
+    ) -> UserModel: ...
 
 
 class IUserPasswordCommand(Protocol):

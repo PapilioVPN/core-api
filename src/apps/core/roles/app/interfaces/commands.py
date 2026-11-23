@@ -23,15 +23,17 @@ class IRoleRemoveCommand(Protocol):
 
 class IRoleScopeCommand(Protocol):
     async def create(
-        self, role_id: int, data: RoleScopeCreate
+        self, role_id: int, data: RoleScopeCreate, *, actor_id: int
     ) -> RoleScopeModel: ...
     async def update(
-        self, role_id: int, data: RoleScopeUpdate
+        self, role_id: int, data: RoleScopeUpdate, *, actor_id: int
     ) -> RoleScopeModel: ...
-    async def remove(self, role_id: int, scope_id: int) -> RoleScopeModel: ...
+    async def remove(
+        self, role_id: int, scope_id: int, *, actor_id: int
+    ) -> RoleScopeModel: ...
     async def create_batch(
-        self, role_id: int, data: RoleScopeBatchCreate
+        self, role_id: int, data: RoleScopeBatchCreate, *, actor_id: int
     ) -> BatchResultType[RoleScopeModel, ValidationException]: ...
     async def update_batch(
-        self, role_id: int, data: RoleScopeBatchUpdate
+        self, role_id: int, data: RoleScopeBatchUpdate, *, actor_id: int
     ) -> BatchResultType[RoleScopeModel, ValidationException]: ...

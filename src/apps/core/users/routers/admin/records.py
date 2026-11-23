@@ -12,6 +12,7 @@ from src.apps.core.auth.domain.results.identity import AdminIdentity
 from src.apps.core.auth.routers.dependencies.authorization import (
     require_admin,
 )
+from src.apps.core.auth.routers.dependencies.identity import current_admin
 from src.apps.core.users.app.interfaces.commands import (
     IUserCreateCommand,
     IUserPasswordCommand,
@@ -160,6 +161,7 @@ async def delete_user(
 async def patch_user_role(
     id: IdType,
     data: UserRoleUpdate,
+    actor: Annotated[AdminIdentity, Depends(current_admin)],
     command: FromDishka[IUserRoleCommand],
 ) -> APIResponse[UserOutput, None]:
     """Replace an account's role through the dedicated role command.
@@ -167,6 +169,7 @@ async def patch_user_role(
     Args:
         id: Internal user identity validated from the public path by Papilio.
         data: Required target role identity from the request body.
+        actor: The authenticated operator making the change.
         command: Request-scoped role command checking role existence.
 
     Returns:
@@ -175,7 +178,7 @@ async def patch_user_role(
     Raises:
         NotFoundException: The user or referenced role does not exist.
     """
-    user = await command.update(id, data)
+    user = await command.update(id, data, actor_id=actor.user_id)
     output = UserOutput.from_obj(user)
     return APIResponse[UserOutput, None].from_data(output)
 
