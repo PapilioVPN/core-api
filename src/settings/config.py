@@ -1,21 +1,25 @@
 """Papilio settings with the Core discovery root."""
 
 from papilio.core.config import AppConfig, Settings
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.settings.cli import CLIConfig
 
 
 class NatsConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)
+
     servers: list[str] = Field(min_length=1, repr=False)
     connect_timeout: int = Field(default=5, gt=0)
     graceful_timeout: float = Field(default=15, gt=0)
 
 
 class SchedulerConfig(BaseModel):
-    stream: str = "papiliovpn_core_jobs"
-    subject: str = "papiliovpn.core.jobs"
-    durable: str = "papiliovpn_core_workers"
+    model_config = ConfigDict(extra="forbid")
+
+    stream: str = Field(default="papiliovpn_core_jobs", min_length=1)
+    subject: str = Field(default="papiliovpn.core.jobs", min_length=1)
+    durable: str = Field(default="papiliovpn_core_workers", min_length=1)
 
 
 class CoreSettings(Settings):
