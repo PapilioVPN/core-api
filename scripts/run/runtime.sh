@@ -21,7 +21,8 @@ case "${1:-up}" in
         "${compose[@]}" run --rm --no-deps api alembic upgrade head
         step 'Start Core API'
         "${compose[@]}" "${profile[@]}" up --detach --wait --wait-timeout 120
-        success "API available on http://${CORE_BIND:-127.0.0.1}:${CORE_PORT:-8000}"
+        address=$("${compose[@]}" port api 8000)
+        success "API available on http://$address"
         ;;
     stop) "${compose[@]}" --profile jobs down ;;
     logs) "${compose[@]}" --profile jobs logs --follow --tail 100 ;;
