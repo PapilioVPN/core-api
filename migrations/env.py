@@ -10,11 +10,12 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 from sqlmodel import SQLModel
 
-# Revision 0004 remains valid and its retired tables retain existing data.
+# Keep retired tables from published revisions out of schema comparisons.
 RETIRED_TABLES = {
     "tbl_attributes",
     "tbl_categories",
     "tbl_category_attributes",
+    "tbl_payments",
     "tbl_volume_ranges_legacy",
 }
 
