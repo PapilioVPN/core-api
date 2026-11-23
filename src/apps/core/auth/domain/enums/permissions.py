@@ -1,0 +1,10 @@
+"""Stable operation bits; scope keys remain user-managed data."""
+
+from enum import IntFlag
+
+
+class AdminPermission(IntFlag):
+    READ = 1
+    CREATE = 2
+    UPDATE = 4
+    DELETE = 8

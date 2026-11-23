@@ -1,0 +1,63 @@
+"""Refresh credentials authorize rotation independently of expired access."""
+
+from dishka.integrations.fastapi import FromDishka
+from fastapi import APIRouter
+from papilio.api.responses.envelope import APIResponse
+
+from src.apps.core.auth.app.interfaces.commands import (
+    ITokenLogoutCommand,
+    ITokenRefreshCommand,
+)
+from src.apps.core.auth.domain.dtos.refresh import TokenRefresh
+from src.apps.core.auth.routers.credentials import CredentialRoute
+from src.apps.core.auth.routers.schemas.records import TokenPairOutput
+
+router = APIRouter(
+    prefix="/admin/auth/refresh-tokens",
+    route_class=CredentialRoute,
+)
+
+
+@router.post("", response_model=APIResponse[TokenPairOutput, None])
+async def post_refresh_tokens(
+    data: TokenRefresh, command: FromDishka[ITokenRefreshCommand]
+) -> APIResponse[TokenPairOutput, None]:
+    """Exchange one refresh for a new pair after current account checks.
+
+    Args:
+        data: Required refresh credential; access/sudo headers are not needed.
+        command: Injected rotation owner using the request's native SQL UoW.
+
+    Returns:
+        Access/refresh pair only after the owning transaction commits.
+
+    Raises:
+        UnAuthorizedException: Credential was rejected or already consumed.
+        Exception: Policy/SQL/signing errors propagate; no pair is returned.
+    """
+    pair = await command.refresh(data)
+    return APIResponse[TokenPairOutput, None].from_data(
+        TokenPairOutput.from_obj(pair)
+    )
+
+
+@router.delete("", response_model=APIResponse[None, None])
+async def delete_refresh_tokens(
+    data: TokenRefresh, command: FromDishka[ITokenLogoutCommand]
+) -> APIResponse[None, None]:
+    """Log out the supplied refresh credential without revoking other tokens.
+
+    Args:
+        data: Required refresh credential; no Bearer/sudo header is needed.
+        command: Request-local revocation owner using the native SQL UoW.
+
+    Returns:
+        Success after commit, including repeated revocation. Root null fields
+        are omitted by the native response envelope.
+
+    Raises:
+        UnAuthorizedException: The refresh credential fails verification.
+        Exception: Persistence/commit failures propagate without success.
+    """
+    await command.logout(data)
+    return APIResponse[None, None](success=True)

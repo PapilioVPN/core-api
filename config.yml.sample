@@ -1,0 +1,51 @@
+# Copy to config.yml and supply private deployment values.
+app:
+  settings: src.settings.config.CoreSettings
+  tables_path: infra.pg.tables
+  modules: [src.apps.core]
+run:
+  entrypoint: src.entrypoints.api:app
+  backend: uvicorn
+  host: 127.0.0.1
+  port: 8000
+  reload: false
+fastapi:
+  title: PapilioVPN Core API
+  description: The central management API for PapilioVPN
+  version: 0.0.0
+db:
+  dsn: postgresql+asyncpg://papiliovpn:change-me@127.0.0.1:5432/papiliovpn
+  test_dsn: postgresql+asyncpg://papiliovpn:change-me@127.0.0.1:5432/papiliovpn_test
+  pool_timeout: 5
+  pool_recycle: 1800
+  pool_size: 5
+  max_overflow: 5
+crypto:
+  encryption_key: replace-with-private-encryption-key
+  password_salt: null
+jwt:
+  algorithm: HS256
+  secret_key: null
+  api_secret: replace-with-private-api-secret
+  access_token_expire_minutes: 15
+  refresh_token_expire_minutes: 20160
+redis: null
+cli:
+  color: true
+  theme:
+    title: bold cyan
+    accent: cyan
+    success: bold green
+    error: bold red
+# Enable NATS for the optional Scheduler and Events processes.
+# nats:
+#   servers: [nats://127.0.0.1:4222]
+storage:
+  path: var/media
+  temp_dir: var/tmp
+  max_file_size: 5242880
+  allowed_extensions: []
+logging:
+  level: INFO
+  format: console
+  service: papiliovpn-core-api

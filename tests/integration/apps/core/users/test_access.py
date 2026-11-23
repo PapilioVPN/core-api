@@ -1,0 +1,235 @@
+"""Exercise native administrator operations against the migrated schema."""
+
+from os import getpid
+from typing import cast
+
+import pytest
+from dishka import AsyncContainer
+from fastapi import FastAPI
+from httpx import AsyncClient
+from papilio.errors.exceptions import ConflictException
+
+from src.apps.core.users.app.commands.owner import OwnerCommand
+from src.apps.core.users.domain.dtos.owner import OwnerCreate
+
+pytestmark = pytest.mark.integration
+
+
+async def test_core_access(app: FastAPI, client: AsyncClient) -> None:
+    container = cast(AsyncContainer, app.state.dishka_container)
+    owner = OwnerCreate(
+        first_name="Test",
+        last_name="Owner",
+        mobile="09120000001",
+        password="owner-password-for-test",
+    )
+    async with container() as scope:
+        await (await scope.get(OwnerCommand)).create(owner)
+    async with container() as scope:
+        with pytest.raises(ConflictException):
+            await (await scope.get(OwnerCommand)).create(owner)
+
+    assert (
+        await client.get("/admin/health/resources/memory")
+    ).status_code == 401
+    rejected = await client.post(
+        "/admin/auth/tokens",
+        json={"mobile": owner.mobile, "password": "incorrect-password"},
+    )
+    assert rejected.status_code == 401
+    invalid = await client.post(
+        "/admin/auth/tokens", json={"password": "hidden"}
+    )
+    assert invalid.status_code == 422
+    assert "hidden" not in invalid.text
+    login = await client.post(
+        "/admin/auth/tokens",
+        json={"mobile": owner.mobile, "password": owner.password},
+    )
+    assert login.status_code == 200, login.text
+    tokens = login.json()["data"]
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+    me = await client.get("/admin/account/me", headers=headers)
+    assert me.status_code == 200, me.text
+    profile = me.json()["data"]
+    assert profile["is_super_admin"] is True
+    assert profile["scopes"] == {"access": 15, "system": 1}
+    scope_list = await client.get("/admin/scopes", headers=headers)
+    system_scope = next(
+        item for item in scope_list.json()["data"] if item["key"] == "system"
+    )
+    reduced = await client.request(
+        "DELETE",
+        f"/admin/roles/{profile['role_id']}/scopes",
+        json={"scope_id": system_scope["id"]},
+        headers=headers,
+    )
+    assert reduced.status_code == 200, reduced.text
+    relogin = await client.post(
+        "/admin/auth/tokens",
+        json={"mobile": owner.mobile, "password": owner.password},
+    )
+    assert relogin.status_code == 200
+    tokens = relogin.json()["data"]
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+    me = await client.get("/admin/account/me", headers=headers)
+    assert me.json()["data"]["scopes"] == {"access": 15}
+    assert (
+        await client.delete(f"/admin/users/{profile['id']}", headers=headers)
+    ).status_code == 403
+
+    for path in (
+        "/admin/health/postgres",
+        "/admin/health/postgres/time",
+        "/admin/health/redis",
+        "/admin/health/resources/host",
+        "/admin/health/resources/runtime",
+        "/admin/health/resources/sessions",
+        "/admin/health/resources/cpu",
+        "/admin/health/resources/cpu/usage?sample_seconds=0.02",
+        "/admin/health/resources/cpu/cores/usage?sample_seconds=0.02",
+        "/admin/health/resources/memory",
+        "/admin/health/resources/swap",
+        "/admin/health/network/interfaces",
+        "/admin/health/network/io",
+        "/admin/health/network/io/total",
+        "/admin/health/storage/partitions",
+        "/admin/health/storage/usage?path=/",
+        "/admin/health/storage/io",
+        "/admin/health/storage/io/total",
+        "/admin/health/processes?limit=2",
+        "/admin/health/processes/count",
+        f"/admin/health/processes/{getpid()}",
+        "/admin/health/sensors/temperatures",
+        "/admin/health/sensors/fans",
+        "/admin/health/sensors/battery",
+    ):
+        response = await client.get(path, headers=headers)
+        assert response.status_code == 200, (path, response.text)
+        assert response.json()["data"]["duration_ms"] >= 0
+
+    new_scope = await client.post(
+        "/admin/scopes",
+        json={"key": "reports", "title": "Reports"},
+        headers=headers,
+    )
+    assert new_scope.status_code == 201, new_scope.text
+    scope_id = new_scope.json()["data"]["id"]
+    new_role = await client.post(
+        "/admin/roles",
+        json={"key": "viewer", "title": "Viewer"},
+        headers=headers,
+    )
+    assert new_role.status_code == 201, new_role.text
+    role_id = new_role.json()["data"]["id"]
+
+    grants = f"/admin/roles/{role_id}/scopes"
+    assigned = await client.post(
+        grants,
+        json={"scope_id": scope_id, "permissions": 1},
+        headers=headers,
+    )
+    assert assigned.status_code == 201, assigned.text
+    changed = await client.patch(
+        grants,
+        json={"scope_id": scope_id, "permissions": 0},
+        headers=headers,
+    )
+    assert changed.status_code == 200, changed.text
+    assert changed.json()["data"]["permissions"] == 0
+    batch = await client.patch(
+        f"{grants}/batch",
+        json={"items": [{"scope_id": scope_id, "permissions": 1}]},
+        headers=headers,
+    )
+    assert batch.status_code == 200, batch.text
+    assert batch.json()["data"][0]["permissions"] == 1
+
+    user = await client.post(
+        "/admin/users",
+        json={
+            "first_name": "Test",
+            "last_name": "Viewer",
+            "mobile": "09120000002",
+            "password": "viewer-password-for-test",
+            "role_id": role_id,
+            "is_super_admin": True,
+        },
+        headers=headers,
+    )
+    assert user.status_code == 201, user.text
+    assert "hashed_password" not in user.json()["data"]
+    assert user.json()["data"]["is_super_admin"] is False
+    user_id = user.json()["data"]["id"]
+    updated = await client.patch(
+        f"/admin/users/{user_id}",
+        json={"first_name": "Other"},
+        headers=headers,
+    )
+    assert updated.status_code == 200, updated.text
+    found = await client.get("/admin/users?q=09120000002", headers=headers)
+    assert found.json()["data"][0]["first_name"] == "Other"
+
+    viewer = await client.post(
+        "/admin/auth/tokens",
+        json={"mobile": "09120000002", "password": "viewer-password-for-test"},
+    )
+    assert viewer.status_code == 200, viewer.text
+    viewer_headers = {
+        "Authorization": f"Bearer {viewer.json()['data']['access_token']}"
+    }
+    denied = await client.get(
+        "/admin/health/resources/memory", headers=viewer_headers
+    )
+    assert denied.status_code == 403
+
+    password_url = "/admin/account/me/password"
+    new_password = "updated-viewer-password"
+    bad_password = await client.patch(
+        password_url,
+        json={
+            "current_password": "incorrect-password",
+            "password": new_password,
+        },
+        headers=viewer_headers,
+    )
+    assert bad_password.status_code == 401
+    changed_password = await client.patch(
+        password_url,
+        json={
+            "current_password": "viewer-password-for-test",
+            "password": new_password,
+        },
+        headers=viewer_headers,
+    )
+    assert changed_password.status_code == 200, changed_password.text
+    changed_login = await client.post(
+        "/admin/auth/tokens",
+        json={"mobile": "09120000002", "password": new_password},
+    )
+    assert changed_login.status_code == 200
+
+    refresh_url = "/admin/auth/refresh-tokens"
+    refresh = await client.post(
+        refresh_url,
+        json={"refresh_token": tokens["refresh_token"]},
+    )
+    assert refresh.status_code == 200, refresh.text
+    replay = await client.post(
+        refresh_url,
+        json={"refresh_token": tokens["refresh_token"]},
+    )
+    assert replay.status_code == 401
+    fresh = {"refresh_token": refresh.json()["data"]["refresh_token"]}
+    assert (
+        await client.request("DELETE", refresh_url, json=fresh)
+    ).status_code == 200
+    assert (await client.post(refresh_url, json=fresh)).status_code == 401
+
+    removed = await client.delete(f"/admin/users/{user_id}", headers=headers)
+    assert removed.status_code == 200, removed.text
+    removed = await client.delete(f"/admin/roles/{role_id}", headers=headers)
+    assert removed.status_code == 200, removed.text
+    removed = await client.delete(f"/admin/scopes/{scope_id}", headers=headers)
+    assert removed.status_code == 200, removed.text

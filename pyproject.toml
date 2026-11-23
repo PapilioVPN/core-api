@@ -1,0 +1,61 @@
+[build-system]
+requires = ["hatchling==1.33.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "papiliovpn-core-api"
+version = "0.0.0"
+description = "The central management API for PapilioVPN"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "papilio[server,postgresql,redis,auth,passwords] @ https://codeload.github.com/amupouya/papilio/tar.gz/984bc18d789fdae37e35cd015a54d38175155c62",
+    "psutil==7.2.2",
+]
+
+[project.scripts]
+papiliovpn-core = "src.entrypoints.cli:app"
+
+[project.optional-dependencies]
+tasks = [
+    "papilio-tasks[events-nats,scheduler-nats] @ https://codeload.github.com/amupouya/papilio-tasks/tar.gz/5b3861bc1b2b6794c1030534c9d7eb92572225d5",
+]
+dev = [
+    "papilio[test]",
+    "pyright==1.1.414",
+    "ruff==0.17.3",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "migrations", "alembic.ini", "README.md", "config.yml.sample", "pyproject.toml"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+    "unit: controlled, in-process checks",
+    "integration: checks using native runtime dependencies",
+    "api: HTTP API checks",
+]
+
+[tool.ruff]
+line-length = 79
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.13"
+typeCheckingMode = "standard"
+reportUntypedFunctionDecorator = "error"
+venvPath = "."
+venv = ".venv"
