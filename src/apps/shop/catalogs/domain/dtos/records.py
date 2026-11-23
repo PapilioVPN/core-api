@@ -27,10 +27,18 @@ class CatalogCreate(BaseDTO):
     duration: DurationRef = None
 
 
-class CatalogUpdate(BaseDTO):
+class CatalogProfile(BaseDTO):
     title: MStrType | MISSING = MISSING
     price: Price | MISSING = MISSING
     priority: IntType | MISSING = MISSING
     status: CatalogStatus | MISSING = MISSING
+
+
+class CatalogUpdate(CatalogProfile):
     volume: VolumeRef | MISSING = MISSING
     duration: DurationRef | MISSING = MISSING
+
+
+class CatalogPatch(CatalogProfile):
+    volume_id: int | None | MISSING = MISSING
+    duration_id: int | None | MISSING = MISSING

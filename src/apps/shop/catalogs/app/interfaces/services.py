@@ -3,17 +3,14 @@
 from collections.abc import Sequence
 from typing import Protocol
 
-from src.apps.shop.catalogs.domain.dtos.records import (
-    CatalogCreate,
-    CatalogUpdate,
-)
+from src.apps.shop.catalogs.domain.dtos.records import CatalogPatch
 from src.apps.shop.catalogs.domain.models.records import CatalogModel
 
 
 class ICatalogCRUD(Protocol):
-    async def create(self, data: CatalogCreate) -> CatalogModel: ...
+    async def create(self, data: CatalogModel) -> CatalogModel: ...
 
-    async def update(self, id: int, data: CatalogUpdate) -> CatalogModel: ...
+    async def update(self, id: int, data: CatalogPatch) -> CatalogModel: ...
 
     async def remove(self, id: int) -> CatalogModel: ...
 

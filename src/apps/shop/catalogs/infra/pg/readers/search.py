@@ -1,52 +1,31 @@
-"""Focused PostgreSQL reads for catalog detail and panel search."""
+"""Read filtered catalog pages and text-scoped options from PostgreSQL."""
 
 from collections import Counter
-from collections.abc import Sequence
 
 from papilio.infra.db.repositories.backends.postgresql import PGReader
 from papilio.infra.db.tools.read import fetch_page
 from papilio.schemas.results import PagedType
-from sqlmodel import col
 
 from src.apps.shop.catalogs.domain.dtos.search import CatalogSearch
 from src.apps.shop.catalogs.domain.enums.records import CatalogStatus
 from src.apps.shop.catalogs.domain.models.records import CatalogModel
-from src.apps.shop.catalogs.domain.results.details import CatalogDetail
 from src.apps.shop.catalogs.domain.results.filters import (
     CatalogOptions,
     Choice,
 )
-from src.apps.shop.catalogs.infra.pg.sql.details import details
 from src.apps.shop.catalogs.infra.pg.sql.search import facets, search
-from src.apps.shop.catalogs.infra.pg.tables import CatalogTable
 
 
-class CatalogReader(PGReader):
-    async def get_by_id(self, id: int) -> CatalogDetail | None:
-        """Read a catalog and its selected volume and duration in one query.
-
-        Args:
-            id: Stored catalog identity.
-
-        Returns:
-            The catalog and its actual referenced definitions, or None.
-        """
-        stmt = details().where(col(CatalogTable.id) == id)
-        result = await self.uow.execute(stmt)
-        row = result.tuples().one_or_none()
-        return CatalogDetail(*row) if row is not None else None
-
-    async def get_by_ids(self, ids: Sequence[int]) -> Sequence[CatalogDetail]:
-        """Load all existing details for a bounded ID set in one query."""
-        stmt = details().where(col(CatalogTable.id).in_(ids))
-        result = await self.uow.execute(stmt)
-        return [CatalogDetail(*row) for row in result.tuples()]
-
-    async def list(self, data: CatalogSearch) -> PagedType[CatalogModel]:
+class CatalogSearchReader(PGReader):
+    async def search(
+        self, data: CatalogSearch, *, limit: int, offset: int
+    ) -> PagedType[CatalogModel]:
         """Read a filtered page for the administrator panel.
 
         Args:
-            data: Validated filters, sort selection and page bounds.
+            data: Validated search predicates and sort selection.
+            limit: Maximum number of offers to retrieve.
+            offset: Number of matching offers to skip.
 
         Returns:
             Matching catalogs and their total before pagination.
@@ -54,8 +33,8 @@ class CatalogReader(PGReader):
         page = await fetch_page(
             self.uow,
             search(data),
-            limit=data.per_page,
-            offset=(data.page - 1) * data.per_page,
+            limit=limit,
+            offset=offset,
         )
         return page
 

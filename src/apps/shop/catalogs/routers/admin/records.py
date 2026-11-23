@@ -5,20 +5,21 @@ from typing import Annotated
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Depends, Query
 from papilio.api.responses.envelope import APIResponse
-from papilio.api.responses.meta import PagerMeta, SortMeta
 from papilio.schemas.outputs import EnumOut
 from papilio.types.aliases import IdType, ListIdType, PerPageType
 
 from src.apps.core.auth.routers.dependencies.authorization import require_admin
-from src.apps.shop.catalogs.app.interfaces.queries import ICatalogQuery
+from src.apps.shop.catalogs.app.interfaces.commands import ICatalogCommand
+from src.apps.shop.catalogs.app.interfaces.queries import (
+    ICatalogFormQuery,
+    ICatalogQuery,
+)
 from src.apps.shop.catalogs.app.interfaces.services import ICatalogCRUD
 from src.apps.shop.catalogs.domain.dtos.records import (
     CatalogCreate,
     CatalogUpdate,
 )
-from src.apps.shop.catalogs.domain.dtos.search import CatalogSearch
 from src.apps.shop.catalogs.domain.enums.records import (
-    CatalogSort,
     CatalogStatus,
 )
 from src.apps.shop.catalogs.routers.schemas.form import (
@@ -29,7 +30,6 @@ from src.apps.shop.catalogs.routers.schemas.records import (
     CatalogDetailOutput,
     CatalogOutput,
 )
-from src.apps.shop.catalogs.routers.schemas.search import CatalogMeta, filters
 from src.apps.shop.durations.routers.schemas.records import DurationOutput
 from src.apps.shop.services.routers.schemas.records import ServiceOutput
 from src.apps.shop.volumes.routers.schemas.records import VolumeOutput
@@ -43,36 +43,16 @@ router = APIRouter(
 
 @router.post("", status_code=201)
 async def post_catalog(
-    data: CatalogCreate, crud: FromDishka[ICatalogCRUD]
+    data: CatalogCreate, command: FromDishka[ICatalogCommand]
 ) -> APIResponse[CatalogOutput, None]:
-    catalog = await crud.create(data)
+    catalog = await command.create(data)
     output = CatalogOutput.from_obj(catalog)
     return APIResponse[CatalogOutput, None].from_data(output)
 
 
-@router.get("")
-async def get_catalogs(
-    data: Annotated[CatalogSearch, Query()],
-    query: FromDishka[ICatalogQuery],
-) -> APIResponse[CatalogOutput, CatalogMeta]:
-    page = await query.list(data)
-    options = await query.options(data)
-    return APIResponse[CatalogOutput, CatalogMeta](
-        success=True,
-        data=CatalogOutput.from_objs(page.items),
-        meta=CatalogMeta(
-            pager=PagerMeta.from_total(
-                data.page, data.per_page, page.total_items
-            ),
-            filters=filters(options),
-            sorts=SortMeta.of(CatalogSort),
-        ),
-    )
-
-
 @router.get("/form")
 async def get_catalog_form(
-    query: FromDishka[ICatalogQuery], per_page: PerPageType = 20
+    query: FromDishka[ICatalogFormQuery], per_page: PerPageType = 20
 ) -> APIResponse[CatalogFormOutput, None]:
     form = await query.form(per_page)
     output = CatalogFormOutput(
@@ -106,9 +86,9 @@ async def get_catalog(
 
 @router.patch("/{id:int}")
 async def patch_catalog(
-    id: IdType, data: CatalogUpdate, crud: FromDishka[ICatalogCRUD]
+    id: IdType, data: CatalogUpdate, command: FromDishka[ICatalogCommand]
 ) -> APIResponse[CatalogOutput, None]:
-    catalog = await crud.update(id, data)
+    catalog = await command.update(id, data)
     output = CatalogOutput.from_obj(catalog)
     return APIResponse[CatalogOutput, None].from_data(output)
 

@@ -75,16 +75,25 @@ async def test_catalogs(app: FastAPI, client: AsyncClient) -> None:
     first = created.json()["data"]
     assert first["volume_id"] is None and first["duration_id"] is None
     path = f"{url}/{first['id']}"
+    empty = await client.patch(path, json={}, headers=headers)
+    assert empty.status_code == 400, empty.text
     low = await client.patch(path, json={"price": 9999}, headers=headers)
     assert low.status_code == 422, low.text
 
     volume = {"size_bytes": 30 * 1024**3}
     duration = {"days": 60}
     updated = await client.patch(
-        path, json={"volume": volume, "duration": duration}, headers=headers
+        path,
+        json={
+            "title": "Starter Updated",
+            "volume": volume,
+            "duration": duration,
+        },
+        headers=headers,
     )
     assert updated.status_code == 200, updated.text
     first = updated.json()["data"]
+    assert first["title"] == "Starter Updated"
     assert first["volume_id"] and first["duration_id"]
 
     upper_price = 2**63 - 1

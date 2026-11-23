@@ -1,0 +1,1 @@
+"""Coordinated catalog operations."""

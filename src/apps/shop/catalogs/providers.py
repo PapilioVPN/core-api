@@ -1,12 +1,22 @@
-"""Bind catalog CRUD, queries and cache in native scopes."""
+"""Bind catalog services, commands, queries and cache."""
 
 from dishka import Provider, Scope, provide
 
-from src.apps.shop.catalogs.app.interfaces.queries import ICatalogQuery
+from src.apps.shop.catalogs.app.commands.records import CatalogCommand
+from src.apps.shop.catalogs.app.interfaces.cache import ICatalogCache
+from src.apps.shop.catalogs.app.interfaces.commands import ICatalogCommand
+from src.apps.shop.catalogs.app.interfaces.queries import (
+    ICatalogFormQuery,
+    ICatalogQuery,
+    ICatalogSearchQuery,
+)
 from src.apps.shop.catalogs.app.interfaces.services import ICatalogCRUD
-from src.apps.shop.catalogs.app.queries.panel import CatalogQuery
+from src.apps.shop.catalogs.app.queries.form import CatalogFormQuery
+from src.apps.shop.catalogs.app.queries.records import CatalogQuery
+from src.apps.shop.catalogs.app.queries.search import CatalogSearchQuery
 from src.apps.shop.catalogs.app.services.crud import CatalogCRUD
-from src.apps.shop.catalogs.infra.pg.readers.panel import CatalogReader
+from src.apps.shop.catalogs.infra.pg.readers.details import CatalogReader
+from src.apps.shop.catalogs.infra.pg.readers.search import CatalogSearchReader
 from src.apps.shop.catalogs.infra.pg.repositories.crud import (
     CatalogRepository,
 )
@@ -20,6 +30,10 @@ class CatalogProvider(Provider):
 
     repo = provide(CatalogRepository)
     reader = provide(CatalogReader)
-    cache = provide(CatalogCache, scope=Scope.APP)
+    search_reader = provide(CatalogSearchReader)
+    cache = provide(CatalogCache, scope=Scope.APP, provides=ICatalogCache)
     crud = provide(CatalogCRUD, provides=ICatalogCRUD)
+    command = provide(CatalogCommand, provides=ICatalogCommand)
     query = provide(CatalogQuery, provides=ICatalogQuery)
+    search = provide(CatalogSearchQuery, provides=ICatalogSearchQuery)
+    form = provide(CatalogFormQuery, provides=ICatalogFormQuery)
