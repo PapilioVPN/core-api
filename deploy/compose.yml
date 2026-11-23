@@ -5,7 +5,8 @@ x-core: &core
   environment:
     PAPILIO_CONFIG: /app/config.yml
   volumes:
-    - type: bind
+    - &config
+      type: bind
       source: ${CORE_STATE:?Run ./install.sh runtime}/config.yml
       target: /app/config.yml
       read_only: true
@@ -53,6 +54,9 @@ services:
 
   api:
     <<: *core
+    volumes:
+      - *config
+      - media:/app/var/media
     ports:
       - "${CORE_BIND:-127.0.0.1}:${CORE_PORT:-8000}:8000"
     depends_on:
@@ -90,5 +94,6 @@ secrets:
     file: ${CORE_STATE:?Run ./install.sh runtime}/db.password
 
 volumes:
+  media:
   postgres:
   nats:

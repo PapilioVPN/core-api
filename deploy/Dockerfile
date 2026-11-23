@@ -14,6 +14,7 @@ COPY migrations ./migrations
 COPY scripts/seeders ./scripts/seeders
 COPY alembic.ini config.yml.sample ./
 COPY deploy/configure.py deploy/healthcheck.py ./
+RUN install -d -m 0700 -o 10001 -g 10001 /app/var/media /app/var/tmp
 USER 10001:10001
 CMD ["papilio", "run"]
 HEALTHCHECK --interval=5s --timeout=4s --start-period=5s --retries=12 CMD ["python", "/app/healthcheck.py"]
