@@ -1,20 +1,19 @@
-"""Store source-linked payments and archive the previous payment records.
+"""Store source-linked payments.
 
 Revision ID: 0017
-Revises: 0016
+Revises: 0014
 """
 
 import sqlalchemy as sa
 from alembic import op
 
 revision = "0017"
-down_revision = "0016"
+down_revision = "0014"
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
-    op.rename_table("tbl_payments", "tbl_payments_legacy")
     op.create_table(
         "tbl_payments",
         sa.Column(
@@ -45,11 +44,6 @@ def upgrade() -> None:
             ["customer_id"], ["tbl_customers.id"], ondelete="RESTRICT"
         ),
     )
-    op.execute("""
-        SELECT setval(pg_get_serial_sequence('tbl_payments', 'id'), legacy.id)
-        FROM (SELECT max(id) AS id FROM tbl_payments_legacy) AS legacy
-        WHERE legacy.id IS NOT NULL
-    """)
     op.create_index(
         "ix_tbl_payments_customer", "tbl_payments", ["customer_id", "id"]
     )
@@ -61,4 +55,3 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_table("tbl_payments")
-    op.rename_table("tbl_payments_legacy", "tbl_payments")
