@@ -1,7 +1,7 @@
 """Papilio settings with the Core discovery root."""
 
 from papilio.core.config import AppConfig, Settings
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.settings.cli import CLIConfig
 
@@ -29,12 +29,3 @@ class CoreSettings(Settings):
     nats: NatsConfig | None = None
     scheduler: SchedulerConfig = Field(default_factory=SchedulerConfig)
     cli: CLIConfig = Field(default_factory=CLIConfig)
-
-    @field_validator("app")
-    @classmethod
-    def remove_retired_catalog(cls, app: AppConfig) -> AppConfig:
-        """Ignore the retired root in existing installations' settings."""
-        if "src.apps.catalog" in app.modules:
-            modules = [m for m in app.modules if m != "src.apps.catalog"]
-            app = app.model_copy(update={"modules": modules})
-        return app
