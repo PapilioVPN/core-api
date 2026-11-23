@@ -15,23 +15,23 @@ class IAdminIdentityService(Protocol):
             token: Untrusted encoded access token; never log its value.
 
         Returns:
-            Verified internal user/role IDs and payload scope masks, including
-            zero masks. Expected audience is administrator-owned; this does not
-            check account/role availability or evaluate scope/sudo permissions.
+            Verified account and session IDs with the current role and scopes.
 
         Raises:
-            UnAuthorizedException: Access verification fails or the verified
-                subject or role/scope claim shape is invalid.
+            UnAuthorizedException: Token, session or account is unavailable.
         """
         ...
 
 
 class IPasswordLoginService(Protocol):
-    async def login(self, data: PasswordLogin) -> TokenPair:
+    async def login(
+        self, data: PasswordLogin, *, user_agent: str | None
+    ) -> TokenPair:
         """Authenticate an active administrator and issue credentials.
 
         Args:
             data: Mobile and raw password supplied by the caller.
+            user_agent: Optional client label recorded with the session.
 
         Returns:
             Access and refresh credentials with actual UTC-aware expirations.

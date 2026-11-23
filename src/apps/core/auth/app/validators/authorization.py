@@ -9,10 +9,10 @@ from src.apps.core.auth.domain.results.identity import AdminIdentity
 def validate_admin_permission(
     identity: AdminIdentity, scope: str, permission: AdminPermission
 ) -> None:
-    """Require every requested bit in the exact access-token scope.
+    """Require every requested bit in the administrator's current scope.
 
     Args:
-        identity: Verified administrator permission snapshot.
+        identity: Administrator resolved against current account and grants.
         scope: Exact group key; another scope grants nothing here.
         permission: Required operation bits; zero never grants access.
 
@@ -20,7 +20,9 @@ def validate_admin_permission(
         None when permitted, otherwise a native forbidden error.
     """
     mask = identity.scopes.get(scope, 0)
-    if not permission or mask & permission != permission:
+    if not permission or (
+        not identity.is_super_admin and mask & permission != permission
+    ):
         raise ForbiddenException(
             message="Insufficient administrator permissions",
             message_code="admin_permission_required",

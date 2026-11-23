@@ -1,43 +1,30 @@
 """Native account-ID adaptation after JWT protocol verification."""
 
+from uuid import UUID
+
 from papilio.core import resources
 from papilio.errors.exceptions import UnAuthorizedException
 from papilio.types.aliases import IdType
 from pydantic import TypeAdapter, ValidationError
 
-from src.apps.core.auth.domain.dtos.identity import AdminClaims
-from src.apps.core.auth.domain.results.identity import AdminIdentity
 from src.apps.core.tokens.domain.models.tokens import VerifiedToken
 
 USER_ID_ADAPTER: TypeAdapter[int] = TypeAdapter(IdType)
 
 
-def parse_admin_identity(verified: VerifiedToken) -> AdminIdentity:
-    """Adapt the verified subject and administrator claims to a typed identity.
-
-    Args:
-        verified: Token already checked for admin audience and access kind.
-
-    Returns:
-        Internal user/role IDs and the scope masks captured in the payload.
-
-    Raises:
-        UnAuthorizedException: The subject or owner claim shape is invalid.
-    """
-    user_id = parse_admin_subject(verified)
-    try:
-        claims = AdminClaims.model_validate(
-            verified.identity.claims, strict=True
-        )
-    except ValidationError as exc:
-        raise UnAuthorizedException(
-            message="Invalid authentication token",
-            message_code=resources.INVALID_TOKEN,
-        ) from exc
-    result = AdminIdentity(
-        user_id=user_id, role_id=claims.role_id, scopes=claims.scopes
+def session_unavailable() -> UnAuthorizedException:
+    """Use one authentication error for missing or closed sessions."""
+    return UnAuthorizedException(
+        message="Session is unavailable", message_code="session_unavailable"
     )
-    return result
+
+
+def require_session_id(verified: VerifiedToken) -> UUID:
+    """Require a session-bound credential from the administrator audience."""
+    session_id = verified.identity.session_id
+    if session_id is None:
+        raise session_unavailable()
+    return session_id
 
 
 def parse_admin_subject(verified: VerifiedToken) -> int:

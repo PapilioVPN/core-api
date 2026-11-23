@@ -29,7 +29,7 @@ async def current_admin(
         service: Injected administrator access-token verification contract.
 
     Returns:
-        Verified account identity with the role/scope payload snapshot.
+        Verified account identity with active session and current grants.
 
     Raises:
         UnAuthorizedException: Bearer credentials are missing or invalid.

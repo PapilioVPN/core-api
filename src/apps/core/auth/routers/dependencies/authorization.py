@@ -1,13 +1,12 @@
-"""Group-owned native HTTP dependencies for administrator operations."""
+"""Native HTTP permissions for administrator operations."""
 
 from collections.abc import Callable, Coroutine
 from typing import Annotated, Any
 
-from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import Depends, Request
 
-from src.apps.core.auth.app.interfaces.authorization import (
-    IAdminAuthorizationService,
+from src.apps.core.auth.app.validators.authorization import (
+    validate_admin_permission,
 )
 from src.apps.core.auth.domain.enums.permissions import AdminPermission
 from src.apps.core.auth.domain.results.identity import AdminIdentity
@@ -28,21 +27,18 @@ def require_admin(
         Native injectable dependency; unknown methods require no valid grant.
     """
 
-    @inject
     async def authorize(
         request: Request,
         identity: Annotated[AdminIdentity, Depends(current_admin)],
-        service: FromDishka[IAdminAuthorizationService],
     ) -> AdminIdentity:
         """Verify current eligibility and the method's operation mask.
 
         Args:
             request: Native HTTP request; client body cannot choose scope/bits.
-            identity: Verified access credential and permission snapshot.
-            service: Request-scoped authorization owner.
+            identity: Verified session and current permissions.
 
         Returns:
-            Authorized administrator identity, preserving its token scopes.
+            Authorized administrator identity and current scopes.
         """
         permission = {
             "GET": AdminPermission.READ,
@@ -52,7 +48,7 @@ def require_admin(
             "PATCH": AdminPermission.UPDATE,
             "DELETE": AdminPermission.DELETE,
         }.get(request.method, AdminPermission(0))
-        result = await service.check(identity, scope, permission)
-        return result
+        validate_admin_permission(identity, scope, permission)
+        return identity
 
     return authorize

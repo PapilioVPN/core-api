@@ -16,7 +16,7 @@ class ITokenRefreshCommand(Protocol):
         Returns:
             New access/refresh pair after current account/role/policy reads
             and consumption of the old refresh in one native transaction.
-            No sudo credential is issued or extended.
+            The new pair retains the same session identity.
 
         Raises:
             UnAuthorizedException: Token is invalid/reused or account/role
@@ -27,14 +27,13 @@ class ITokenRefreshCommand(Protocol):
 
 class ITokenLogoutCommand(Protocol):
     async def logout(self, data: TokenRefresh) -> None:
-        """Revoke the supplied administrator refresh in a native transaction.
+        """Close the session of the supplied unused refresh.
 
         Args:
             data: Private refresh credential; no access or sudo is required.
 
         Returns:
-            None. Repeated revocation succeeds without changing history;
-            other credentials retain their own validity.
+            None. Repeated revocation leaves other sessions unchanged.
 
         Raises:
             UnAuthorizedException: Credential verification fails.

@@ -27,26 +27,26 @@ class RefreshUseService:
         self.repo = repo
 
     @transactional
-    async def revoke(self, token: VerifiedToken) -> None:
+    async def revoke(self, token: VerifiedToken) -> bool:
         """Invalidate one verified refresh without changing existing history.
 
         Args:
             token: Verified refresh identity and its original expiration.
 
         Returns:
-            None after inserting consumption or preserving an existing record.
-            Raw credentials are never stored. Native outer ownership applies.
+            True when newly revoked, or False when previously consumed.
 
         Raises:
             Exception: SQL/commit failures and cancellation propagate.
         """
-        await self.repo.insert_if_absent(
+        inserted = await self.repo.insert_if_absent(
             RefreshUseModel(
                 audience=token.identity.audience,
                 token_id=token.token_id,
                 expires_at=token.expires_at,
             )
         )
+        return inserted
 
     @transactional
     async def remove_expired(self, *, limit: int) -> int:
@@ -81,11 +81,5 @@ class RefreshUseService:
             UnAuthorizedException: A committed consumption already exists.
             Exception: SQL/commit failures propagate; rollback preserves reuse.
         """
-        inserted = await self.repo.insert_if_absent(
-            RefreshUseModel(
-                audience=token.identity.audience,
-                token_id=token.token_id,
-                expires_at=token.expires_at,
-            )
-        )
+        inserted = await self.revoke(token)
         validate_refresh_consumption(inserted)

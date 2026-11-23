@@ -32,7 +32,7 @@ async def get_me(
     identity: Annotated[AdminIdentity, Depends(current_admin)],
     service: FromDishka[IUserProfileService],
 ) -> APIResponse[UserProfileOutput, None]:
-    """Read the authenticated account with its access-token permissions.
+    """Read the authenticated account with its current permissions.
 
     Args:
         identity: Verified bearer identity supplied by authentication.

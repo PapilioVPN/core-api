@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from uuid import UUID
 
 from pydantic import JsonValue
 
@@ -20,6 +21,7 @@ class TokenIdentity:
     subject: str
     audience: str
     claims: dict[str, JsonValue] = field(default_factory=dict, repr=False)
+    session_id: UUID | None = None
 
 
 @dataclass(frozen=True, slots=True)

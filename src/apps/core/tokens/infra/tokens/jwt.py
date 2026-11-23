@@ -38,6 +38,8 @@ class JWTCodec:
         }
         if kind == TokenType.ACCESS:
             claims["data"] = identity.claims
+        if identity.session_id is not None:
+            claims["sid"] = str(identity.session_id)
         token = create_token(
             identity.subject,
             self.config.secret_key,
@@ -68,7 +70,12 @@ class JWTCodec:
             ):
                 raise ValueError("Invalid token claims")
             result = VerifiedToken(
-                identity=TokenIdentity(payload.sub, payload.aud, payload.data),
+                identity=TokenIdentity(
+                    subject=payload.sub,
+                    audience=payload.aud,
+                    claims=payload.data,
+                    session_id=payload.sid,
+                ),
                 token_id=payload.jti,
                 issued_at=datetime.fromtimestamp(payload.iat, UTC),
                 expires_at=datetime.fromtimestamp(payload.exp, UTC),

@@ -6,7 +6,6 @@ from papilio.errors.exceptions import (
     ValidationException,
 )
 
-from src.apps.core.roles.domain.models.records import RoleModel
 from src.apps.core.users.domain.dtos.records import UserUpdate
 from src.apps.core.users.domain.models.records import UserModel
 
@@ -29,28 +28,6 @@ def require_active_user(user: UserModel | None) -> UserModel:
             message_code="account_unavailable",
         )
     return user
-
-
-def require_active_role(
-    role: RoleModel | None, *, super_admin: bool = False
-) -> RoleModel:
-    """Require an available assigned role for self-profile access.
-
-    Args:
-        role: Authoritative current role, or None when missing.
-
-    Returns:
-        The unchanged active role.
-
-    Raises:
-        UnAuthorizedException: The assigned role is absent or inactive.
-    """
-    if role is None or (not role.is_active and not super_admin):
-        raise UnAuthorizedException(
-            message="Account is unavailable",
-            message_code="account_unavailable",
-        )
-    return role
 
 
 def validate_self_account(user_id: int, target_id: int) -> None:

@@ -44,7 +44,7 @@ async def post_refresh_tokens(
 async def delete_refresh_tokens(
     data: TokenRefresh, command: FromDishka[ITokenLogoutCommand]
 ) -> APIResponse[None, None]:
-    """Log out the supplied refresh credential without revoking other tokens.
+    """Close the session of the supplied unused refresh credential.
 
     Args:
         data: Required refresh credential; no Bearer/sudo header is needed.

@@ -6,15 +6,14 @@ from src.apps.core.tokens.domain.models.tokens import VerifiedToken
 
 
 class IRefreshUseService(Protocol):
-    async def revoke(self, token: VerifiedToken) -> None:
+    async def revoke(self, token: VerifiedToken) -> bool:
         """Ensure a verified refresh identity can no longer be consumed.
 
         Args:
             token: Refresh metadata verified by the owning token service.
 
         Returns:
-            None. An existing consumption is unchanged and counts as success.
-            Native outer transaction ownership applies.
+            True when newly revoked, or False when previously consumed.
         """
         ...
 
