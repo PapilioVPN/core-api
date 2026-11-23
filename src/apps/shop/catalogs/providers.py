@@ -5,6 +5,10 @@ from dishka import Provider, Scope, provide
 from src.apps.shop.catalogs.app.commands.records import CatalogCommand
 from src.apps.shop.catalogs.app.interfaces.cache import ICatalogCache
 from src.apps.shop.catalogs.app.interfaces.commands import ICatalogCommand
+from src.apps.shop.catalogs.app.interfaces.public import (
+    IPublicCatalogQuery,
+    IServiceCatalogQuery,
+)
 from src.apps.shop.catalogs.app.interfaces.queries import (
     ICatalogFormQuery,
     ICatalogQuery,
@@ -12,11 +16,17 @@ from src.apps.shop.catalogs.app.interfaces.queries import (
 )
 from src.apps.shop.catalogs.app.interfaces.services import ICatalogCRUD
 from src.apps.shop.catalogs.app.queries.form import CatalogFormQuery
+from src.apps.shop.catalogs.app.queries.public import PublicCatalogQuery
 from src.apps.shop.catalogs.app.queries.records import CatalogQuery
 from src.apps.shop.catalogs.app.queries.search import CatalogSearchQuery
+from src.apps.shop.catalogs.app.queries.service import ServiceCatalogQuery
 from src.apps.shop.catalogs.app.services.crud import CatalogCRUD
 from src.apps.shop.catalogs.infra.pg.readers.details import CatalogReader
+from src.apps.shop.catalogs.infra.pg.readers.public import PublicCatalogReader
 from src.apps.shop.catalogs.infra.pg.readers.search import CatalogSearchReader
+from src.apps.shop.catalogs.infra.pg.readers.service import (
+    ServiceCatalogReader,
+)
 from src.apps.shop.catalogs.infra.pg.repositories.crud import (
     CatalogRepository,
 )
@@ -37,3 +47,7 @@ class CatalogProvider(Provider):
     query = provide(CatalogQuery, provides=ICatalogQuery)
     search = provide(CatalogSearchQuery, provides=ICatalogSearchQuery)
     form = provide(CatalogFormQuery, provides=ICatalogFormQuery)
+    public_reader = provide(PublicCatalogReader)
+    public = provide(PublicCatalogQuery, provides=IPublicCatalogQuery)
+    service_reader = provide(ServiceCatalogReader)
+    service = provide(ServiceCatalogQuery, provides=IServiceCatalogQuery)
