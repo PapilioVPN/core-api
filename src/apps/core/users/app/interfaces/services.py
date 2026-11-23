@@ -14,8 +14,8 @@ from src.apps.core.users.domain.dtos.records import (
     UserUpdate,
 )
 from src.apps.core.users.domain.models.records import UserModel
+from src.apps.core.users.domain.results.access import UserAccess
 from src.apps.core.users.domain.results.profile import UserProfileResult
-from src.apps.core.users.domain.results.records import UserAccess
 
 
 class IUserService(Protocol):

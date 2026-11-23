@@ -1,6 +1,6 @@
 """Explicit adaptation of loaded role rows into materialized domain results."""
 
-from src.apps.core.roles.domain.results.records import (
+from src.apps.core.roles.domain.results.details import (
     RoleDetailsResult,
     ScopePermissionResult,
 )

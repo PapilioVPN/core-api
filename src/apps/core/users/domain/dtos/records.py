@@ -38,13 +38,6 @@ class UserRoleUpdate(BaseDTO):
     role_id: IdType
 
 
-class UserPasswordUpdate(BaseDTO):
-    """Raw password input, validated before command-owned hashing."""
-
-    current_password: PasswordType = Field(repr=False)
-    password: PasswordType = Field(repr=False)
-
-
 class UserBatchRead(BaseDTO):
     ids: list[IdType] = Field(min_length=1, max_length=100)
 

@@ -3,10 +3,10 @@
 from typing import Protocol
 
 from src.apps.core.auth.domain.results.identity import AdminIdentity
+from src.apps.core.users.domain.dtos.password import UserPasswordUpdate
 from src.apps.core.users.domain.dtos.profile import UserProfileUpdate
 from src.apps.core.users.domain.dtos.records import (
     UserCreate,
-    UserPasswordUpdate,
     UserRoleUpdate,
 )
 from src.apps.core.users.domain.models.records import UserModel

@@ -9,7 +9,7 @@ from sqlalchemy import func, or_, select, update
 from sqlmodel import col
 
 from src.apps.core.users.domain.models.records import UserModel
-from src.apps.core.users.domain.results.records import UserAccess
+from src.apps.core.users.domain.results.access import UserAccess
 from src.apps.core.users.infra.pg.tables import UserTable
 
 

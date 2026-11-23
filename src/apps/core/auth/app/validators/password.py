@@ -2,9 +2,9 @@
 
 from papilio.errors.exceptions import UnAuthorizedException
 
-from src.apps.core.roles.domain.results.records import RoleAccess
+from src.apps.core.roles.domain.results.details import RoleAccess
 from src.apps.core.users.domain.models.records import UserModel
-from src.apps.core.users.domain.results.records import UserAccess
+from src.apps.core.users.domain.results.access import UserAccess
 
 
 def require_active_user[T: (UserModel, UserAccess)](user: T | None) -> T:

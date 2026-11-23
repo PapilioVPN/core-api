@@ -3,7 +3,7 @@
 from papilio.infra.db.tools.decorators import transactional
 
 from src.apps.core.roles.app.interfaces.services import IRoleService
-from src.apps.core.roles.app.validators.records import (
+from src.apps.core.roles.app.validators.remove import (
     validate_role_removal,
 )
 from src.apps.core.roles.domain.models.records import RoleModel

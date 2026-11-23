@@ -7,11 +7,11 @@ from papilio.infra.db.tools.read import fetch_page
 from papilio.schemas.results import PagedType
 from sqlmodel import col
 
-from src.apps.core.roles.domain.results.records import (
+from src.apps.core.roles.domain.results.details import (
     RoleAccess,
     RoleDetailsResult,
 )
-from src.apps.core.roles.infra.pg.mappers.records import RoleMapper
+from src.apps.core.roles.infra.pg.mappers.details import RoleMapper
 from src.apps.core.roles.infra.pg.sql.records import RoleReadSQL
 from src.apps.core.roles.infra.pg.tables import RoleTable
 

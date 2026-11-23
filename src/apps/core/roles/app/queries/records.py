@@ -7,7 +7,7 @@ from src.apps.core.roles.domain.dtos.records import (
     RoleBatchRead,
     RoleList,
 )
-from src.apps.core.roles.domain.results.records import (
+from src.apps.core.roles.domain.results.details import (
     RoleAccess,
     RoleDetailsResult,
 )

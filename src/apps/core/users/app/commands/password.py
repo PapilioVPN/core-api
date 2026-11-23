@@ -13,7 +13,7 @@ from src.apps.core.users.app.interfaces.services import (
     IUserProfileService,
     IUserService,
 )
-from src.apps.core.users.domain.dtos.records import UserPasswordUpdate
+from src.apps.core.users.domain.dtos.password import UserPasswordUpdate
 from src.apps.core.users.domain.models.records import UserModel
 
 

@@ -4,7 +4,7 @@ from papilio.schemas.inputs import BaseDTO
 from papilio.types.aliases import IdType, PageType, PerPageType
 from pydantic import Field
 
-from src.apps.core.roles.domain.types.records import PermissionsType
+from src.apps.core.roles.domain.types.permissions import PermissionsType
 
 
 class RoleScopeCreate(BaseDTO):

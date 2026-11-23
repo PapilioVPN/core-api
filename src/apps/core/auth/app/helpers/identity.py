@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import JsonValue
 
-from src.apps.core.roles.domain.results.records import RoleAccess
+from src.apps.core.roles.domain.results.details import RoleAccess
 from src.apps.core.tokens.domain.models.tokens import TokenIdentity
 
 

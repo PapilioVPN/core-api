@@ -18,14 +18,14 @@ from src.apps.core.users.app.interfaces.commands import (
     IUserRoleCommand,
 )
 from src.apps.core.users.app.interfaces.services import IUserService
+from src.apps.core.users.domain.dtos.password import UserPasswordUpdate
 from src.apps.core.users.domain.dtos.records import (
     UserCreate,
     UserList,
-    UserPasswordUpdate,
     UserRoleUpdate,
     UserUpdate,
 )
-from src.apps.core.users.routers.dependencies.records import (
+from src.apps.core.users.routers.dependencies.account import (
     current_account,
     user_profile_patch,
 )

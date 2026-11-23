@@ -11,7 +11,7 @@ from src.apps.core.auth.routers.dependencies.identity import current_admin
 from src.apps.core.users.app.interfaces.commands import (
     IUserPasswordCommand,
 )
-from src.apps.core.users.domain.dtos.records import UserPasswordUpdate
+from src.apps.core.users.domain.dtos.password import UserPasswordUpdate
 from src.apps.core.users.routers.schemas.records import UserOutput
 
 router = APIRouter(
