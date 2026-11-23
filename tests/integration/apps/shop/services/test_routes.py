@@ -65,7 +65,7 @@ async def test_services(app: FastAPI, client: AsyncClient) -> None:
         url,
         headers=headers,
         json={
-            "title": "VIP",
+            "title": "Panel VIP",
             "description": "Multiple locations",
             "priority": 10,
         },
@@ -100,12 +100,14 @@ async def test_services(app: FastAPI, client: AsyncClient) -> None:
     assert forbidden.status_code == 403, forbidden.text
 
     created = await client.post(
-        url, headers=headers, json={"title": "Economy"}
+        url, headers=headers, json={"title": "Panel Economy"}
     )
     assert created.status_code == 201, created.text
-    page = await client.get(url, headers=headers, params={"per_page": 1})
+    page = await client.get(
+        url, headers=headers, params={"per_page": 1, "q": "Panel"}
+    )
     assert page.status_code == 200, page.text
-    assert page.json()["data"][0]["title"] == "Economy"
+    assert page.json()["data"][0]["title"] == "Panel Economy"
     assert page.json()["meta"]["total_items"] == 2
 
     paused = await client.patch(

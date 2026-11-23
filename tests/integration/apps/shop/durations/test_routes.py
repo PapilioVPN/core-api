@@ -65,7 +65,9 @@ async def test_durations(app: FastAPI, client: AsyncClient) -> None:
     assert second["id"] != first["id"] and second["days"] == 45
 
     response = await client.get(
-        url, params={"page": 2, "per_page": 1}, headers=headers
+        url,
+        params={"page": 2, "per_page": 1, "min_days": 30, "max_days": 45},
+        headers=headers,
     )
     assert response.status_code == 200, response.text
     assert response.json()["data"] == [second]
