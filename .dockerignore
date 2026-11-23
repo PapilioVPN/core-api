@@ -5,6 +5,9 @@
 !src/**
 !migrations/
 !migrations/**
+!scripts/
+!scripts/seeders/
+!scripts/seeders/**
 !alembic.ini
 !config.yml.sample
 !deploy/
