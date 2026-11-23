@@ -2,11 +2,12 @@
 
 from papilio.errors.exceptions import UnAuthorizedException
 
-from src.apps.core.roles.domain.results.records import RoleDetailsResult
+from src.apps.core.roles.domain.results.records import RoleAccess
 from src.apps.core.users.domain.models.records import UserModel
+from src.apps.core.users.domain.results.records import UserAccess
 
 
-def require_active_user(user: UserModel | None) -> UserModel:
+def require_active_user[T: (UserModel, UserAccess)](user: T | None) -> T:
     """Require an existing active account before checking its password.
 
     Args:
@@ -63,15 +64,15 @@ def validate_password_match(matches: bool) -> None:
 
 
 def require_active_role(
-    role: RoleDetailsResult | None, *, super_admin: bool = False
-) -> RoleDetailsResult:
+    role: RoleAccess | None, *, super_admin: bool = False
+) -> RoleAccess:
     """Require an existing active role before issuing access claims.
 
     Args:
         role: Materialized assigned-role lookup result, or None.
 
     Returns:
-        The unchanged active role, retaining scope flags for claim selection.
+        The unchanged role with its active scope masks.
 
     Raises:
         UnAuthorizedException: Assigned role is missing or inactive.

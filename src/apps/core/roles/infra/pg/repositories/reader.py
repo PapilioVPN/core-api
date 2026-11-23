@@ -7,13 +7,42 @@ from papilio.infra.db.tools.read import fetch_page
 from papilio.schemas.results import PagedType
 from sqlmodel import col
 
-from src.apps.core.roles.domain.results.records import RoleDetailsResult
+from src.apps.core.roles.domain.results.records import (
+    RoleAccess,
+    RoleDetailsResult,
+)
 from src.apps.core.roles.infra.pg.mappers.records import RoleMapper
 from src.apps.core.roles.infra.pg.sql.records import RoleReadSQL
 from src.apps.core.roles.infra.pg.tables import RoleTable
 
 
 class RoleReader(PGReader):
+    async def find_access(self, id: int) -> RoleAccess | None:
+        """Read only the fields used to evaluate the current role.
+
+        Args:
+            id: Stored role identity.
+
+        Returns:
+            Role eligibility and active scope masks, or None when missing.
+            Roles without active grants retain an empty scope map.
+        """
+        stmt = RoleReadSQL.select_access(id)
+        result = await self.uow.execute(stmt)
+        rows = result.tuples().all()
+        access = None
+        if rows:
+            access = RoleAccess(
+                id=id,
+                is_active=rows[0][0],
+                scopes={
+                    key: mask
+                    for _, key, mask in rows
+                    if key is not None and mask is not None
+                },
+            )
+        return access
+
     async def get_by_id(self, id: int) -> RoleDetailsResult | None:
         """Read one role and all its stored scope assignments.
 

@@ -63,7 +63,7 @@ async def patch_me(
         command: Request-scoped transactional self-profile command.
 
     Returns:
-        Updated profile output with the token's role/scope snapshot.
+        Updated profile output with the current role and scopes.
 
     Raises:
         UnAuthorizedException: Authentication or account/role checks fail.

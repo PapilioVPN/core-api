@@ -13,14 +13,31 @@ USER_ID_ADAPTER: TypeAdapter[int] = TypeAdapter(IdType)
 
 
 def session_unavailable() -> UnAuthorizedException:
-    """Use one authentication error for missing or closed sessions."""
+    """Build the standard error for an unavailable session.
+
+    Args:
+        None.
+
+    Returns:
+        Authentication error shared by missing and closed sessions.
+    """
     return UnAuthorizedException(
         message="Session is unavailable", message_code="session_unavailable"
     )
 
 
 def require_session_id(verified: VerifiedToken) -> UUID:
-    """Require a session-bound credential from the administrator audience."""
+    """Require a session-bound administrator credential.
+
+    Args:
+        verified: Already verified access or refresh token.
+
+    Returns:
+        The session UUID carried by the credential.
+
+    Raises:
+        UnAuthorizedException: The credential has no session UUID.
+    """
     session_id = verified.identity.session_id
     if session_id is None:
         raise session_unavailable()

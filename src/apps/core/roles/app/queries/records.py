@@ -7,7 +7,10 @@ from src.apps.core.roles.domain.dtos.records import (
     RoleBatchRead,
     RoleList,
 )
-from src.apps.core.roles.domain.results.records import RoleDetailsResult
+from src.apps.core.roles.domain.results.records import (
+    RoleAccess,
+    RoleDetailsResult,
+)
 from src.apps.core.roles.infra.pg.repositories.reader import RoleReader
 
 
@@ -41,17 +44,17 @@ class RoleQuery(IDChecks[RoleDetailsResult]):
         role = self._check_for_id_existence(id, role)
         return role
 
-    async def find_by_id(self, id: int) -> RoleDetailsResult | None:
-        """Read optional role details without evaluating access rights.
+    async def find_access(self, id: int) -> RoleAccess | None:
+        """Read live authorization facts for a role.
 
         Args:
             id: Stored role identity.
 
         Returns:
-            Materialized role details, or None when the role is absent.
+            Role eligibility and active scope masks, or None when absent.
         """
-        role = await self.reader.get_by_id(id)
-        return role
+        access = await self.reader.find_access(id)
+        return access
 
     async def get_by_ids(self, data: RoleBatchRead) -> list[RoleDetailsResult]:
         """Read a bounded set of role details through the native batch path.

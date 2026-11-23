@@ -19,6 +19,14 @@ from src.apps.core.auth.infra.pg.repositories.sessions import (
 
 class SessionService:
     def __init__(self, repo: SessionRepository) -> None:
+        """Bind the session repository on the native request UoW.
+
+        Args:
+            repo: Owner of administrator session persistence.
+
+        Returns:
+            None.
+        """
         self.repo = repo
 
     @transactional
@@ -30,7 +38,17 @@ class SessionService:
         expires_at: datetime,
         user_agent: str | None,
     ) -> None:
-        """Store the login and its current refresh expiry, in UTC."""
+        """Store the login and its refresh expiry.
+
+        Args:
+            user_id: Authenticated owner account.
+            id: New session UUID.
+            expires_at: Aware UTC refresh-token deadline.
+            user_agent: Bounded device label, if supplied.
+
+        Returns:
+            None after the session is saved.
+        """
         now = datetime.now(UTC)
         await self.repo.create(
             SessionModel(
@@ -44,14 +62,37 @@ class SessionService:
         )
 
     async def require(self, user_id: int, id: UUID) -> None:
-        """Reject absent, expired or foreign sessions."""
+        """Require the current account's live session.
+
+        Args:
+            user_id: Verified account identity.
+            id: Session UUID carried by its signed credential.
+
+        Returns:
+            None when the session is valid.
+
+        Raises:
+            UnAuthorizedException: Session is absent, expired or foreign.
+        """
         if not await self.repo.exists(user_id, id, now=datetime.now(UTC)):
             raise session_unavailable()
 
     async def rotate(
         self, user_id: int, id: UUID, *, expires_at: datetime
     ) -> None:
-        """Record refresh time and expiry in the owning transaction."""
+        """Record refresh time and expiry in the owning transaction.
+
+        Args:
+            user_id: Verified account identity.
+            id: Session UUID from the refresh credential.
+            expires_at: Aware UTC deadline of the replacement credential.
+
+        Returns:
+            None after extending the session.
+
+        Raises:
+            UnAuthorizedException: The session is no longer active.
+        """
         rotated = await self.repo.rotate(
             user_id, id, now=datetime.now(UTC), expires_at=expires_at
         )
@@ -61,7 +102,15 @@ class SessionService:
     async def list(
         self, identity: AdminIdentity, query: SessionList
     ) -> PagedType[SessionResult]:
-        """List active sessions and identify the authenticated one."""
+        """List active sessions and identify the authenticated one.
+
+        Args:
+            identity: Authenticated account and current session.
+            query: Native page and page size.
+
+        Returns:
+            Newest-first active sessions and their filtered total.
+        """
         page = await self.repo.list(
             identity.user_id,
             now=datetime.now(UTC),
@@ -85,12 +134,31 @@ class SessionService:
 
     @transactional
     async def revoke(self, user_id: int, id: UUID) -> bool:
-        """Close one owned active session and report whether it existed."""
+        """Close one owned active session.
+
+        Args:
+            user_id: Verified owner account.
+            id: Session UUID.
+
+        Returns:
+            True if the session was active and is now closed.
+        """
         revoked = await self.repo.revoke(user_id, id, now=datetime.now(UTC))
         return revoked
 
     async def revoke_one(self, identity: AdminIdentity, id: UUID) -> None:
-        """Close an owned session or report it as missing."""
+        """Close an owned session selected through the account API.
+
+        Args:
+            identity: Authenticated owner account and current session.
+            id: Target session UUID.
+
+        Returns:
+            None after closing the session.
+
+        Raises:
+            NotFoundException: No active owned session matches the UUID.
+        """
         if not await self.revoke(identity.user_id, id):
             raise NotFoundException(
                 message="Session not found",
@@ -102,7 +170,14 @@ class SessionService:
 
     @transactional
     async def revoke_others(self, identity: AdminIdentity) -> int:
-        """Close other active sessions for this account."""
+        """Close other active sessions for this account.
+
+        Args:
+            identity: Authenticated account and session to preserve.
+
+        Returns:
+            Count of sessions closed.
+        """
         count = await self.repo.revoke_others(
             identity.user_id, identity.session_id, now=datetime.now(UTC)
         )
@@ -110,7 +185,14 @@ class SessionService:
 
     @transactional
     async def remove_expired(self, *, limit: int) -> int:
-        """Delete one bounded batch of expired sessions."""
+        """Delete one bounded batch of expired sessions.
+
+        Args:
+            limit: Maximum number of rows to remove.
+
+        Returns:
+            Count removed at the current UTC time.
+        """
         count = await self.repo.remove_expired(
             now=datetime.now(UTC), limit=limit
         )

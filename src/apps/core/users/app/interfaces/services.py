@@ -15,12 +15,14 @@ from src.apps.core.users.domain.dtos.records import (
 )
 from src.apps.core.users.domain.models.records import UserModel
 from src.apps.core.users.domain.results.profile import UserProfileResult
+from src.apps.core.users.domain.results.records import UserAccess
 
 
 class IUserService(Protocol):
     async def create(self, data: UserModel) -> UserModel: ...
     async def get_by_id(self, id: int) -> UserModel: ...
     async def find_by_id(self, id: int) -> UserModel | None: ...
+    async def find_access(self, id: int) -> UserAccess | None: ...
     async def find_by_mobile(self, mobile: str) -> UserModel | None: ...
     async def exists_by_role_id(self, role_id: int) -> bool: ...
     async def get_by_ids(self, data: UserBatchRead) -> Sequence[UserModel]: ...
@@ -43,18 +45,16 @@ class IUserService(Protocol):
 
 class IUserProfileService(Protocol):
     async def get_me(self, identity: AdminIdentity) -> UserProfileResult:
-        """Read the current profile with its verified token permissions.
+        """Read the current profile with its verified live permissions.
 
         Args:
-            identity: Verified account identity and payload role/scope claims,
-                supplied by authentication, never by caller body or URL fields.
+            identity: Account, current role and scopes supplied by
+                authentication.
 
         Returns:
-            Current profile with role ID and scopes from the token payload,
-            preserving zero masks. Check current account/assigned-role
-            availability through their owning interfaces.
+            Current profile with role ID and scopes, preserving zero masks.
 
         Raises:
-            UnAuthorizedException: Account or assigned role is absent/inactive.
+            UnAuthorizedException: Account is absent or inactive.
         """
         ...

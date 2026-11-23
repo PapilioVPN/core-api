@@ -8,12 +8,15 @@ from src.apps.core.roles.domain.dtos.records import (
     RoleBatchRead,
     RoleList,
 )
-from src.apps.core.roles.domain.results.records import RoleDetailsResult
+from src.apps.core.roles.domain.results.records import (
+    RoleAccess,
+    RoleDetailsResult,
+)
 
 
 class IRoleQuery(Protocol):
     async def get_by_id(self, id: int) -> RoleDetailsResult: ...
-    async def find_by_id(self, id: int) -> RoleDetailsResult | None: ...
+    async def find_access(self, id: int) -> RoleAccess | None: ...
     async def get_by_ids(
         self, data: RoleBatchRead
     ) -> list[RoleDetailsResult]: ...

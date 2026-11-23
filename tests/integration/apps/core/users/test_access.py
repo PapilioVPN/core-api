@@ -209,6 +209,22 @@ async def test_core_access(app: FastAPI, client: AsyncClient) -> None:
             "/admin/health/resources/memory", headers=viewer_headers
         )
     ).status_code == 200
+    scope_url = f"/admin/scopes/{system_scope['id']}"
+    assert (
+        await client.patch(
+            scope_url, json={"is_active": False}, headers=headers
+        )
+    ).status_code == 200
+    assert (
+        await client.get(
+            "/admin/health/resources/memory", headers=viewer_headers
+        )
+    ).status_code == 403
+    assert (
+        await client.patch(
+            scope_url, json={"is_active": True}, headers=headers
+        )
+    ).status_code == 200
     assert (
         await client.patch(
             grants, json={**system_grant, "permissions": 0}, headers=headers
@@ -219,6 +235,18 @@ async def test_core_access(app: FastAPI, client: AsyncClient) -> None:
             "/admin/health/resources/memory", headers=viewer_headers
         )
     ).status_code == 403
+    role_url = f"/admin/roles/{role_id}"
+    assert (
+        await client.patch(
+            role_url, json={"is_active": False}, headers=headers
+        )
+    ).status_code == 200
+    assert (
+        await client.get("/admin/account/me", headers=viewer_headers)
+    ).status_code == 401
+    assert (
+        await client.patch(role_url, json={"is_active": True}, headers=headers)
+    ).status_code == 200
 
     password_url = "/admin/account/me/password"
     new_password = "updated-viewer-password"

@@ -71,9 +71,9 @@ class TokenRefreshCommand:
         )
         user_id = parse_admin_subject(verified)
         session_id = require_session_id(verified)
-        user = require_active_user(await self.users.find_by_id(user_id))
+        user = require_active_user(await self.users.find_access(user_id))
         role = require_active_role(
-            await self.roles.find_by_id(user.role_id),
+            await self.roles.find_access(user.role_id),
             super_admin=user.is_super_admin,
         )
         await self.uses.consume(verified)

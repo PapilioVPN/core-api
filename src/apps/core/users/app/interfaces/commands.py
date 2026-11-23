@@ -47,17 +47,16 @@ class IUserProfileCommand(Protocol):
         """Update the authenticated account's supplied profile names.
 
         Args:
-            identity: Verified token identity and role/scope snapshot. The
-                caller cannot choose a different target account or claims.
+            identity: Verified current account, role and scopes.
             data: Name patch; omitted fields stay unchanged. Contact, password,
                 role and account-activity changes have separate owners.
 
         Returns:
             Updated self-account view without raw or hashed credentials,
-            preserving the role and scope masks captured in the access token.
+            with the role and scopes resolved for this request.
 
         Raises:
-            UnAuthorizedException: Account or assigned role is absent/inactive.
+            UnAuthorizedException: Account is absent or inactive.
             ValidationException: No recognized profile fields were supplied.
         """
         ...

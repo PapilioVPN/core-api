@@ -16,6 +16,7 @@ from src.apps.core.users.domain.dtos.records import (
     UserUpdate,
 )
 from src.apps.core.users.domain.models.records import UserModel
+from src.apps.core.users.domain.results.records import UserAccess
 from src.apps.core.users.infra.pg.repositories.records import (
     UserRepository,
 )
@@ -34,6 +35,18 @@ class UserService(IDChecks[UserModel]):
             None.
         """
         self.repo = repo
+
+    async def find_access(self, id: int) -> UserAccess | None:
+        """Read live account eligibility facts for authentication.
+
+        Args:
+            id: Stored account identity.
+
+        Returns:
+            Current account flags and assigned role, or None when absent.
+        """
+        access = await self.repo.find_access(id)
+        return access
 
     @handle_conflicts(entity="User")
     @transactional

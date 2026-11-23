@@ -70,7 +70,7 @@ class PasswordLoginService:
         password_hash = require_password_hash(user.hashed_password)
         matches = await self.hasher.verify(data.password, password_hash)
         validate_password_match(matches)
-        role = await self.roles.find_by_id(user.role_id)
+        role = await self.roles.find_access(user.role_id)
         role = require_active_role(role, super_admin=user.is_super_admin)
         session_id = uuid4()
         identity = admin_token_identity(user.id, role, session_id)

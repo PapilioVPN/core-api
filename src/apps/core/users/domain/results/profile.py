@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class UserProfileResult:
-    """Current profile with role and scope snapshot from the access token."""
+    """Current profile with the latest authenticated role and scopes."""
 
     id: int
     first_name: str

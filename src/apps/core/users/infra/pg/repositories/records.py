@@ -9,11 +9,32 @@ from sqlalchemy import func, or_, select, update
 from sqlmodel import col
 
 from src.apps.core.users.domain.models.records import UserModel
+from src.apps.core.users.domain.results.records import UserAccess
 from src.apps.core.users.infra.pg.tables import UserTable
 
 
 class UserRepository(PGPersistenceRepository[UserModel]):
     table = UserTable
+
+    async def find_access(self, id: int) -> UserAccess | None:
+        """Select only the account fields needed for authorization.
+
+        Args:
+            id: Stored account identity.
+
+        Returns:
+            Current account flags and role ID, or None for a missing account.
+        """
+        stmt = select(
+            col(self.table.id),
+            col(self.table.role_id),
+            col(self.table.is_active),
+            col(self.table.is_super_admin),
+        ).where(col(self.table.id) == id)
+        result = await self.uow.execute(stmt)
+        row = result.tuples().one_or_none()
+        access = None if row is None else UserAccess(*row)
+        return access
 
     async def find_by_mobile(self, mobile: str) -> UserModel | None:
         """Read a user by exact mobile, including inactive accounts.

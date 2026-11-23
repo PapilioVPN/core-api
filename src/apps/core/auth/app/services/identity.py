@@ -2,7 +2,6 @@
 
 from papilio.infra.db.tools.decorators import transactional
 
-from src.apps.core.auth.app.helpers.identity import active_scopes
 from src.apps.core.auth.app.services.sessions import SessionService
 from src.apps.core.auth.app.validators.identity import (
     parse_admin_subject,
@@ -26,6 +25,17 @@ class AdminIdentityService:
         users: IUserService,
         roles: IRoleQuery,
     ) -> None:
+        """Bind the request's authentication collaborators.
+
+        Args:
+            tokens: Shared JWT verifier.
+            sessions: Current administrator session reader.
+            users: Current account eligibility reader.
+            roles: Current role and scope reader.
+
+        Returns:
+            None.
+        """
         self.tokens = tokens
         self.sessions = sessions
         self.users = users
@@ -40,6 +50,7 @@ class AdminIdentityService:
 
         Returns:
             The active account, owned session and current role permissions.
+            The native read transaction ends before the HTTP operation runs.
 
         Raises:
             UnAuthorizedException: Token, session or account is unavailable.
@@ -48,15 +59,15 @@ class AdminIdentityService:
         user_id = parse_admin_subject(verified)
         session_id = require_session_id(verified)
         await self.sessions.require(user_id, session_id)
-        user = require_active_user(await self.users.find_by_id(user_id))
+        user = require_active_user(await self.users.find_access(user_id))
         role = require_active_role(
-            await self.roles.find_by_id(user.role_id),
+            await self.roles.find_access(user.role_id),
             super_admin=user.is_super_admin,
         )
         result = AdminIdentity(
             user_id=user_id,
             role_id=role.id,
-            scopes=active_scopes(role),
+            scopes=role.scopes,
             session_id=session_id,
             is_super_admin=user.is_super_admin,
         )

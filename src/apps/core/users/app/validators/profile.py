@@ -51,7 +51,17 @@ def validate_self_account(user_id: int, target_id: int) -> None:
 
 
 def protect_owner(user: UserModel) -> None:
-    """Protect the bootstrap administrator from destructive account edits."""
+    """Protect the bootstrap administrator from destructive account edits.
+
+    Args:
+        user: Account proposed for the change.
+
+    Returns:
+        None when the account may be changed.
+
+    Raises:
+        ForbiddenException: The account is a Super Admin.
+    """
     if user.is_super_admin:
         raise ForbiddenException(
             message="The Super Admin account is protected",

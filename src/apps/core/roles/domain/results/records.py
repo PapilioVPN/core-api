@@ -5,6 +5,13 @@ from datetime import datetime
 
 
 @dataclass(frozen=True, slots=True)
+class RoleAccess:
+    id: int
+    is_active: bool
+    scopes: dict[str, int]
+
+
+@dataclass(frozen=True, slots=True)
 class ScopePermissionResult:
     scope_id: int
     key: str
