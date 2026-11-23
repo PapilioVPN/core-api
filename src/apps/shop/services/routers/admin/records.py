@@ -9,7 +9,7 @@ from papilio.api.responses.meta import PagerMeta
 from papilio.types.aliases import IdType
 
 from src.apps.core.auth.routers.dependencies.authorization import require_admin
-from src.apps.shop.services.app.services.records import Services
+from src.apps.shop.services.app.interfaces.services import IServices
 from src.apps.shop.services.domain.dtos.records import (
     ServiceCreate,
     ServiceList,
@@ -26,7 +26,7 @@ router = APIRouter(
 
 @router.post("", status_code=201)
 async def post_service(
-    data: ServiceCreate, services: FromDishka[Services]
+    data: ServiceCreate, services: FromDishka[IServices]
 ) -> APIResponse[ServiceOutput, None]:
     service = await services.create(data)
     output = ServiceOutput.from_obj(service)
@@ -36,7 +36,7 @@ async def post_service(
 @router.get("")
 async def get_services(
     query: Annotated[ServiceList, Query()],
-    services: FromDishka[Services],
+    services: FromDishka[IServices],
 ) -> APIResponse[ServiceOutput, PagerMeta]:
     page = await services.list(query)
     return APIResponse[ServiceOutput, PagerMeta](
@@ -50,7 +50,7 @@ async def get_services(
 
 @router.get("/{id:int}")
 async def get_service(
-    id: IdType, services: FromDishka[Services]
+    id: IdType, services: FromDishka[IServices]
 ) -> APIResponse[ServiceOutput, None]:
     service = await services.get_by_id(id)
     output = ServiceOutput.from_obj(service)
@@ -59,7 +59,7 @@ async def get_service(
 
 @router.patch("/{id:int}")
 async def patch_service(
-    id: IdType, data: ServiceUpdate, services: FromDishka[Services]
+    id: IdType, data: ServiceUpdate, services: FromDishka[IServices]
 ) -> APIResponse[ServiceOutput, None]:
     service = await services.update(id, data)
     output = ServiceOutput.from_obj(service)
