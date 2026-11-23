@@ -16,6 +16,7 @@ RETIRED_TABLES = {
     "tbl_categories",
     "tbl_category_attributes",
     "tbl_payments",
+    "tbl_receipts",
     "tbl_volume_ranges_legacy",
 }
 
