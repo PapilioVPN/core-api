@@ -1,5 +1,6 @@
 """Catalog reads exposed to the panel."""
 
+from collections.abc import Sequence
 from typing import Protocol
 
 from papilio.schemas.results import PagedType
@@ -13,6 +14,10 @@ from src.apps.shop.catalogs.domain.results.form import CatalogForm
 
 class ICatalogQuery(Protocol):
     async def get_by_id(self, id: int) -> CatalogDetail: ...
+
+    async def get_by_ids(
+        self, ids: Sequence[int]
+    ) -> Sequence[CatalogDetail]: ...
 
     async def list(self, data: CatalogSearch) -> PagedType[CatalogModel]: ...
 

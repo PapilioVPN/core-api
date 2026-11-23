@@ -128,3 +128,18 @@ async def test_services(app: FastAPI, client: AsyncClient) -> None:
     assert invalid.status_code == 422, invalid.text
     missing = await client.get(f"{url}/99999", headers=headers)
     assert missing.status_code == 404, missing.text
+
+    batch = await client.get(
+        f"{url}/batch",
+        params={"ids": [row["id"], row["id"], 99999]},
+        headers=operator_headers,
+    )
+    assert batch.status_code == 200, batch.text
+    assert batch.json()["data"] == [row]
+    assert (
+        await client.delete(path, headers=operator_headers)
+    ).status_code == 403
+    removed = await client.delete(path, headers=headers)
+    assert removed.status_code == 200, removed.text
+    assert removed.json()["data"] == row
+    assert (await client.get(path, headers=headers)).status_code == 404

@@ -1,11 +1,11 @@
 """Focused PostgreSQL reads for catalog detail and panel search."""
 
 from collections import Counter
+from collections.abc import Sequence
 
 from papilio.infra.db.repositories.backends.postgresql import PGReader
 from papilio.infra.db.tools.read import fetch_page
 from papilio.schemas.results import PagedType
-from sqlalchemy import select
 from sqlmodel import col
 
 from src.apps.shop.catalogs.domain.dtos.search import CatalogSearch
@@ -16,10 +16,9 @@ from src.apps.shop.catalogs.domain.results.filters import (
     CatalogOptions,
     Choice,
 )
+from src.apps.shop.catalogs.infra.pg.sql.details import details
 from src.apps.shop.catalogs.infra.pg.sql.search import facets, search
 from src.apps.shop.catalogs.infra.pg.tables import CatalogTable
-from src.apps.shop.durations.infra.pg.tables import DurationTable
-from src.apps.shop.volumes.infra.pg.tables import VolumeTable
 
 
 class CatalogReader(PGReader):
@@ -32,20 +31,16 @@ class CatalogReader(PGReader):
         Returns:
             The catalog and its actual referenced definitions, or None.
         """
-        table = CatalogTable
-        stmt = (
-            select(table, VolumeTable, DurationTable)
-            .outerjoin(
-                VolumeTable, col(VolumeTable.id) == col(table.volume_id)
-            )
-            .outerjoin(
-                DurationTable, col(DurationTable.id) == col(table.duration_id)
-            )
-            .where(col(table.id) == id)
-        )
+        stmt = details().where(col(CatalogTable.id) == id)
         result = await self.uow.execute(stmt)
         row = result.tuples().one_or_none()
         return CatalogDetail(*row) if row is not None else None
+
+    async def get_by_ids(self, ids: Sequence[int]) -> Sequence[CatalogDetail]:
+        """Load all existing details for a bounded ID set in one query."""
+        stmt = details().where(col(CatalogTable.id).in_(ids))
+        result = await self.uow.execute(stmt)
+        return [CatalogDetail(*row) for row in result.tuples()]
 
     async def list(self, data: CatalogSearch) -> PagedType[CatalogModel]:
         """Read a filtered page for the administrator panel.

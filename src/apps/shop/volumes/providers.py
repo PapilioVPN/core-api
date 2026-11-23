@@ -2,9 +2,9 @@
 
 from dishka import Provider, Scope, provide
 
-from src.apps.shop.volumes.app.interfaces.services import IVolumes
-from src.apps.shop.volumes.app.services.records import Volumes
-from src.apps.shop.volumes.infra.pg.repositories.records import (
+from src.apps.shop.volumes.app.interfaces.services import IVolumeCRUD
+from src.apps.shop.volumes.app.services.crud import VolumeCRUD
+from src.apps.shop.volumes.infra.pg.repositories.crud import (
     VolumeRepository,
 )
 
@@ -13,4 +13,4 @@ class VolumesProvider(Provider):
     scope = Scope.REQUEST
 
     repo = provide(VolumeRepository)
-    volumes = provide(Volumes, provides=IVolumes)
+    volumes = provide(VolumeCRUD, provides=IVolumeCRUD)

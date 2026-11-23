@@ -6,10 +6,10 @@ from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Depends, Query
 from papilio.api.responses.envelope import APIResponse
 from papilio.api.responses.meta import PagerMeta
-from papilio.types.aliases import IdType
+from papilio.types.aliases import IdType, ListIdType
 
 from src.apps.core.auth.routers.dependencies.authorization import require_admin
-from src.apps.shop.durations.app.interfaces.services import IDurations
+from src.apps.shop.durations.app.interfaces.services import IDurationCRUD
 from src.apps.shop.durations.domain.dtos.records import (
     DurationCreate,
     DurationList,
@@ -25,7 +25,7 @@ router = APIRouter(
 
 @router.post("", status_code=201)
 async def post_duration(
-    data: DurationCreate, durations: FromDishka[IDurations]
+    data: DurationCreate, durations: FromDishka[IDurationCRUD]
 ) -> APIResponse[DurationOutput, None]:
     duration = await durations.create(data)
     output = DurationOutput.from_obj(duration)
@@ -35,7 +35,7 @@ async def post_duration(
 @router.get("")
 async def get_durations(
     query: Annotated[DurationList, Query()],
-    durations: FromDishka[IDurations],
+    durations: FromDishka[IDurationCRUD],
 ) -> APIResponse[DurationOutput, PagerMeta]:
     page = await durations.list(query)
     return APIResponse[DurationOutput, PagerMeta](
@@ -47,9 +47,19 @@ async def get_durations(
     )
 
 
+@router.get("/batch")
+async def get_durations_batch(
+    ids: Annotated[ListIdType, Query()], durations: FromDishka[IDurationCRUD]
+) -> APIResponse[DurationOutput, None]:
+    rows = await durations.get_by_ids(ids)
+    return APIResponse[DurationOutput, None].from_data(
+        DurationOutput.from_objs(rows)
+    )
+
+
 @router.get("/{id:int}")
 async def get_duration(
-    id: IdType, durations: FromDishka[IDurations]
+    id: IdType, durations: FromDishka[IDurationCRUD]
 ) -> APIResponse[DurationOutput, None]:
     duration = await durations.get_by_id(id)
     output = DurationOutput.from_obj(duration)

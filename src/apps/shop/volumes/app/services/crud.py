@@ -1,17 +1,19 @@
 """Create and read immutable volume definitions."""
 
+from collections.abc import Sequence
+
 from papilio.infra.db.tools.decorators import transactional
 from papilio.schemas.results import PagedType
 from papilio.tools.checks import IDChecks
 
 from src.apps.shop.volumes.domain.dtos.records import VolumeCreate, VolumeList
 from src.apps.shop.volumes.domain.models.records import VolumeModel
-from src.apps.shop.volumes.infra.pg.repositories.records import (
+from src.apps.shop.volumes.infra.pg.repositories.crud import (
     VolumeRepository,
 )
 
 
-class Volumes(IDChecks[VolumeModel]):
+class VolumeCRUD(IDChecks[VolumeModel]):
     entity = "Volume"
 
     def __init__(self, repo: VolumeRepository) -> None:
@@ -43,9 +45,19 @@ class Volumes(IDChecks[VolumeModel]):
         Raises:
             NotFoundException: The identity is absent.
         """
-        volume = await self.repo.get_by_id(id)
+        volume = await self.find_by_id(id)
         volume = self._check_for_id_existence(id, volume)
         return volume
+
+    async def find_by_id(self, id: int) -> VolumeModel | None:
+        """Read a stored identity, returning None if it is absent."""
+        volume = await self.repo.get_by_id(id)
+        return volume
+
+    async def get_by_ids(self, ids: Sequence[int]) -> Sequence[VolumeModel]:
+        """Read a bounded set in one query, omitting absent identities."""
+        rows = await self.repo.get_by_ids(ids) if ids else []
+        return rows
 
     async def list(self, query: VolumeList) -> PagedType[VolumeModel]:
         """Read volume definitions for the panel's selection list.

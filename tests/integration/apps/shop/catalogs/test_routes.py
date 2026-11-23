@@ -11,6 +11,7 @@ from src.apps.core.roles.app.interfaces.services import IRoleService
 from src.apps.core.roles.domain.dtos.records import RoleCreate
 from src.apps.core.users.app.interfaces.commands import IUserCreateCommand
 from src.apps.core.users.domain.dtos.records import UserCreate
+from src.apps.shop.catalogs.app.interfaces.services import ICatalogCRUD
 
 pytestmark = pytest.mark.integration
 
@@ -105,6 +106,14 @@ async def test_catalogs(app: FastAPI, client: AsyncClient) -> None:
     assert second["volume_id"] == first["volume_id"]
     assert second["duration_id"] == first["duration_id"]
 
+    async with container() as scope:
+        crud = await scope.get(ICatalogCRUD)
+        assert (await crud.get_by_id(first["id"])).price == body["price"]
+        assert await crud.find_by_id(99999) is None
+        rows = await crud.get_by_ids([second["id"], second["id"], 99999])
+        assert [row.id for row in rows] == [second["id"]]
+        assert await crud.get_by_ids([]) == []
+
     bad = await client.patch(
         path,
         json={
@@ -155,3 +164,30 @@ async def test_catalogs(app: FastAPI, client: AsyncClient) -> None:
     detail = await client.get(path, headers=headers)
     assert detail.status_code == 200, detail.text
     assert detail.json()["data"]["volume"] is None
+
+    batch = await client.get(
+        f"{url}/batch",
+        params={"ids": [first["id"], second["id"], first["id"], 99999]},
+        headers=headers,
+    )
+    assert batch.status_code == 200, batch.text
+    assert [row["catalog"]["id"] for row in batch.json()["data"]] == [
+        first["id"],
+        second["id"],
+    ]
+    service_path = f"/admin/services/{service['id']}"
+    blocked = await client.delete(service_path, headers=headers)
+    assert blocked.status_code == 409, blocked.text
+    assert blocked.json()["error"]["message_code"] == "service_in_use"
+
+    removed = await client.delete(path, headers=headers)
+    assert removed.status_code == 200, removed.text
+    assert removed.json()["data"] == changed.json()["data"]
+    assert (await client.get(path, headers=headers)).status_code == 404
+    second_path = f"{url}/{second['id']}"
+    assert (
+        await client.delete(second_path, headers=headers)
+    ).status_code == 200
+    assert (
+        await client.delete(service_path, headers=headers)
+    ).status_code == 200

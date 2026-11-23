@@ -1,5 +1,7 @@
 """Use native Redis hash fields for independently expiring catalog details."""
 
+from collections.abc import Sequence
+
 from papilio.infra.redis.client import RedisClient, resolve
 from pydantic import TypeAdapter
 from redis.exceptions import ConnectionError, OutOfMemoryError, TimeoutError
@@ -35,6 +37,23 @@ class CatalogCache:
                 pass
         return detail
 
+    async def find_many(self, ids: Sequence[int]) -> dict[int, CatalogDetail]:
+        """Fetch available detail fields in one Redis operation."""
+        details = {}
+        if self.redis is not None and ids:
+            try:
+                entries = await resolve(
+                    self.redis.client.hmget(self.key, [str(id) for id in ids])
+                )
+                details = {
+                    id: _snapshot.validate_json(raw)
+                    for id, raw in zip(ids, entries, strict=True)
+                    if raw is not None
+                }
+            except (ConnectionError, TimeoutError):
+                pass
+        return details
+
     async def store(self, detail: CatalogDetail, ttl: int) -> None:
         """Store one detail with its own expiration.
 
@@ -66,4 +85,23 @@ class CatalogCache:
             try:
                 await resolve(self.redis.client.hdel(self.key, str(id)))
             except (ConnectionError, TimeoutError):
+                pass
+
+    async def store_many(
+        self, details: Sequence[CatalogDetail], ttl: int
+    ) -> None:
+        """Cache materialized detail fields together with individual expiry."""
+        if self.redis is not None and details:
+            try:
+                await resolve(
+                    self.redis.client.hsetex(
+                        self.key,
+                        mapping={
+                            str(detail.catalog.id): _snapshot.dump_json(detail)
+                            for detail in details
+                        },
+                        ex=ttl,
+                    )
+                )
+            except (ConnectionError, TimeoutError, OutOfMemoryError):
                 pass

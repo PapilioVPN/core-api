@@ -1,5 +1,7 @@
 """Manage service definitions shared by the shop's operators."""
 
+from collections.abc import Sequence
+
 from papilio.infra.db.tools.decorators import transactional
 from papilio.schemas.results import PagedType
 from papilio.tools.checks import IDChecks
@@ -10,12 +12,12 @@ from src.apps.shop.services.domain.dtos.records import (
     ServiceUpdate,
 )
 from src.apps.shop.services.domain.models.records import ServiceModel
-from src.apps.shop.services.infra.pg.repositories.records import (
+from src.apps.shop.services.infra.pg.repositories.crud import (
     ServiceRepository,
 )
 
 
-class Services(IDChecks[ServiceModel]):
+class ServiceCRUD(IDChecks[ServiceModel]):
     entity = "Service"
 
     def __init__(self, repo: ServiceRepository) -> None:
@@ -54,9 +56,26 @@ class Services(IDChecks[ServiceModel]):
         Raises:
             NotFoundException: The identity is absent.
         """
-        service = await self.repo.get_by_id(id)
+        service = await self.find_by_id(id)
         service = self._check_for_id_existence(id, service)
         return service
+
+    @transactional
+    async def remove(self, id: int) -> ServiceModel:
+        """Remove an unreferenced service and return its stored record."""
+        service = await self.repo.remove_by_id(id)
+        service = self._check_for_id_existence(id, service)
+        return service
+
+    async def find_by_id(self, id: int) -> ServiceModel | None:
+        """Read a stored identity, returning None if it is absent."""
+        service = await self.repo.get_by_id(id)
+        return service
+
+    async def get_by_ids(self, ids: Sequence[int]) -> Sequence[ServiceModel]:
+        """Read a bounded set in one query, omitting absent identities."""
+        rows = await self.repo.get_by_ids(ids) if ids else []
+        return rows
 
     async def list(self, query: ServiceList) -> PagedType[ServiceModel]:
         """Read a filtered page for the administrator panel.

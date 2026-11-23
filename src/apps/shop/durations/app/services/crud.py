@@ -1,5 +1,7 @@
 """Create and read reusable duration definitions."""
 
+from collections.abc import Sequence
+
 from papilio.infra.db.tools.decorators import transactional
 from papilio.schemas.results import PagedType
 from papilio.tools.checks import IDChecks
@@ -9,12 +11,12 @@ from src.apps.shop.durations.domain.dtos.records import (
     DurationList,
 )
 from src.apps.shop.durations.domain.models.records import DurationModel
-from src.apps.shop.durations.infra.pg.repositories.records import (
+from src.apps.shop.durations.infra.pg.repositories.crud import (
     DurationRepository,
 )
 
 
-class Durations(IDChecks[DurationModel]):
+class DurationCRUD(IDChecks[DurationModel]):
     entity = "Duration"
 
     def __init__(self, repo: DurationRepository) -> None:
@@ -48,9 +50,19 @@ class Durations(IDChecks[DurationModel]):
         Raises:
             NotFoundException: The identity is absent.
         """
-        duration = await self.repo.get_by_id(id)
+        duration = await self.find_by_id(id)
         duration = self._check_for_id_existence(id, duration)
         return duration
+
+    async def find_by_id(self, id: int) -> DurationModel | None:
+        """Read a stored identity, returning None if it is absent."""
+        duration = await self.repo.get_by_id(id)
+        return duration
+
+    async def get_by_ids(self, ids: Sequence[int]) -> Sequence[DurationModel]:
+        """Read a bounded set in one query, omitting absent identities."""
+        rows = await self.repo.get_by_ids(ids) if ids else []
+        return rows
 
     async def list(self, query: DurationList) -> PagedType[DurationModel]:
         """Read definitions for the panel's duration picker.

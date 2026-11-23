@@ -1,4 +1,6 @@
-"""Create and update catalogs with transactionally resolved terms."""
+"""Authoritative catalog CRUD with transactionally resolved terms."""
+
+from collections.abc import Sequence
 
 from papilio.infra.db.tools.decorators import transactional
 from papilio.infra.db.transaction import transaction
@@ -12,26 +14,26 @@ from src.apps.shop.catalogs.domain.dtos.records import (
     VolumeRef,
 )
 from src.apps.shop.catalogs.domain.models.records import CatalogModel
-from src.apps.shop.catalogs.infra.pg.repositories.records import (
+from src.apps.shop.catalogs.infra.pg.repositories.crud import (
     CatalogRepository,
 )
 from src.apps.shop.catalogs.infra.redis.repositories.details import (
     CatalogCache,
 )
-from src.apps.shop.durations.app.interfaces.services import IDurations
-from src.apps.shop.services.app.interfaces.services import IServices
-from src.apps.shop.volumes.app.interfaces.services import IVolumes
+from src.apps.shop.durations.app.interfaces.services import IDurationCRUD
+from src.apps.shop.services.app.interfaces.services import IServiceCRUD
+from src.apps.shop.volumes.app.interfaces.services import IVolumeCRUD
 
 
-class CatalogCommand(IDChecks[CatalogModel]):
+class CatalogCRUD(IDChecks[CatalogModel]):
     entity = "Catalog"
 
     def __init__(
         self,
         repo: CatalogRepository,
-        services: IServices,
-        volumes: IVolumes,
-        durations: IDurations,
+        services: IServiceCRUD,
+        volumes: IVolumeCRUD,
+        durations: IDurationCRUD,
         cache: CatalogCache,
     ) -> None:
         """Bind catalog storage, owning references and its detail cache."""
@@ -40,6 +42,22 @@ class CatalogCommand(IDChecks[CatalogModel]):
         self.volumes = volumes
         self.durations = durations
         self.cache = cache
+
+    async def get_by_id(self, id: int) -> CatalogModel:
+        """Read a required catalog from PostgreSQL by its identity."""
+        catalog = await self.find_by_id(id)
+        catalog = self._check_for_id_existence(id, catalog)
+        return catalog
+
+    async def find_by_id(self, id: int) -> CatalogModel | None:
+        """Read a catalog record without requiring its existence."""
+        catalog = await self.repo.get_by_id(id)
+        return catalog
+
+    async def get_by_ids(self, ids: Sequence[int]) -> Sequence[CatalogModel]:
+        """Read a bounded set of records, omitting absent identities."""
+        catalogs = await self.repo.get_by_ids(ids) if ids else []
+        return catalogs
 
     async def _volume_id(self, data: VolumeRef) -> int | None:
         if data is None:
@@ -112,6 +130,14 @@ class CatalogCommand(IDChecks[CatalogModel]):
                 changes["duration_id"] = await self._duration_id(data.duration)
             self._check_not_empty_dict(changes)
             catalog = await self.repo.update_by_id(id, changes)
+            catalog = self._check_for_id_existence(id, catalog)
+        await self.cache.forget(catalog.id)
+        return catalog
+
+    async def remove(self, id: int) -> CatalogModel:
+        """Remove one catalog and invalidate its cached detail after commit."""
+        async with transaction():
+            catalog = await self.repo.remove_by_id(id)
             catalog = self._check_for_id_existence(id, catalog)
         await self.cache.forget(catalog.id)
         return catalog

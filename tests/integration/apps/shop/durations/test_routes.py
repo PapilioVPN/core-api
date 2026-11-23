@@ -86,3 +86,11 @@ async def test_durations(app: FastAPI, client: AsyncClient) -> None:
     stored = await client.get(path, headers=headers)
     assert stored.status_code == 200, stored.text
     assert stored.json()["data"] == first
+
+    batch = await client.get(
+        f"{url}/batch",
+        params={"ids": [second["id"], second["id"], 99999]},
+        headers=headers,
+    )
+    assert batch.status_code == 200, batch.text
+    assert batch.json()["data"] == [second]

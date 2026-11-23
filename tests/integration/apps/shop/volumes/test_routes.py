@@ -84,3 +84,11 @@ async def test_volumes(app: FastAPI, client: AsyncClient) -> None:
     stored = await client.get(path, headers=headers)
     assert stored.status_code == 200, stored.text
     assert stored.json()["data"]["size_bytes"] == fixed["size_bytes"]
+
+    batch = await client.get(
+        f"{url}/batch",
+        params={"ids": [row["id"], row["id"], 99999]},
+        headers=headers,
+    )
+    assert batch.status_code == 200, batch.text
+    assert batch.json()["data"] == [row]
