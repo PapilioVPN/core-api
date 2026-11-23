@@ -23,7 +23,7 @@ class Volumes(IDChecks[VolumeModel]):
         """Register one reusable volume definition.
 
         Args:
-            data: Validated fixed size or selectable bounds in bytes.
+            data: Validated fixed size in bytes.
 
         Returns:
             The stored volume with its identity and creation time.
@@ -51,7 +51,7 @@ class Volumes(IDChecks[VolumeModel]):
         """Read volume definitions for the panel's selection list.
 
         Args:
-            query: Validated mode and page bounds.
+            query: Validated size filter and page bounds.
 
         Returns:
             Matching volume definitions and their total.
@@ -59,7 +59,6 @@ class Volumes(IDChecks[VolumeModel]):
         page = await self.repo.list(
             limit=query.per_page,
             offset=(query.page - 1) * query.per_page,
-            mode=query.mode,
             size_bytes=query.size_bytes,
         )
         return page

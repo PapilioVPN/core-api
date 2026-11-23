@@ -15,6 +15,7 @@ RETIRED_TABLES = {
     "tbl_attributes",
     "tbl_categories",
     "tbl_category_attributes",
+    "tbl_volume_ranges_legacy",
 }
 
 get_bootstrapper().boot_sqlmodels()

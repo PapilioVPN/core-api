@@ -46,7 +46,7 @@ async def test_volumes(app: FastAPI, client: AsyncClient) -> None:
     headers = {
         "Authorization": f"Bearer {login.json()['data']['access_token']}"
     }
-    fixed = {"mode": "fixed", "size_bytes": 50 * 1024**3}
+    fixed = {"size_bytes": 50 * 1024**3}
     created, repeated = await gather(
         client.post(url, json=fixed, headers=headers),
         client.post(url, json=fixed, headers=headers),
@@ -55,7 +55,6 @@ async def test_volumes(app: FastAPI, client: AsyncClient) -> None:
     assert repeated.status_code == 201, repeated.text
     row = created.json()["data"]
     assert repeated.json()["data"] == row
-    assert row["mode"] == "fixed"
     assert row["size_bytes"] == fixed["size_bytes"]
     path = f"{url}/{row['id']}"
 
@@ -65,20 +64,16 @@ async def test_volumes(app: FastAPI, client: AsyncClient) -> None:
         "max_bytes": 100 * 1024**3,
         "step_bytes": 5 * 1024**3,
     }
-    created = await client.post(url, json=custom, headers=headers)
-    assert created.status_code == 201, created.text
-    row = created.json()["data"]
-    assert {field: row[field] for field in custom} == custom
-    page = await client.get(url, headers=headers, params={"mode": "custom"})
+    page = await client.get(
+        url,
+        headers=headers,
+        params=fixed,
+    )
     assert page.status_code == 200, page.text
     assert page.json()["meta"]["total_items"] == 1
     assert page.json()["data"] == [row]
-
-    invalid = await client.post(
-        url, headers=headers, json={**custom, "max_bytes": 98 * 1024**3}
-    )
-    assert invalid.status_code == 400, invalid.text
-    assert invalid.json()["error"]["loc"] == ["max_bytes"]
+    invalid = await client.post(url, headers=headers, json=custom)
+    assert invalid.status_code == 422, invalid.text
     invalid = await client.post(
         url, headers=headers, json={**fixed, "size_bytes": 2**63}
     )

@@ -10,13 +10,8 @@ class VolumeTable(VolumeModel, BaseTable, table=True):
     __table_args__ = (
         Index(
             "uq_volumes_terms",
-            "mode",
             "size_bytes",
-            "min_bytes",
-            "max_bytes",
-            "step_bytes",
             unique=True,
-            postgresql_nulls_not_distinct=True,
             postgresql_where=text("is_canonical"),
         ),
     )
