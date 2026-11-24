@@ -20,19 +20,19 @@ class PaddleGateway(BaseGateway):
         self.min_score = config.min_score
 
     async def read(self, image: bytes) -> tuple[str, ...] | OCRFailure:
-        """Read text lines that meet the configured threshold.
+        """Read ordered text lines and blank low-confidence positions.
 
         Args:
             image: Original image bytes bounded by the pipeline.
 
         Returns:
-            Recognized lines or a safe code for an expected failure.
+            Trusted text in its original positions or a safe failure code.
         """
         payload: ReadRequest = {
             "file": b64encode(image).decode("ascii"),
             "fileType": 1,
             "visualize": False,
-            "textRecScoreThresh": self.min_score,
+            "textRecScoreThresh": 0.0,
         }
         try:
             response = await self.post(self.url, json=payload)
@@ -45,14 +45,13 @@ class PaddleGateway(BaseGateway):
                     response.content
                 ).result
                 lines = tuple(
-                    line
+                    line if score >= self.min_score else ""
                     for page in result.pages
                     for line, score in zip(
                         page.pruned_result.rec_texts,
                         page.pruned_result.rec_scores,
                         strict=True,
                     )
-                    if score >= self.min_score
                 )
             except ValueError:
                 lines = OCRFailure("ocr_response_invalid")

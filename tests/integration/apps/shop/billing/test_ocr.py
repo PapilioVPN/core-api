@@ -26,10 +26,12 @@ from src.apps.shop.billing.ocr_requests.app.interfaces.processing import (
 from src.apps.shop.billing.ocr_requests.app.interfaces.services import (
     IOCRRequestService,
 )
+from src.apps.shop.billing.ocr_requests.app.parsers.receipts import (
+    ReceiptParser,
+)
 from src.apps.shop.billing.ocr_requests.domain.dtos.records import (
     OCRRequestList,
 )
-from src.apps.shop.billing.ocr_requests.domain.parsers.receipts import fields
 from src.apps.shop.billing.ocr_requests.infra.pg.repositories.crud import (
     OCRRequestRepository,
 )
@@ -53,7 +55,8 @@ pytestmark = pytest.mark.integration
 
 
 def test_receipt_fields() -> None:
-    result = fields(
+    parse = ReceiptParser().parse
+    result = parse(
         (
             "مبلغ: ۱۲۳٬۴۵۶ تومان",
             "کد رهگیری: ۰۰۰۴۲",
@@ -63,8 +66,14 @@ def test_receipt_fields() -> None:
     assert result.amount == 1_234_560
     assert result.tracking_code == "00042"
     assert result.reference_code == "42000"
-    assert fields(("مبلغ: ۱۲۳۴۵۶",)).amount is None
-    assert fields(("مبلغ: ۱۰۰ ریال", "مبلغ: ۱۲۳ تومان")).amount is None
+    assert parse(("مبلغ: ۱۲۳۴۵۶",)).amount is None
+    assert parse(("مبلغ: ۱۰۰ ریال", "مبلغ: ۱۲۳ تومان")).amount is None
+    assert parse(("مبلغ", "۲،۴۰۰،۰۰۰ ریال")).amount == 2_400_000
+    assert parse(("ریال ۲٬۴۰۰٬۰۰۰", "مبلغ انتقال")).amount == 2_400_000
+    assert parse(("مبلغ", "۲٬۴۰۰٬۰۰۰۰ ریال")).amount is None
+    assert parse(("مبلغ", "", "۲٬۴۰۰٬۰۰۰ ریال")).amount is None
+    assert parse(("۲٬۴۰۰٬۰۰۰ ریال",)).amount is None
+    assert parse(("۱۰۰ ریال", "مبلغ", "۲۰۰ ریال")).amount is None
 
 
 async def test_ocr_without_endpoint(settings: CoreSettings) -> None:
@@ -88,6 +97,15 @@ async def test_ocr_pipeline(pg: CoreSettings, tmp_path: Path) -> None:
     container = app.container
     image = b"receipt bytes for the controlled OCR peer"
     calls: list[Request] = []
+    reads = {
+        1: (
+            ["مبلغ", "۱۲۳ تومان", "کد رهگیری: ۰۰۰۴۲"],
+            [0.99, 0.99, 0.6],
+        ),
+        3: (["مبلغ: ۱۲۳ تومان", "کد رهگیری: ۰۰۰۴۲"], [0.99]),
+        4: (["مبلغ: ۲۴،۰۰۰،۰۰۰ ریال"], [0.6]),
+        5: (["مبلغ", "ناخوانا", "۲۴،۰۰۰،۰۰۰ ریال"], [0.99, 0.6, 0.99]),
+    }
 
     async def recognize(request: Request) -> Response:
         calls.append(request)
@@ -95,9 +113,11 @@ async def test_ocr_pipeline(pg: CoreSettings, tmp_path: Path) -> None:
         assert request.url == "http://paddleocr.test/ocr"
         assert b64decode(body["file"]) == image
         assert body["fileType"] == 1 and not body["visualize"]
+        assert body["textRecScoreThresh"] == 0
         if len(calls) == 2:
             response = Response(503)
         else:
+            texts, scores = reads[len(calls)]
             response = Response(
                 200,
                 json={
@@ -106,13 +126,8 @@ async def test_ocr_pipeline(pg: CoreSettings, tmp_path: Path) -> None:
                         "ocrResults": [
                             {
                                 "prunedResult": {
-                                    "rec_texts": [
-                                        "مبلغ: ۱۲۳ تومان",
-                                        "کد رهگیری: ۰۰۰۴۲",
-                                    ],
-                                    "rec_scores": [0.99, 0.6]
-                                    if len(calls) == 1
-                                    else [0.99],
+                                    "rec_texts": texts,
+                                    "rec_scores": scores,
                                 }
                             }
                         ],
@@ -201,6 +216,23 @@ async def test_ocr_pipeline(pg: CoreSettings, tmp_path: Path) -> None:
                             stored is not None
                             and stored.status == payment.status
                         )
+
+                for event_id in ("ocr-example-4", "ocr-example-5"):
+                    await pipeline.process(
+                        payment.receipt_id, event_id=event_id
+                    )
+                    async with container() as scope:
+                        requests = await scope.get(IOCRRequestService)
+                        receipts = await scope.get(ReceiptRepository)
+                        attempt = await requests.find_by_event(event_id)
+                        receipt = await receipts.get_by_id(payment.receipt_id)
+                        assert attempt is not None and receipt is not None
+                        assert (
+                            attempt.status
+                            == receipt.extraction_status
+                            == ExtractionStatus.UNREADABLE
+                        )
+                        assert receipt.amount == 1_230
 
                 async with container() as scope:
                     requests = await scope.get(IOCRRequestService)

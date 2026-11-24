@@ -10,10 +10,10 @@ from src.apps.shop.billing.receipts.domain.enums.extraction import (
     ExtractionStatus,
 )
 
-from ...domain.parsers.receipts import fields
 from ...domain.results.records import OCRFailure, OCROutcome
 from ..executions.records import OCRExecution
 from ..interfaces.gateways import IOCRGateway
+from ..parsers.receipts import ReceiptParser
 
 
 class OCRPipeline:
@@ -22,12 +22,14 @@ class OCRPipeline:
         execution: OCRExecution,
         files: IFileDownload,
         gateway: IOCRGateway,
+        parser: ReceiptParser,
         storage: StorageConfig,
     ) -> None:
-        """Bind short SQL execution, existing Storage and the OCR gateway."""
+        """Bind SQL scopes, Storage, recognition and receipt parsing."""
         self.execution = execution
         self.files = files
         self.gateway = gateway
+        self.parser = parser
         self.max_bytes = storage.max_file_size
 
     async def process(self, receipt_id: int, *, event_id: str) -> None:
@@ -70,7 +72,7 @@ class OCRPipeline:
                 ExtractionStatus.FAILED, error_code=lines.code
             )
         else:
-            result = fields(lines)
+            result = self.parser.parse(lines)
             status = (
                 ExtractionStatus.EXTRACTED
                 if any(

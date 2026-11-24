@@ -7,6 +7,7 @@ from src.settings.config import CoreSettings, OCRConfig
 from ..app.executions.records import OCRExecution
 from ..app.interfaces.gateways import IOCRGateway
 from ..app.interfaces.processing import IOCRPipeline
+from ..app.parsers.receipts import ReceiptParser
 from ..app.pipelines.receipts import OCRPipeline
 from ..infra.paddle.clients import PaddleGateway
 
@@ -16,6 +17,7 @@ class AppProvider(Provider):
 
     gateway = provide(PaddleGateway, provides=IOCRGateway)
     execution = provide(OCRExecution)
+    parser = provide(ReceiptParser)
     pipeline = provide(OCRPipeline, provides=IOCRPipeline)
 
     @provide
