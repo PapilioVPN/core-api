@@ -9,10 +9,16 @@ from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
 
-from ...app.interfaces.commands import IPaymentCommand
+from ...app.interfaces.commands import IPaymentCommand, IPaymentReviewCommand
 from ...app.interfaces.queries import IPaymentQuery
 from ...domain.dtos.records import PaymentCreate
-from ..schemas.records import PaymentDetailOutput, PaymentOutput
+from ...domain.dtos.review import PaymentReview
+from ...domain.enums.records import PaymentStatus
+from ..schemas.records import (
+    PaymentDetailOutput,
+    PaymentOutput,
+    PaymentReviewOutput,
+)
 
 router = APIRouter(
     prefix="/admin/payments",
@@ -37,3 +43,17 @@ async def get_payment(
     detail = await query.get_by_id(id)
     output = PaymentDetailOutput.from_obj(detail)
     return APIResponse[PaymentDetailOutput, None].from_data(output)
+
+
+@router.patch("/{id:int}/review")
+async def patch_payment_review(
+    id: IdType,
+    data: PaymentReview,
+    command: FromDishka[IPaymentReviewCommand],
+) -> APIResponse[PaymentReviewOutput, None]:
+    if data.status == PaymentStatus.CONFIRMED:
+        payment = await command.confirm(id)
+    else:
+        payment = await command.reject(id, reason=data.reason)
+    output = PaymentReviewOutput.from_obj(payment)
+    return APIResponse[PaymentReviewOutput, None].from_data(output)

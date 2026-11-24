@@ -21,6 +21,10 @@ class PaymentOutput(BaseOutput):
     updated_at: datetime
 
 
+class PaymentReviewOutput(PaymentOutput):
+    rejection_reason: str | None
+
+
 class PaymentDetailOutput(BaseOutput):
-    payment: PaymentOutput
+    payment: PaymentReviewOutput
     receipt: ReceiptOutput

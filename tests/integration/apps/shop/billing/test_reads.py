@@ -112,6 +112,13 @@ async def test_payment_reads(app: FastAPI, client: AsyncClient) -> None:
             )
 
     try:
+        blocked = await client.patch(
+            f"{path}/{pending.id}/review",
+            json={"status": "confirmed"},
+            headers=headers,
+        )
+        assert blocked.status_code == 403
+
         result = await client.get(
             path, params={"amount": amount, "per_page": 1}, headers=headers
         )

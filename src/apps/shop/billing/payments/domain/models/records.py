@@ -5,6 +5,7 @@ from datetime import datetime
 from papilio.infra.db.schema.entity import PersistenceEntity
 from papilio.infra.db.schema.fields import (
     BigIntField,
+    CharField,
     EnumField,
     ForeignKeyField,
     TimestampField,
@@ -22,3 +23,4 @@ class PaymentModel(PersistenceEntity):
         PaymentStatus, length=12, default=PaymentStatus.PENDING
     )
     confirmed_at: datetime | None = TimestampField(nullable=True, default=None)
+    rejection_reason: str | None = CharField(500, nullable=True, default=None)

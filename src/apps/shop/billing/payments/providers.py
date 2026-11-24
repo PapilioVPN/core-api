@@ -3,7 +3,8 @@
 from dishka import Provider, Scope, provide
 
 from .app.commands.records import PaymentCommand
-from .app.interfaces.commands import IPaymentCommand
+from .app.commands.review import PaymentReviewCommand
+from .app.interfaces.commands import IPaymentCommand, IPaymentReviewCommand
 from .app.interfaces.queries import IPaymentQuery, IPaymentSearchQuery
 from .app.interfaces.services import IPaymentService
 from .app.queries.details import PaymentQuery
@@ -20,5 +21,6 @@ class PaymentProvider(Provider):
     reader = provide(PaymentReader)
     payments = provide(PaymentService, provides=IPaymentService)
     command = provide(PaymentCommand, provides=IPaymentCommand)
+    review = provide(PaymentReviewCommand, provides=IPaymentReviewCommand)
     query = provide(PaymentQuery, provides=IPaymentQuery)
     search = provide(PaymentSearchQuery, provides=IPaymentSearchQuery)

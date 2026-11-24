@@ -2,8 +2,13 @@
 
 from typing import Protocol
 
+from ...domain.enums.records import PaymentStatus
 from ...domain.models.records import PaymentModel
 
 
 class IPaymentService(Protocol):
     async def create(self, data: PaymentModel) -> PaymentModel: ...
+
+    async def review(
+        self, id: int, status: PaymentStatus, *, reason: str | None = None
+    ) -> PaymentModel: ...
