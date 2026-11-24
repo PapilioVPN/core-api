@@ -3,7 +3,37 @@
 import warnings
 from pathlib import Path
 
+from papilio.errors.exceptions import ValidationException
 from PIL import Image
+
+from src.shared.utils.asyncio.processes import ProcessRunner
+
+
+async def validate_image(
+    path: Path,
+    mime_type: str,
+    *,
+    processes: ProcessRunner,
+    error: ValidationException,
+) -> None:
+    """Validate image bytes in a worker process.
+
+    Args:
+        path: Local file available throughout validation.
+        mime_type: Expected MIME of the uploaded image.
+        processes: Existing runner for decoding outside the event loop.
+        error: The caller's validation error for invalid content.
+
+    Returns:
+        None after the image decodes as the expected MIME.
+
+    Raises:
+        ValidationException: The image does not decode as the expected MIME.
+        OSError: The source file cannot be opened.
+    """
+    valid = await processes.run(mime_checker, path, mime_type)
+    if not valid:
+        raise error
 
 
 def mime_checker(path: Path, mime_type: str) -> bool:

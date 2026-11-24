@@ -1,15 +1,12 @@
 """Validate receipt images through the existing file upload owner."""
 
-from functools import partial
-
 from anyio.abc import ByteReceiveStream
 from papilio.errors.exceptions import ValidationException
 
 from src.apps.core.storage.files.app.interfaces.uploads import IFileUpload
-from src.apps.core.storage.files.domain.results.staging import StagedFile
 from src.apps.core.storage.files.domain.results.uploads import FileUploadResult
 from src.shared.utils.asyncio.processes import ProcessRunner
-from src.shared.utils.images import mime_checker
+from src.shared.utils.images import validate_image
 
 from ...domain.dtos.uploads import ReceiptUpload
 
@@ -40,16 +37,15 @@ class ReceiptUploadService:
             source,
             data,
             max_bytes=max_bytes,
-            validator=partial(self._validate, mime_type=data.mime_type),
+            validator=lambda staged: validate_image(
+                staged.path,
+                data.mime_type,
+                processes=self.processes,
+                error=ValidationException(
+                    message="Receipt image does not match the declared type",
+                    message_code="receipt_image_invalid",
+                    loc=["image"],
+                ),
+            ),
         )
         return result
-
-    async def _validate(self, data: StagedFile, *, mime_type: str) -> None:
-        """Check the actual MIME and decode staged bytes before publication."""
-        valid = await self.processes.run(mime_checker, data.path, mime_type)
-        if not valid:
-            raise ValidationException(
-                message="Receipt image does not match the declared type",
-                message_code="receipt_image_invalid",
-                loc=["image"],
-            )
