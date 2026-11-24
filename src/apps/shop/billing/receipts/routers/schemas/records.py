@@ -18,6 +18,5 @@ class ReceiptOutput(BaseOutput):
     bank_name: str | None
     source_last4: str | None
     destination_last4: str | None
-    rejection_reason: str | None
     created_at: datetime
     updated_at: datetime

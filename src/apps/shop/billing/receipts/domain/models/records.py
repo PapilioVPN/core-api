@@ -25,4 +25,3 @@ class ReceiptModel(PersistenceEntity):
     bank_name: str | None = CharField(100, nullable=True, default=None)
     source_last4: str | None = CharField(4, nullable=True, default=None)
     destination_last4: str | None = CharField(4, nullable=True, default=None)
-    rejection_reason: str | None = CharField(500, nullable=True, default=None)

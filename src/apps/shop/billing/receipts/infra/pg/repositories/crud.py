@@ -6,7 +6,7 @@ from papilio.infra.db.repositories.backends.postgresql import (
     PGPersistenceRepository,
 )
 from papilio.schemas.results import PagedType
-from sqlalchemy import and_, or_
+from sqlalchemy import or_
 from sqlalchemy.sql import ColumnElement
 from sqlmodel import col
 
@@ -17,19 +17,6 @@ from ..tables import ReceiptTable
 
 class ReceiptRepository(PGPersistenceRepository[ReceiptModel]):
     table = ReceiptTable
-
-    async def review(
-        self, id: int, status: ReceiptStatus, *, reason: str | None
-    ) -> ReceiptModel | None:
-        """Update one pending receipt and return the changed row if present."""
-        table = self.table
-        rows = await self.update(
-            and_(
-                col(table.id) == id, col(table.status) == ReceiptStatus.PENDING
-            ),
-            {"status": status, "rejection_reason": reason},
-        )
-        return rows[0] if rows else None
 
     async def search(
         self,

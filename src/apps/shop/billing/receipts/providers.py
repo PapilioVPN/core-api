@@ -2,8 +2,6 @@
 
 from dishka import Provider, Scope, provide
 
-from .app.commands.review import ReceiptReviewCommand
-from .app.interfaces.commands import IReceiptReviewCommand
 from .app.interfaces.services import IReceiptService
 from .app.interfaces.uploads import IReceiptUpload
 from .app.services.crud import ReceiptService
@@ -16,7 +14,6 @@ class ReceiptProvider(Provider):
 
     repo = provide(ReceiptRepository)
     receipts = provide(ReceiptService, provides=IReceiptService)
-    review = provide(ReceiptReviewCommand, provides=IReceiptReviewCommand)
     upload = provide(
         ReceiptUploadService, provides=IReceiptUpload, scope=Scope.APP
     )

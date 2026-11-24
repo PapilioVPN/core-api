@@ -2,11 +2,7 @@
 
 from papilio_tasks.apps.events.publishers.jetstream import publisher
 
-from ...domain.events.review import (
-    ReceiptApproved,
-    ReceiptCreated,
-    ReceiptRejected,
-)
+from ...domain.events.records import ReceiptCreated
 from .config import BrokerConfig
 
 receipt_created = publisher(
@@ -14,16 +10,4 @@ receipt_created = publisher(
     subject=BrokerConfig.created,
     stream=BrokerConfig.stream,
     outbox_key=BrokerConfig.created,
-)
-receipt_approved = publisher(
-    ReceiptApproved,
-    subject=BrokerConfig.approved,
-    stream=BrokerConfig.stream,
-    outbox_key=BrokerConfig.approved,
-)
-receipt_rejected = publisher(
-    ReceiptRejected,
-    subject=BrokerConfig.rejected,
-    stream=BrokerConfig.stream,
-    outbox_key=BrokerConfig.rejected,
 )
