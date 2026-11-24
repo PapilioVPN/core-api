@@ -10,6 +10,7 @@ from src.apps.core.storage.files.app.services.contents import (
     FileContentService,
 )
 from src.apps.core.storage.files.app.services.records import FileService
+from src.apps.core.storage.files.infra.pg.readers.links import FileLinkReader
 from src.apps.core.storage.files.infra.pg.repositories.contents import (
     FileContentRepository,
 )
@@ -23,6 +24,7 @@ class StorageFileProvider(Provider):
 
     contents = provide(FileContentRepository, scope=Scope.REQUEST)
     files = provide(FileRepository, scope=Scope.REQUEST)
+    links = provide(FileLinkReader, scope=Scope.REQUEST)
     content_service = provide(
         FileContentService, provides=IFileContentService, scope=Scope.REQUEST
     )

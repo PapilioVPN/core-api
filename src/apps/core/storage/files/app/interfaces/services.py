@@ -167,6 +167,8 @@ class IFileContentService(Protocol):
 
 
 class IFileService(Protocol):
+    async def find_id_by_url(self, url: str) -> int | None: ...
+
     """Own independent logical file records through one repository.
 
     Prepared registrations reference existing content; coordinated existence

@@ -11,6 +11,7 @@ from src.apps.core.storage.files.domain.dtos.records import (
     FileList,
 )
 from src.apps.core.storage.files.domain.models.records import FileModel
+from src.apps.core.storage.files.infra.pg.readers.links import FileLinkReader
 from src.apps.core.storage.files.infra.pg.repositories.records import (
     FileRepository,
 )
@@ -19,15 +20,22 @@ from src.apps.core.storage.files.infra.pg.repositories.records import (
 class FileService(IDChecks[FileModel]):
     entity = "File"
 
-    def __init__(self, repo: FileRepository) -> None:
+    def __init__(self, repo: FileRepository, links: FileLinkReader) -> None:
         """Bind file metadata persistence on the owning request's UoW.
 
         Args:
             repo: The single native logical file repository.
+            links: Registered content URL lookup.
         Returns:
             None.
         """
         self.repo = repo
+        self.links = links
+
+    async def find_id_by_url(self, url: str) -> int | None:
+        """Resolve a stored file URL without making a network request."""
+        id = await self.links.find_id_by_url(url)
+        return id
 
     @transactional
     async def create(self, data: FileModel) -> FileModel:
