@@ -38,20 +38,22 @@ class PaddleGateway(BaseGateway):
             response = await self.post(self.url, json=payload)
             response.raise_for_status()
         except HTTPError:
-            return OCRFailure("ocr_api_unavailable")
-
-        try:
-            result = ReadResponse.model_validate_json(response.content).result
-            lines = tuple(
-                line
-                for page in result.pages
-                for line, score in zip(
-                    page.pruned_result.rec_texts,
-                    page.pruned_result.rec_scores,
-                    strict=True,
+            lines = OCRFailure("ocr_api_unavailable")
+        else:
+            try:
+                result = ReadResponse.model_validate_json(
+                    response.content
+                ).result
+                lines = tuple(
+                    line
+                    for page in result.pages
+                    for line, score in zip(
+                        page.pruned_result.rec_texts,
+                        page.pruned_result.rec_scores,
+                        strict=True,
+                    )
+                    if score >= self.min_score
                 )
-                if score >= self.min_score
-            )
-        except ValueError:
-            return OCRFailure("ocr_response_invalid")
+            except ValueError:
+                lines = OCRFailure("ocr_response_invalid")
         return lines

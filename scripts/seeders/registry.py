@@ -54,19 +54,20 @@ def select_seeds(
         if seed.key in seen or not set(seed.requires) <= seen:
             raise ValueError(f"Invalid seed registration order: {seed.key}")
         seen.add(seed.key)
-    selected: set[str] = set()
-    if not targets:
-        return seeds
-    for target in targets:
-        matches = {
-            seed.key
-            for seed in seeds
-            if seed.key == target or seed.key.startswith(target + ".")
-        }
-        if not matches:
-            raise ValueError(f"Unknown seed target: {target}")
-        selected.update(matches)
-    for seed in reversed(seeds):
-        if seed.key in selected:
-            selected.update(seed.requires)
-    return tuple(seed for seed in seeds if seed.key in selected)
+    result = seeds
+    if targets:
+        selected: set[str] = set()
+        for target in targets:
+            matches = {
+                seed.key
+                for seed in seeds
+                if seed.key == target or seed.key.startswith(target + ".")
+            }
+            if not matches:
+                raise ValueError(f"Unknown seed target: {target}")
+            selected.update(matches)
+        for seed in reversed(seeds):
+            if seed.key in selected:
+                selected.update(seed.requires)
+        result = tuple(seed for seed in seeds if seed.key in selected)
+    return result

@@ -88,20 +88,22 @@ def s3_peer(tmp_path: Path) -> Iterator[S3Peer]:
             time.sleep(peer.delay)
             if peer.error:
                 self.error(*peer.error)
-                return
-            path = peer.path(self.path)
-            if not path.exists():
-                self.error(404, "NoSuchKey")
-                return
-            self.send_response(200)
-            self.send_header("Content-Length", str(path.stat().st_size))
-            self.end_headers()
-            time.sleep(peer.body_delay)
-            try:
-                with path.open("rb") as source:
-                    shutil.copyfileobj(source, self.wfile, 65536)
-            except (BrokenPipeError, ConnectionResetError):
-                pass
+            else:
+                path = peer.path(self.path)
+                if path.exists():
+                    self.send_response(200)
+                    self.send_header(
+                        "Content-Length", str(path.stat().st_size)
+                    )
+                    self.end_headers()
+                    time.sleep(peer.body_delay)
+                    try:
+                        with path.open("rb") as source:
+                            shutil.copyfileobj(source, self.wfile, 65536)
+                    except (BrokenPipeError, ConnectionResetError):
+                        pass
+                else:
+                    self.error(404, "NoSuchKey")
 
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     host, port = server.server_address[:2]

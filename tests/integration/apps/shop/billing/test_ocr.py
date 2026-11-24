@@ -89,28 +89,30 @@ async def test_ocr_pipeline(pg: CoreSettings, tmp_path: Path) -> None:
         assert b64decode(body["file"]) == image
         assert body["fileType"] == 1 and not body["visualize"]
         if len(calls) == 2:
-            return Response(503)
-        return Response(
-            200,
-            json={
-                "errorCode": 0,
-                "result": {
-                    "ocrResults": [
-                        {
-                            "prunedResult": {
-                                "rec_texts": [
-                                    "مبلغ: ۱۲۳ تومان",
-                                    "کد رهگیری: ۰۰۰۴۲",
-                                ],
-                                "rec_scores": [0.99, 0.6]
-                                if len(calls) == 1
-                                else [0.99],
+            response = Response(503)
+        else:
+            response = Response(
+                200,
+                json={
+                    "errorCode": 0,
+                    "result": {
+                        "ocrResults": [
+                            {
+                                "prunedResult": {
+                                    "rec_texts": [
+                                        "مبلغ: ۱۲۳ تومان",
+                                        "کد رهگیری: ۰۰۰۴۲",
+                                    ],
+                                    "rec_scores": [0.99, 0.6]
+                                    if len(calls) == 1
+                                    else [0.99],
+                                }
                             }
-                        }
-                    ],
+                        ],
+                    },
                 },
-            },
-        )
+            )
+        return response
 
     try:
         connection = await container.get(HTTPConnection)

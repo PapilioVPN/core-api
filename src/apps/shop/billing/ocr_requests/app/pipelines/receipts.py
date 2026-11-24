@@ -55,39 +55,47 @@ class OCRPipeline:
             Extraction outcome with only confidently recognized, explicit
             values.
         """
-        if file_id is None:
-            return OCROutcome(
-                ExtractionStatus.FAILED, error_code="image_unavailable"
+        image = (
+            OCRFailure("image_unavailable")
+            if file_id is None
+            else await self._read_image(file_id)
+        )
+        lines = (
+            image
+            if isinstance(image, OCRFailure)
+            else await self.gateway.read(image)
+        )
+        if isinstance(lines, OCRFailure):
+            outcome = OCROutcome(
+                ExtractionStatus.FAILED, error_code=lines.code
             )
+        else:
+            result = fields(lines)
+            status = (
+                ExtractionStatus.EXTRACTED
+                if any(
+                    value is not None
+                    for value in (
+                        result.amount,
+                        result.tracking_code,
+                        result.reference_code,
+                    )
+                )
+                else ExtractionStatus.UNREADABLE
+            )
+            outcome = OCROutcome(status, result)
+        return outcome
+
+    async def _read_image(self, file_id: int) -> bytes | OCRFailure:
+        """Read bounded image bytes from Storage."""
         try:
             async with self.files.open(file_id) as download:
                 size = download.metadata.size_bytes
-                if not 0 < size <= self.max_bytes:
-                    return OCROutcome(
-                        ExtractionStatus.FAILED,
-                        error_code="image_size_invalid",
-                    )
-                stream = BufferedByteReceiveStream(download.source)
-                image = await stream.receive_exactly(size)
+                if 0 < size <= self.max_bytes:
+                    stream = BufferedByteReceiveStream(download.source)
+                    image = await stream.receive_exactly(size)
+                else:
+                    image = OCRFailure("image_size_invalid")
         except (APPException, OSError, IncompleteRead, BrokenResourceError):
-            return OCROutcome(
-                ExtractionStatus.FAILED, error_code="image_unavailable"
-            )
-
-        lines = await self.gateway.read(image)
-        if isinstance(lines, OCRFailure):
-            return OCROutcome(ExtractionStatus.FAILED, error_code=lines.code)
-        result = fields(lines)
-        status = (
-            ExtractionStatus.EXTRACTED
-            if any(
-                value is not None
-                for value in (
-                    result.amount,
-                    result.tracking_code,
-                    result.reference_code,
-                )
-            )
-            else ExtractionStatus.UNREADABLE
-        )
-        return OCROutcome(status, result)
+            image = OCRFailure("image_unavailable")
+        return image

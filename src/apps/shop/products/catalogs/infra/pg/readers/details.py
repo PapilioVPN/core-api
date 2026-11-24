@@ -29,8 +29,9 @@ class CatalogReader(PGReader):
 
     async def get_by_ids(self, ids: Sequence[int]) -> Sequence[CatalogDetail]:
         """Load all existing details for a bounded ID set in one query."""
-        if not ids:
-            return []
-        stmt = details().where(col(CatalogTable.id).in_(ids))
-        result = await self.uow.execute(stmt)
-        return [CatalogDetail(*row) for row in result.tuples()]
+        rows: list[CatalogDetail] = []
+        if ids:
+            stmt = details().where(col(CatalogTable.id).in_(ids))
+            result = await self.uow.execute(stmt)
+            rows = [CatalogDetail(*row) for row in result.tuples()]
+        return rows
