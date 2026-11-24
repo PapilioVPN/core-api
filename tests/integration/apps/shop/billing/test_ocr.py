@@ -8,6 +8,7 @@ import pytest
 from anyio.streams.file import FileReadStream
 from faststream.nats import NatsBroker
 from httpx import AsyncClient, MockTransport, Request, Response
+from papilio.errors.exceptions import NotFoundException
 from papilio.infra.db.transaction import transaction
 from papilio.infra.http.connection import HTTPConnection
 from pydantic import HttpUrl
@@ -21,6 +22,12 @@ from src.apps.core.storage.files.app.interfaces.uploads import IFileUpload
 from src.apps.core.storage.files.domain.dtos.uploads import FileUpload
 from src.apps.shop.billing.ocr_requests.app.interfaces.processing import (
     IOCRPipeline,
+)
+from src.apps.shop.billing.ocr_requests.app.interfaces.services import (
+    IOCRRequestService,
+)
+from src.apps.shop.billing.ocr_requests.domain.dtos.records import (
+    OCRRequestList,
 )
 from src.apps.shop.billing.ocr_requests.domain.parsers.receipts import fields
 from src.apps.shop.billing.ocr_requests.infra.pg.repositories.crud import (
@@ -149,13 +156,14 @@ async def test_ocr_pipeline(pg: CoreSettings, tmp_path: Path) -> None:
                 assert len(calls) == 1
 
                 async with container() as scope:
-                    requests = await scope.get(OCRRequestRepository)
+                    requests = await scope.get(IOCRRequestService)
                     receipts = await scope.get(ReceiptRepository)
-                    attempt = await requests.get_one(
-                        col(requests.table.event_id) == "ocr-example-1"
-                    )
+                    attempt = await requests.find_by_event("ocr-example-1")
                     receipt = await receipts.get_by_id(payment.receipt_id)
                     assert attempt is not None and receipt is not None
+                    assert (await requests.get_by_id(attempt.id)).event_id == (
+                        attempt.event_id
+                    )
                     assert (
                         attempt.status
                         == receipt.extraction_status
@@ -175,12 +183,10 @@ async def test_ocr_pipeline(pg: CoreSettings, tmp_path: Path) -> None:
                         payment.receipt_id, event_id=event_id
                     )
                     async with container() as scope:
-                        requests = await scope.get(OCRRequestRepository)
+                        requests = await scope.get(IOCRRequestService)
                         receipts = await scope.get(ReceiptRepository)
                         payments = await scope.get(PaymentRepository)
-                        attempt = await requests.get_one(
-                            col(requests.table.event_id) == event_id
-                        )
+                        attempt = await requests.find_by_event(event_id)
                         receipt = await receipts.get_by_id(payment.receipt_id)
                         stored = await payments.get_by_id(payment.id)
                         assert attempt is not None and receipt is not None
@@ -195,6 +201,28 @@ async def test_ocr_pipeline(pg: CoreSettings, tmp_path: Path) -> None:
                             stored is not None
                             and stored.status == payment.status
                         )
+
+                async with container() as scope:
+                    requests = await scope.get(IOCRRequestService)
+                    for page, event_id in (
+                        (1, "ocr-example-3"),
+                        (2, "ocr-example-2"),
+                    ):
+                        failed = await requests.list(
+                            OCRRequestList(
+                                receipt_id=payment.receipt_id,
+                                status=ExtractionStatus.FAILED,
+                                per_page=1,
+                                page=page,
+                            )
+                        )
+                        assert failed.total_items == 2
+                        assert [
+                            attempt.event_id for attempt in failed.items
+                        ] == [event_id]
+                    assert await requests.find_by_event("ocr-missing") is None
+                    with pytest.raises(NotFoundException):
+                        await requests.get_by_id(2**63 - 1)
             finally:
                 async with container() as scope:
                     requests = await scope.get(OCRRequestRepository)

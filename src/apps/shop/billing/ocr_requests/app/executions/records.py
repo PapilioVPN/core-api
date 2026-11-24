@@ -11,7 +11,7 @@ from src.apps.shop.billing.receipts.app.interfaces.services import (
 
 from ...domain.models.records import OCRRequestModel
 from ...domain.results.records import OCROutcome, OCRSource
-from ...infra.pg.repositories.crud import OCRRequestRepository
+from ..interfaces.services import IOCRRequestService
 
 
 class OCRExecution:
@@ -25,7 +25,7 @@ class OCRExecution:
         receipt_id: int,
         event_id: str,
         *,
-        requests: OCRRequestRepository = Inject(),
+        requests: IOCRRequestService = Inject(),
         receipts: IReceiptService = Inject(),
         files: IFileService = Inject(),
     ) -> OCRSource | None:
@@ -34,7 +34,7 @@ class OCRExecution:
         Args:
             receipt_id: Identity carried by ReceiptCreated.
             event_id: Durable identity of the delivery.
-            requests: Request-scoped attempt repository.
+            requests: Request-scoped attempt service.
             receipts: Receipt record owner.
             files: Storage metadata service.
 
@@ -59,7 +59,7 @@ class OCRExecution:
         event_id: str,
         outcome: OCROutcome,
         *,
-        requests: OCRRequestRepository = Inject(),
+        requests: IOCRRequestService = Inject(),
         receipts: IReceiptService = Inject(),
     ) -> None:
         """Commit a new attempt and its receipt update together.
@@ -68,13 +68,13 @@ class OCRExecution:
             receipt_id: Identity of the processed receipt.
             event_id: Durable identity used to suppress repeated writes.
             outcome: Terminal extraction status and observed fields.
-            requests: Request-scoped attempt repository.
+            requests: Request-scoped attempt service.
             receipts: Receipt record owner on the same transaction.
 
         Returns:
             None after applying or skipping the completion.
         """
-        record = await requests.insert(
+        record = await requests.create(
             OCRRequestModel(
                 receipt_id=receipt_id,
                 event_id=event_id,
