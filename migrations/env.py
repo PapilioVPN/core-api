@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 from sqlmodel import SQLModel
 
+from src.bootstrap.outbox import metadata as outbox_metadata
+
 # Keep retired tables from published revisions out of schema comparisons.
 RETIRED_TABLES = {
     "tbl_attributes",
@@ -19,6 +21,7 @@ RETIRED_TABLES = {
 }
 
 get_bootstrapper().boot_sqlmodels()
+metadata = [SQLModel.metadata, outbox_metadata]
 database = get_settings().db
 if database is None:
     raise ValueError("Database settings are required")
@@ -27,7 +30,7 @@ if database is None:
 def migrate(connection: Connection) -> None:
     context.configure(
         connection=connection,
-        target_metadata=SQLModel.metadata,
+        target_metadata=metadata,
         include_name=lambda name, type_, _: (
             type_ != "table"
             or name not in RETIRED_TABLES
@@ -51,7 +54,7 @@ url = context.config.get_main_option("sqlalchemy.url") or database.dsn
 if context.is_offline_mode():
     context.configure(
         url=url,
-        target_metadata=SQLModel.metadata,
+        target_metadata=metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )

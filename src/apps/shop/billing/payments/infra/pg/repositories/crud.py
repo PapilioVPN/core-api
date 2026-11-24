@@ -6,6 +6,7 @@ from papilio.infra.db.repositories.backends.postgresql import (
     PGPersistenceRepository,
 )
 from papilio.schemas.results import PagedType
+from sqlalchemy import and_
 from sqlalchemy.sql import ColumnElement
 from sqlmodel import col
 
@@ -16,6 +17,24 @@ from ..tables import PaymentTable
 
 class PaymentRepository(PGPersistenceRepository[PaymentModel]):
     table = PaymentTable
+
+    async def review(
+        self,
+        receipt_id: int,
+        status: PaymentStatus,
+        *,
+        confirmed_at: datetime | None,
+    ) -> PaymentModel | None:
+        """Update the pending payment linked to the supplied receipt."""
+        table = self.table
+        rows = await self.update(
+            and_(
+                col(table.receipt_id) == receipt_id,
+                col(table.status) == PaymentStatus.PENDING,
+            ),
+            {"status": status, "confirmed_at": confirmed_at},
+        )
+        return rows[0] if rows else None
 
     async def find_by_receipt_id(self, receipt_id: int) -> PaymentModel | None:
         """Read the payment that owns a receipt.

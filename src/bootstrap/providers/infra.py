@@ -6,6 +6,7 @@ from papilio.providers.db import PGProvider
 from papilio.providers.passwords import PasswordProvider
 from papilio.providers.redis import RedisProvider
 
+from src.bootstrap.providers.outbox import OutboxProvider
 from src.bootstrap.providers.storage import StorageInfraProvider
 from src.settings.config import CoreSettings
 from src.shared.providers.asyncio import AsyncioProvider
@@ -27,6 +28,7 @@ def infra_providers(settings: CoreSettings) -> list[Provider]:
         AsyncioProvider(),
         StorageInfraProvider(settings.storage),
         PGProvider(settings.db),
+        OutboxProvider(settings),
         PasswordProvider(settings.crypto.password_salt),
     ]
     if settings.redis is None:

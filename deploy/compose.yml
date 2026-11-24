@@ -89,6 +89,10 @@ services:
     <<: *jobs
     command: [papilio_tasks, events, run, "src.entrypoints.events:app"]
 
+  outbox:
+    <<: *jobs
+    command: [faststream, run, "src.entrypoints.outbox:app"]
+
 secrets:
   db_password:
     file: ${CORE_STATE:?Run ./install.sh runtime}/db.password

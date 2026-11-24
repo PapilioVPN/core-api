@@ -72,7 +72,7 @@ PY
 
 ./run.sh runtime up
 running=$("${compose[@]}" ps --status running --services)
-for service in api postgres redis nats scheduler beat events; do
+for service in api postgres redis nats scheduler beat events outbox; do
     grep -Fxq "$service" <<< "$running"
 done
 ./run.sh runtime migrate

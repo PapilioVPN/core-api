@@ -11,8 +11,8 @@ from src.bootstrap.providers.infra import infra_providers
 from src.settings.config import CoreSettings
 
 
-def create_events(settings: CoreSettings) -> Application:
-    """Bind native event discovery without opening NATS."""
+def registrar(settings: CoreSettings) -> JetRegistrar:
+    """Configure native JetStream without opening NATS."""
     nats = settings.nats
     if nats is None:
         raise ValueError("Configure nats.servers to start events")
@@ -21,11 +21,24 @@ def create_events(settings: CoreSettings) -> Application:
         connect_timeout=nats.connect_timeout,
         graceful_timeout=nats.graceful_timeout,
     )
+    return JetRegistrar(NatsBroker(broker))
+
+
+def create_events_producer(settings: CoreSettings) -> Application:
+    """Bind the relay's target publishers without starting subscribers."""
+    app = create_app(
+        registrar=registrar(settings), publishers=settings.app.modules
+    )
+    return app
+
+
+def create_events(settings: CoreSettings) -> Application:
+    """Bind native event discovery without opening NATS."""
     discover = Bootstrapper(
         settings.app.modules, tables_path=settings.app.tables_path
     )
     app = create_app(
-        registrar=JetRegistrar(NatsBroker(broker)),
+        registrar=registrar(settings),
         providers=[
             CoreProvider(settings),
             *infra_providers(settings),
