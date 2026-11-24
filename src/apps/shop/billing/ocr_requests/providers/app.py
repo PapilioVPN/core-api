@@ -8,7 +8,7 @@ from ..app.executions.records import OCRExecution
 from ..app.interfaces.gateways import IOCRGateway
 from ..app.interfaces.processing import IOCRPipeline
 from ..app.pipelines.receipts import OCRPipeline
-from ..infra.gateways.clients import PaddleGateway
+from ..infra.paddle.clients import PaddleGateway
 
 
 class AppProvider(Provider):
