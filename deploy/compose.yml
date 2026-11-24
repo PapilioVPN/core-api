@@ -57,7 +57,6 @@ services:
     volumes:
       - *config
       - media:/app/var/media
-      - media-private:/app/var/media-private
     ports:
       - "${CORE_BIND:-127.0.0.1}:${CORE_PORT:-8000}:8000"
     depends_on:
@@ -96,6 +95,5 @@ secrets:
 
 volumes:
   media:
-  media-private:
   postgres:
   nats:
