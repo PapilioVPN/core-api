@@ -17,6 +17,7 @@ from src.apps.core.storage.files.app.interfaces.downloads import (
     IFileDownloadExecution,
 )
 from src.apps.core.storage.files.app.interfaces.local import ILocalFileStorage
+from src.apps.core.storage.files.app.interfaces.private import IPrivateFiles
 from src.apps.core.storage.files.app.interfaces.s3 import IS3FileStorage
 from src.apps.core.storage.files.app.interfaces.uploads import (
     IFileUpload,
@@ -25,6 +26,7 @@ from src.apps.core.storage.files.app.interfaces.uploads import (
 from src.apps.core.storage.files.app.pipelines.downloads import (
     FileDownloadPipeline,
 )
+from src.apps.core.storage.files.app.pipelines.private import PrivateFiles
 from src.apps.core.storage.files.app.pipelines.uploads import (
     FileUploadPipeline,
 )
@@ -61,6 +63,34 @@ class StorageFileAppProvider(Provider):
         """
         result = LocalFileStorage(root=Path(config.path))
         return result
+
+    @provide(scope=Scope.APP, provides=IPrivateFiles)
+    async def private(
+        self, config: StorageConfig, stager: FileStager
+    ) -> PrivateFiles:
+        """Resolve private media using the same shared filesystem settings.
+
+        Args:
+            config: Public root and shared staging path.
+            stager: Existing bounded upload stager.
+
+        Returns:
+            The private file service rooted outside public media.
+
+        Raises:
+            ValueError: A private or staging path overlaps public media.
+        """
+        public = await AsyncPath(config.path).resolve()
+        root = await public.with_name(f"{public.name}-private").resolve()
+        staging = await AsyncPath(config.temp_dir).resolve()
+        if (
+            root.is_relative_to(public)
+            or public.is_relative_to(root)
+            or staging.is_relative_to(public)
+        ):
+            raise ValueError("Private storage must be outside public media")
+        await root.mkdir(mode=0o700, parents=True, exist_ok=True)
+        return PrivateFiles(Path(root), stager)
 
     @provide(scope=Scope.APP)
     async def stager(

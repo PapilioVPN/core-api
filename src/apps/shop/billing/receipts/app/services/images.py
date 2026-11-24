@@ -1,25 +1,24 @@
 """Validate staged receipt images before private publication."""
 
-from contextlib import AbstractAsyncContextManager
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from functools import partial
 
 from anyio.abc import ByteReceiveStream
-from papilio.errors.exceptions import ValidationException
+from papilio.errors.exceptions import NotFoundException, ValidationException
 
-from src.apps.core.storage.files.infra.staging import FileStager
+from src.apps.core.storage.files.app.interfaces.private import IPrivateFiles
+from src.apps.core.storage.files.domain.results.staging import StagedFile
 from src.shared.utils.asyncio.processes import ProcessRunner
 from src.shared.utils.images import mime_checker
 
 from ...domain.enums.images import ImageFormat
-from ...infra.local import ReceiptFiles
 
 
 class ReceiptImages:
-    def __init__(
-        self, stager: FileStager, processes: ProcessRunner, files: ReceiptFiles
-    ) -> None:
-        self.stager = stager
-        self.processes = processes
+    def __init__(self, files: IPrivateFiles, processes: ProcessRunner) -> None:
         self.files = files
+        self.processes = processes
 
     async def upload(
         self, source: ByteReceiveStream, format: ImageFormat, *, max_bytes: int
@@ -37,22 +36,18 @@ class ReceiptImages:
         Raises:
             ValidationException: The image cannot be decoded as declared.
         """
-        async with self.stager.stage(source, max_bytes=max_bytes) as staged:
-            valid = await self.processes.run(
-                mime_checker, staged.path, format.mime_type
-            )
-            if not valid:
-                raise ValidationException(
-                    message="Invalid receipt image",
-                    message_code="receipt_image_invalid",
-                    loc=["image"],
-                )
-            await self.files.save(format, staged)
-        return staged.sha256
+        digest = await self.files.upload(
+            source,
+            format.value,
+            max_bytes=max_bytes,
+            validator=partial(self._validate, format=format),
+        )
+        return digest
 
-    def open(
+    @asynccontextmanager
+    async def open(
         self, format: ImageFormat, digest: str
-    ) -> AbstractAsyncContextManager[ByteReceiveStream]:
+    ) -> AsyncIterator[ByteReceiveStream]:
         """Open stored bytes using an authorized format and digest.
 
         Args:
@@ -62,4 +57,27 @@ class ReceiptImages:
         Returns:
             An operation-owned stream context.
         """
-        return self.files.open(format, digest)
+        try:
+            async with self.files.open(format.value, digest) as source:
+                yield source
+        except FileNotFoundError as error:
+            raise NotFoundException(
+                message="Receipt image not found",
+                message_code="receipt_image_not_found",
+                entity="receipt_image",
+                identifier="digest",
+                identifier_value=digest,
+            ) from error
+
+    async def _validate(
+        self, staged: StagedFile, *, format: ImageFormat
+    ) -> None:
+        valid = await self.processes.run(
+            mime_checker, staged.path, format.mime_type
+        )
+        if not valid:
+            raise ValidationException(
+                message="Invalid receipt image",
+                message_code="receipt_image_invalid",
+                loc=["image"],
+            )
