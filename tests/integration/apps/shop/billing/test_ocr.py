@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from anyio.streams.file import FileReadStream
+from faststream.nats import NatsBroker
 from httpx import AsyncClient, MockTransport, Request, Response
 from papilio.infra.db.transaction import transaction
 from papilio.infra.http.connection import HTTPConnection
@@ -18,8 +19,8 @@ from src.apps.core.storage.configs.infra.pg.repositories.storage import (
 )
 from src.apps.core.storage.files.app.interfaces.uploads import IFileUpload
 from src.apps.core.storage.files.domain.dtos.uploads import FileUpload
-from src.apps.shop.billing.ocr_requests.app.pipelines.receipts import (
-    OCRPipeline,
+from src.apps.shop.billing.ocr_requests.app.interfaces.processing import (
+    IOCRPipeline,
 )
 from src.apps.shop.billing.ocr_requests.domain.parsers.receipts import fields
 from src.apps.shop.billing.ocr_requests.infra.pg.repositories.crud import (
@@ -57,6 +58,17 @@ def test_receipt_fields() -> None:
     assert result.reference_code == "42000"
     assert fields(("مبلغ: ۱۲۳۴۵۶",)).amount is None
     assert fields(("مبلغ: ۱۰۰ ریال", "مبلغ: ۱۲۳ تومان")).amount is None
+
+
+async def test_ocr_without_endpoint(settings: CoreSettings) -> None:
+    settings.nats = NatsConfig(servers=["nats://127.0.0.1:4222"])
+    app = create_events(settings)
+    try:
+        broker = app.registrar.broker.native
+        assert isinstance(broker, NatsBroker)
+        assert not broker.subscribers
+    finally:
+        await app.stop()
 
 
 async def test_ocr_pipeline(pg: CoreSettings, tmp_path: Path) -> None:
@@ -123,7 +135,7 @@ async def test_ocr_pipeline(pg: CoreSettings, tmp_path: Path) -> None:
                     PaymentCreate(amount=2_000, image_url=upload.url)
                 )
             try:
-                pipeline = await container.get(OCRPipeline)
+                pipeline = await container.get(IOCRPipeline)
                 await pipeline.process(
                     payment.receipt_id, event_id="ocr-example-1"
                 )

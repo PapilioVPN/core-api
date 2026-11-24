@@ -1,10 +1,19 @@
 """Papilio settings with the Core discovery root."""
 
-from papilio.core.config import AppConfig, Settings
+from papilio.core.config import AppConfig, HTTPConfig, Settings
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, PositiveFloat
 
 from src.apps.core.storage.files.config import FileStorageConfig
 from src.settings.cli import CLIConfig
+
+DEFAULT_HTTP = HTTPConfig(
+    max_connections=8,
+    max_keepalive_connections=4,
+    keepalive_expiry=20,
+    timeout=20,
+    connect_timeout=5,
+    follow_redirects=False,
+)
 
 
 class NatsConfig(BaseModel):
@@ -37,6 +46,7 @@ class CoreSettings(Settings):
         tables_path="infra.pg.tables",
     )
     storage: FileStorageConfig  # pyright: ignore[reportIncompatibleVariableOverride]
+    http: HTTPConfig | None = DEFAULT_HTTP
     nats: NatsConfig | None = None
     ocr: OCRConfig | None = None
     scheduler: SchedulerConfig = Field(default_factory=SchedulerConfig)

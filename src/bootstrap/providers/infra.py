@@ -1,7 +1,7 @@
 """Native infrastructure selected by the application configuration."""
 
 from dishka import Provider, Scope, provide
-from papilio.core.config import HTTPConfig
+from papilio.core.config import Settings
 from papilio.infra.redis.client import RedisClient
 from papilio.providers.db import PGProvider
 from papilio.providers.http import HTTPProvider
@@ -10,7 +10,7 @@ from papilio.providers.redis import RedisProvider
 
 from src.bootstrap.providers.outbox import OutboxProvider
 from src.bootstrap.providers.storage import StorageInfraProvider
-from src.settings.config import CoreSettings
+from src.settings.config import DEFAULT_HTTP, CoreSettings
 from src.shared.providers.asyncio import AsyncioProvider
 
 
@@ -26,14 +26,11 @@ def infra_providers(settings: CoreSettings) -> list[Provider]:
     if settings.db is None or settings.crypto is None or settings.jwt is None:
         raise ValueError("Core API requires db, crypto and jwt settings")
 
-    http = settings.http or HTTPConfig(
-        max_connections=8,
-        max_keepalive_connections=4,
-        keepalive_expiry=20,
-        timeout=20,
-        connect_timeout=5,
-    )
+    config = Provider(scope=Scope.APP)
+    config.alias(Settings, provides=CoreSettings)
+    http = settings.http or DEFAULT_HTTP
     providers: list[Provider] = [
+        config,
         AsyncioProvider(),
         StorageInfraProvider(settings.storage),
         PGProvider(settings.db),
