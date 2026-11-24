@@ -7,8 +7,11 @@ from dishka import Provider, Scope, provide
 from papilio.core.config import StorageConfig
 
 from .app.interfaces.images import IReceiptImages
+from .app.interfaces.services import IReceiptService
+from .app.services.crud import ReceiptService
 from .app.services.images import ReceiptImages
 from .infra.local import ReceiptFiles
+from .infra.pg.repositories.crud import ReceiptRepository
 
 
 class ReceiptProvider(Provider):
@@ -40,3 +43,10 @@ class ReceiptProvider(Provider):
             raise ValueError("Receipt storage must be outside public media")
         await root.mkdir(mode=0o700, parents=True, exist_ok=True)
         return ReceiptFiles(Path(root))
+
+
+class ReceiptRecordProvider(Provider):
+    scope = Scope.REQUEST
+
+    repo = provide(ReceiptRepository)
+    service = provide(ReceiptService, provides=IReceiptService)
