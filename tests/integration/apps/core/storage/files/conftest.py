@@ -4,6 +4,7 @@ import hashlib
 import shutil
 import threading
 import time
+from base64 import b64encode
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -26,6 +27,7 @@ class S3Peer:
     content_types: dict[str, str] = field(default_factory=dict)
     requested_keys: list[str] = field(default_factory=list)
     access_keys: list[str] = field(default_factory=list)
+    ports: list[int] = field(default_factory=list)
     lock: threading.Lock = field(default_factory=threading.Lock)
 
     def path(self, key: str) -> Path:
@@ -38,6 +40,8 @@ def s3_peer(tmp_path: Path) -> Iterator[S3Peer]:
     peer.root.mkdir()
 
     class Handler(BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
         def log_message(self, format: str, *args: object) -> None:
             pass
 
@@ -49,23 +53,31 @@ def s3_peer(tmp_path: Path) -> Iterator[S3Peer]:
             self.wfile.write(body)
 
         def do_PUT(self) -> None:
+            peer.ports.append(self.client_address[1])
             assert self.headers["If-None-Match"] == "*"
             assert self.headers["Authorization"].startswith("AWS4-HMAC-SHA256")
             remaining = int(self.headers["Content-Length"])
             path = peer.path(self.path)
             # A lock belongs to this controlled peer, not application storage.
             with peer.lock:
+                digest = hashlib.sha256()
                 with path.with_suffix(".partial").open("wb") as output:
                     while remaining:
                         block = self.rfile.read(min(65536, remaining))
                         assert block
                         output.write(block)
+                        digest.update(block)
                         remaining -= len(block)
                 peer.started.set()
                 time.sleep(peer.delay)
                 if peer.error:
                     path.with_suffix(".partial").unlink()
                     self.error(*peer.error)
+                elif self.headers.get("x-amz-checksum-sha256") != b64encode(
+                    digest.digest()
+                ).decode("ascii"):
+                    path.with_suffix(".partial").unlink()
+                    self.error(400, "BadDigest")
                 elif path.exists():
                     path.with_suffix(".partial").unlink()
                     self.error(412, "PreconditionFailed")
@@ -79,6 +91,7 @@ def s3_peer(tmp_path: Path) -> Iterator[S3Peer]:
                     self.end_headers()
 
         def do_GET(self) -> None:
+            peer.ports.append(self.client_address[1])
             peer.requested_keys.append(self.path)
             authorization = self.headers["Authorization"]
             peer.access_keys.append(

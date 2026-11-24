@@ -1,7 +1,7 @@
 """Local content publication using native bounded file I/O."""
 
 import errno
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -89,7 +89,7 @@ class LocalFileStorage:
     @asynccontextmanager
     async def open(
         self, storage_key: Path
-    ) -> AsyncIterator[ByteReceiveStream]:
+    ) -> AsyncGenerator[ByteReceiveStream]:
         """Read the original stored path without loading the whole file.
 
         Args:

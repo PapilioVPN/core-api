@@ -30,6 +30,8 @@ from src.apps.core.storage.files.domain.dtos.uploads import FileUpload
 from src.apps.core.storage.providers.domain.dtos.configs import S3Config
 from src.settings.config import CoreSettings
 
+from .conftest import S3Peer
+
 pytestmark = pytest.mark.integration
 CONFIG = "/admin/storage/config"
 FILES = "/admin/storage/files"
@@ -56,6 +58,7 @@ async def test_local_and_s3(
     client: AsyncClient,
     tmp_path: Path,
     s3_config: S3Config,
+    s3_peer: S3Peer,
 ) -> None:
     password = "isolated-storage-operator-password"
     container = cast(AsyncContainer, app.state.dishka_container)
@@ -191,6 +194,8 @@ async def test_local_and_s3(
     )
     assert download.status_code == 200, download.text
     assert download.content == remote_payload
+    assert len(s3_peer.ports) == 2
+    assert len(set(s3_peer.ports)) == 1
 
     rows = await client.get(
         FILES, headers=headers, params={"content_id": local.file.content_id}

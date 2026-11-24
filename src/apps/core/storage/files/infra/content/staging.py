@@ -1,7 +1,7 @@
 """Bounded stream hashing and context-owned temporary file preparation."""
 
 import hashlib
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -33,7 +33,7 @@ class FileStager:
     @asynccontextmanager
     async def stage(
         self, source: ByteReceiveStream, *, max_bytes: int
-    ) -> AsyncIterator[StagedFile]:
+    ) -> AsyncGenerator[StagedFile]:
         """Hash and stage a stream using receive blocks of at most one MiB.
 
         Args:

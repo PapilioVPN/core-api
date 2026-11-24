@@ -1,6 +1,6 @@
 """Resolve file metadata, then stream outside its SQL request."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -37,7 +37,7 @@ class FileDownloadPipeline:
         self.s3 = s3
 
     @asynccontextmanager
-    async def open(self, id: int) -> AsyncIterator[FileDownload]:
+    async def open(self, id: int) -> AsyncGenerator[FileDownload]:
         """Resolve the recorded location before opening its scoped byte stream.
 
         Args:

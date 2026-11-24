@@ -1,5 +1,6 @@
 """APP-scoped capability dependencies."""
 
+from collections.abc import AsyncIterator
 from pathlib import Path
 
 from anyio import Path as AsyncPath
@@ -28,9 +29,10 @@ from src.apps.core.storage.files.app.pipelines.downloads import (
 from src.apps.core.storage.files.app.pipelines.uploads import (
     FileUploadPipeline,
 )
-from src.apps.core.storage.files.infra.local import LocalFileStorage
+from src.apps.core.storage.files.infra.content.staging import FileStager
+from src.apps.core.storage.files.infra.local.storage import LocalFileStorage
+from src.apps.core.storage.files.infra.s3.client import S3Clients
 from src.apps.core.storage.files.infra.s3.storage import S3FileStorage
-from src.apps.core.storage.files.infra.staging import FileStager
 from src.shared.utils.asyncio.threads import ThreadRunner
 
 
@@ -48,6 +50,12 @@ class StorageFileAppProvider(Provider):
     download = provide(
         FileDownloadPipeline, provides=IFileDownload, scope=Scope.APP
     )
+
+    @provide(scope=Scope.APP)
+    async def s3_clients(self) -> AsyncIterator[S3Clients]:
+        """Keep SDK connections open for the application lifetime."""
+        async with S3Clients() as clients:
+            yield clients
 
     @provide(scope=Scope.APP, provides=ILocalFileStorage)
     def local(self, config: StorageConfig) -> LocalFileStorage:

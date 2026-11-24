@@ -20,7 +20,7 @@ from src.apps.core.storage.files.domain.results.uploads import (
     FileUploadDestination,
     FileUploadResult,
 )
-from src.apps.core.storage.files.infra.staging import FileStager
+from src.apps.core.storage.files.infra.content.staging import FileStager
 
 
 class FileUploadPipeline:
