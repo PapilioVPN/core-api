@@ -11,7 +11,7 @@ requires-python = ">=3.13,<3.14"
 dependencies = [
     "boto3==1.43.114",
     "faststream-outbox==0.21.0",
-    "papilio[server,postgresql,redis,auth,passwords] @ https://codeload.github.com/amupouya/papilio/tar.gz/984bc18d789fdae37e35cd015a54d38175155c62",
+    "papilio[server,postgresql,redis,auth,passwords,http] @ https://codeload.github.com/amupouya/papilio/tar.gz/984bc18d789fdae37e35cd015a54d38175155c62",
     "papilio-tasks[events-nats,outbox-postgres] @ https://codeload.github.com/amupouya/papilio-tasks/tar.gz/5b3861bc1b2b6794c1030534c9d7eb92572225d5",
     "Pillow==13.0.0",
     "psutil==7.2.2",

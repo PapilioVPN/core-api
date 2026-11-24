@@ -7,6 +7,9 @@ from papilio_tasks.apps.events.application import Application, create_app
 from papilio_tasks.apps.events.registry.jetstream import JetRegistrar
 from papilio_tasks.infra.faststream.brokers.backends.nats import NatsBroker
 
+from src.apps.shop.billing.ocr_requests.tasks.subscribers.receipts import (
+    create_router as ocr_router,
+)
 from src.bootstrap.providers.infra import infra_providers
 from src.settings.config import CoreSettings
 
@@ -46,5 +49,6 @@ def create_events(settings: CoreSettings) -> Application:
         ],
         publishers=settings.app.modules,
         subscribers=settings.app.modules,
+        routers=[ocr_router()] if settings.ocr is not None else [],
     )
     return app

@@ -10,6 +10,7 @@ from papilio.infra.db.schema.fields import (
     TimestampField,
 )
 
+from ..enums.extraction import ExtractionStatus
 from ..enums.records import ReceiptStatus
 
 
@@ -17,6 +18,9 @@ class ReceiptModel(PersistenceEntity):
     image_url: str = CharField(255)
     status: ReceiptStatus = EnumField(
         ReceiptStatus, length=12, default=ReceiptStatus.PENDING
+    )
+    extraction_status: ExtractionStatus | None = EnumField(
+        ExtractionStatus, length=12, nullable=True, default=None
     )
     amount: int | None = BigIntField(nullable=True, default=None)
     paid_at: datetime | None = TimestampField(nullable=True, default=None)
