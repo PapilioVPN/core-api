@@ -5,7 +5,7 @@ from pathlib import Path
 
 import psutil
 
-from src.apps.core.system.health.domain.results.storage import (
+from src.apps.core.system.info.domain.results.storage import (
     DiskIoCounters,
     DiskPartition,
     DiskUsage,

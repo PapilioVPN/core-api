@@ -5,11 +5,6 @@ from datetime import datetime as DateTime
 from papilio.schemas.outputs import BaseOutput
 
 
-class MeasurementOutput[T](BaseOutput):
-    value: T
-    duration_ms: float
-
-
 class ProbeOutput(BaseOutput):
     status: str
     value: bool

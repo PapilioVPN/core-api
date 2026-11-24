@@ -3,7 +3,8 @@
 from anyio import to_thread
 
 from src.apps.core.system.health.app.helpers.measurement import measure
-from src.apps.core.system.health.domain.results.resources import (
+from src.apps.core.system.health.domain.results.services import MeasuredResult
+from src.apps.core.system.info.domain.results.resources import (
     CoreCpuUsage,
     CpuInfo,
     CpuUsage,
@@ -13,10 +14,7 @@ from src.apps.core.system.health.domain.results.resources import (
     SwapInfo,
     UserSession,
 )
-from src.apps.core.system.health.domain.results.services import (
-    MeasuredResult,
-)
-from src.apps.core.system.health.infra.sys.resources import (
+from src.apps.core.system.info.infra.sys.resources import (
     SystemResourcesReader,
 )
 

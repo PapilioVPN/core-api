@@ -3,18 +3,16 @@
 from anyio import to_thread
 
 from src.apps.core.system.health.app.helpers.measurement import measure
-from src.apps.core.system.health.domain.results.sensors import (
+from src.apps.core.system.health.domain.results.services import MeasuredResult
+from src.apps.core.system.info.domain.results.sensors import (
     BatteryInfo,
     FanSpeed,
     Temperature,
 )
-from src.apps.core.system.health.domain.results.services import (
-    MeasuredResult,
-)
-from src.apps.core.system.health.infra.sys.sensors import SensorReader
+from src.apps.core.system.info.infra.sys.sensors import SensorReader
 
 
-class SensorHealthService:
+class SensorService:
     def __init__(self, reader: SensorReader) -> None:
         """Bind the focused reader and native thread execution.
 

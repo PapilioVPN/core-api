@@ -11,7 +11,7 @@ from typing import ClassVar, Protocol, TypedDict, cast
 
 import psutil
 
-from src.apps.core.system.health.domain.results.processes import (
+from src.apps.core.system.info.domain.results.processes import (
     ProcessInfo,
     ProcessListing,
 )

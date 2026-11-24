@@ -6,18 +6,16 @@ from pathlib import Path
 from anyio import to_thread
 
 from src.apps.core.system.health.app.helpers.measurement import measure
-from src.apps.core.system.health.domain.results.services import (
-    MeasuredResult,
-)
-from src.apps.core.system.health.domain.results.storage import (
+from src.apps.core.system.health.domain.results.services import MeasuredResult
+from src.apps.core.system.info.domain.results.storage import (
     DiskIoCounters,
     DiskPartition,
     DiskUsage,
 )
-from src.apps.core.system.health.infra.sys.storage import DiskReader
+from src.apps.core.system.info.infra.sys.storage import DiskReader
 
 
-class DiskHealthService:
+class DiskService:
     def __init__(self, reader: DiskReader) -> None:
         """Bind the focused reader and native thread execution.
 

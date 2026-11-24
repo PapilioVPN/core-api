@@ -3,17 +3,15 @@
 from anyio import to_thread
 
 from src.apps.core.system.health.app.helpers.measurement import measure
-from src.apps.core.system.health.domain.results.network import (
+from src.apps.core.system.health.domain.results.services import MeasuredResult
+from src.apps.core.system.info.domain.results.network import (
     NetworkInterface,
     NetworkIoCounters,
 )
-from src.apps.core.system.health.domain.results.services import (
-    MeasuredResult,
-)
-from src.apps.core.system.health.infra.sys.network import NetworkReader
+from src.apps.core.system.info.infra.sys.network import NetworkReader
 
 
-class NetworkHealthService:
+class NetworkService:
     def __init__(self, reader: NetworkReader) -> None:
         """Bind the focused reader and native thread execution.
 

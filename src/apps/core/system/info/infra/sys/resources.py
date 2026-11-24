@@ -13,7 +13,7 @@ from time import time
 
 import psutil
 
-from src.apps.core.system.health.domain.results.resources import (
+from src.apps.core.system.info.domain.results.resources import (
     CoreCpuUsage,
     CpuFrequency,
     CpuInfo,

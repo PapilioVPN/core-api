@@ -10,13 +10,13 @@ from papilio.api.responses.envelope import APIResponse
 from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
-from src.apps.core.system.health.app.interfaces.health import (
-    IDiskHealthService,
+from src.apps.core.system.info.app.interfaces.services import (
+    IDiskService,
 )
-from src.apps.core.system.health.routers.schemas.common import (
+from src.apps.core.system.info.routers.schemas.common import (
     MeasurementOutput,
 )
-from src.apps.core.system.health.routers.schemas.storage import (
+from src.apps.core.system.info.routers.schemas.storage import (
     DiskIoOutput,
     DiskUsageOutput,
     PartitionOutput,
@@ -36,12 +36,12 @@ router = APIRouter(
     ],
 )
 async def partitions(
-    service: FromDishka[IDiskHealthService], include_virtual: bool = True
+    service: FromDishka[IDiskService], include_virtual: bool = True
 ) -> APIResponse[MeasurementOutput[tuple[PartitionOutput, ...]], None]:
     """Return measured partitions data.
 
     Args:
-        service: Injected IDiskHealthService contract.
+        service: Injected IDiskService contract.
         include_virtual: Include virtual filesystem partitions.
 
     Returns:
@@ -59,13 +59,13 @@ async def partitions(
     response_model=APIResponse[MeasurementOutput[DiskUsageOutput], None],
 )
 async def usage(
-    service: FromDishka[IDiskHealthService],
+    service: FromDishka[IDiskService],
     path: Annotated[str, Query(pattern=r"^/")] = "/",
 ) -> APIResponse[MeasurementOutput[DiskUsageOutput], None]:
     """Return measured usage data.
 
     Args:
-        service: Injected IDiskHealthService contract.
+        service: Injected IDiskService contract.
         path: Absolute path to an existing filesystem entry.
 
     Returns:
@@ -85,12 +85,12 @@ async def usage(
     ],
 )
 async def io_counters(
-    service: FromDishka[IDiskHealthService],
+    service: FromDishka[IDiskService],
 ) -> APIResponse[MeasurementOutput[tuple[DiskIoOutput, ...] | None], None]:
     """Return measured io counters data.
 
     Args:
-        service: Injected IDiskHealthService contract.
+        service: Injected IDiskService contract.
 
     Returns:
         Native envelope preserving source units and null/empty distinctions.
@@ -109,12 +109,12 @@ async def io_counters(
     response_model=APIResponse[MeasurementOutput[DiskIoOutput | None], None],
 )
 async def total_io_counters(
-    service: FromDishka[IDiskHealthService],
+    service: FromDishka[IDiskService],
 ) -> APIResponse[MeasurementOutput[DiskIoOutput | None], None]:
     """Return measured total io counters data.
 
     Args:
-        service: Injected IDiskHealthService contract.
+        service: Injected IDiskService contract.
 
     Returns:
         Native envelope preserving source units and null/empty distinctions.

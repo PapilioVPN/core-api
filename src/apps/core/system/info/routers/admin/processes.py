@@ -10,13 +10,13 @@ from papilio.api.responses.envelope import APIResponse
 from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
-from src.apps.core.system.health.app.interfaces.health import (
-    IProcessHealthService,
+from src.apps.core.system.info.app.interfaces.services import (
+    IProcessService,
 )
-from src.apps.core.system.health.routers.schemas.common import (
+from src.apps.core.system.info.routers.schemas.common import (
     MeasurementOutput,
 )
-from src.apps.core.system.health.routers.schemas.processes import (
+from src.apps.core.system.info.routers.schemas.processes import (
     ProcessListingOutput,
     ProcessOutput,
 )
@@ -33,13 +33,13 @@ router = APIRouter(
     response_model=APIResponse[MeasurementOutput[ProcessListingOutput], None],
 )
 async def processes(
-    service: FromDishka[IProcessHealthService],
+    service: FromDishka[IProcessService],
     limit: Annotated[int, Query(ge=1, le=1000)] = 100,
 ) -> APIResponse[MeasurementOutput[ProcessListingOutput], None]:
     """Return measured processes data.
 
     Args:
-        service: Injected IProcessHealthService contract.
+        service: Injected IProcessService contract.
         limit: Maximum returned processes, from 1 through 1000.
 
     Returns:
@@ -54,12 +54,12 @@ async def processes(
 
 @router.get("/count", response_model=APIResponse[MeasurementOutput[int], None])
 async def process_count(
-    service: FromDishka[IProcessHealthService],
+    service: FromDishka[IProcessService],
 ) -> APIResponse[MeasurementOutput[int], None]:
     """Return measured process count data.
 
     Args:
-        service: Injected IProcessHealthService contract.
+        service: Injected IProcessService contract.
 
     Returns:
         Native envelope preserving source units and null/empty distinctions.
@@ -74,13 +74,13 @@ async def process_count(
     response_model=APIResponse[MeasurementOutput[ProcessOutput | None], None],
 )
 async def process(
-    service: FromDishka[IProcessHealthService],
+    service: FromDishka[IProcessService],
     process_id: Annotated[int, PathParameter(gt=0)],
 ) -> APIResponse[MeasurementOutput[ProcessOutput | None], None]:
     """Return measured process data.
 
     Args:
-        service: Injected IProcessHealthService contract.
+        service: Injected IProcessService contract.
         process_id: Positive native process identifier.
 
     Returns:

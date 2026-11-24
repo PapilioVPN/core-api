@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 import psutil
 
-from src.apps.core.system.health.domain.results.network import (
+from src.apps.core.system.info.domain.results.network import (
     InterfaceAddress,
     InterfaceStatus,
     NetworkInterface,

@@ -5,17 +5,15 @@ from functools import partial
 from anyio import to_thread
 
 from src.apps.core.system.health.app.helpers.measurement import measure
-from src.apps.core.system.health.domain.results.processes import (
+from src.apps.core.system.health.domain.results.services import MeasuredResult
+from src.apps.core.system.info.domain.results.processes import (
     ProcessInfo,
     ProcessListing,
 )
-from src.apps.core.system.health.domain.results.services import (
-    MeasuredResult,
-)
-from src.apps.core.system.health.infra.sys.processes import ProcessReader
+from src.apps.core.system.info.infra.sys.processes import ProcessReader
 
 
-class ProcessHealthService:
+class ProcessService:
     def __init__(self, reader: ProcessReader) -> None:
         """Bind the focused reader and native thread execution.
 

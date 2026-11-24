@@ -9,13 +9,13 @@ from papilio.api.responses.envelope import APIResponse
 from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
-from src.apps.core.system.health.app.interfaces.health import (
+from src.apps.core.system.info.app.interfaces.services import (
     ISystemResourcesService,
 )
-from src.apps.core.system.health.routers.schemas.common import (
+from src.apps.core.system.info.routers.schemas.common import (
     MeasurementOutput,
 )
-from src.apps.core.system.health.routers.schemas.resources import (
+from src.apps.core.system.info.routers.schemas.resources import (
     CoreCpuUsageOutput,
     CpuOutput,
     CpuUsageOutput,

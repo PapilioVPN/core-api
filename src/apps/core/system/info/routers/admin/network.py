@@ -7,13 +7,13 @@ from papilio.api.responses.envelope import APIResponse
 from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
-from src.apps.core.system.health.app.interfaces.health import (
-    INetworkHealthService,
+from src.apps.core.system.info.app.interfaces.services import (
+    INetworkService,
 )
-from src.apps.core.system.health.routers.schemas.common import (
+from src.apps.core.system.info.routers.schemas.common import (
     MeasurementOutput,
 )
-from src.apps.core.system.health.routers.schemas.network import (
+from src.apps.core.system.info.routers.schemas.network import (
     InterfaceOutput,
     NetworkIoOutput,
 )
@@ -32,12 +32,12 @@ router = APIRouter(
     ],
 )
 async def interfaces(
-    service: FromDishka[INetworkHealthService],
+    service: FromDishka[INetworkService],
 ) -> APIResponse[MeasurementOutput[tuple[InterfaceOutput, ...]], None]:
     """Return measured interfaces data.
 
     Args:
-        service: Injected INetworkHealthService contract.
+        service: Injected INetworkService contract.
 
     Returns:
         Native envelope preserving source units and null/empty distinctions.
@@ -56,12 +56,12 @@ async def interfaces(
     ],
 )
 async def io_counters(
-    service: FromDishka[INetworkHealthService],
+    service: FromDishka[INetworkService],
 ) -> APIResponse[MeasurementOutput[tuple[NetworkIoOutput, ...] | None], None]:
     """Return measured io counters data.
 
     Args:
-        service: Injected INetworkHealthService contract.
+        service: Injected INetworkService contract.
 
     Returns:
         Native envelope preserving source units and null/empty distinctions.
@@ -82,12 +82,12 @@ async def io_counters(
     ],
 )
 async def total_io_counters(
-    service: FromDishka[INetworkHealthService],
+    service: FromDishka[INetworkService],
 ) -> APIResponse[MeasurementOutput[NetworkIoOutput | None], None]:
     """Return measured total io counters data.
 
     Args:
-        service: Injected INetworkHealthService contract.
+        service: Injected INetworkService contract.
 
     Returns:
         Native envelope preserving source units and null/empty distinctions.
