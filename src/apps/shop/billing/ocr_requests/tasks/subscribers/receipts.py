@@ -10,13 +10,14 @@ from src.apps.shop.billing.receipts.infra.broker.publishers import (
 )
 
 from ...app.interfaces.processing import IOCRPipeline
+from ...infra.broker.config import BrokerConfig
 
 router = NatsRouter()
 
 
 @router.subscriber(
     publisher=receipt_created,
-    durable="papiliovpn_receipt_ocr",
+    durable=BrokerConfig.receipt_durable,
     pull_sub=True,
     ack_policy=AckPolicy.NACK_ON_ERROR,
 )
