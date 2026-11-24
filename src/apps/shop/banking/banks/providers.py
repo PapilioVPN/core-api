@@ -4,11 +4,13 @@ from dishka import Provider, Scope, provide
 
 from .app.interfaces.queries import IBankQuery
 from .app.queries.records import BankQuery
-from .infra.pg.readers.records import BankReader
+from .infra.pg.readers.records import BankPrefixReader
+from .infra.pg.repositories.records import BankRepository
 
 
 class BankProvider(Provider):
     scope = Scope.REQUEST
 
-    reader = provide(BankReader)
+    repo = provide(BankRepository)
+    prefix_reader = provide(BankPrefixReader)
     query = provide(BankQuery, provides=IBankQuery)
