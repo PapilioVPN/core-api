@@ -30,7 +30,7 @@ def _overlap(service_id: int) -> ConflictException:
     )
 
 
-class RangeRepository(PGPersistenceRepository[VolumeRangeModel]):
+class VolumeRangeRepository(PGPersistenceRepository[VolumeRangeModel]):
     table = VolumeRangeTable
 
     async def create(self, data: VolumeRangeModel) -> VolumeRangeModel:

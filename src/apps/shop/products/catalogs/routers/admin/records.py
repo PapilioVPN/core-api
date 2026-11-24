@@ -19,7 +19,7 @@ from src.apps.shop.products.catalogs.app.interfaces.queries import (
     ICatalogQuery,
 )
 from src.apps.shop.products.catalogs.app.interfaces.services import (
-    ICatalogCRUD,
+    ICatalogService,
 )
 from src.apps.shop.products.catalogs.domain.dtos.records import (
     CatalogCreate,
@@ -105,9 +105,9 @@ async def patch_catalog(
 
 @router.delete("/{id:int}")
 async def delete_catalog(
-    id: IdType, crud: FromDishka[ICatalogCRUD]
+    id: IdType, catalogs: FromDishka[ICatalogService]
 ) -> APIResponse[CatalogOutput, None]:
-    catalog = await crud.remove(id)
+    catalog = await catalogs.remove(id)
     return APIResponse[CatalogOutput, None].from_data(
         CatalogOutput.from_obj(catalog)
     )

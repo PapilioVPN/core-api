@@ -7,13 +7,13 @@ from papilio.tools.checks import IDChecks
 
 from ...domain.dtos.records import ProfileCreate, ProfileUpdate
 from ...domain.models.records import CustomerModel
-from ...infra.pg.repositories.crud import ProfileRepository
+from ...infra.pg.repositories.crud import CustomerRepository
 
 
-class ProfileCRUD(IDChecks[CustomerModel]):
+class CustomerService(IDChecks[CustomerModel]):
     entity = "Customer"
 
-    def __init__(self, repo: ProfileRepository) -> None:
+    def __init__(self, repo: CustomerRepository) -> None:
         """Bind the request's customer repository.
 
         Args:

@@ -12,7 +12,7 @@ from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
 from src.apps.shop.products.services.app.interfaces.services import (
-    IServiceCRUD,
+    IShopService,
 )
 from src.apps.shop.products.services.domain.dtos.records import (
     ServiceCreate,
@@ -32,7 +32,7 @@ router = APIRouter(
 
 @router.post("", status_code=201)
 async def post_service(
-    data: ServiceCreate, services: FromDishka[IServiceCRUD]
+    data: ServiceCreate, services: FromDishka[IShopService]
 ) -> APIResponse[ServiceOutput, None]:
     service = await services.create(data)
     output = ServiceOutput.from_obj(service)
@@ -42,7 +42,7 @@ async def post_service(
 @router.get("")
 async def get_services(
     query: Annotated[ServiceList, Query()],
-    services: FromDishka[IServiceCRUD],
+    services: FromDishka[IShopService],
 ) -> APIResponse[ServiceOutput, PagerMeta]:
     page = await services.list(query)
     return APIResponse[ServiceOutput, PagerMeta](
@@ -56,7 +56,7 @@ async def get_services(
 
 @router.get("/batch")
 async def get_services_batch(
-    ids: Annotated[ListIdType, Query()], services: FromDishka[IServiceCRUD]
+    ids: Annotated[ListIdType, Query()], services: FromDishka[IShopService]
 ) -> APIResponse[ServiceOutput, None]:
     rows = await services.get_by_ids(ids)
     return APIResponse[ServiceOutput, None].from_data(
@@ -66,7 +66,7 @@ async def get_services_batch(
 
 @router.get("/{id:int}")
 async def get_service(
-    id: IdType, services: FromDishka[IServiceCRUD]
+    id: IdType, services: FromDishka[IShopService]
 ) -> APIResponse[ServiceOutput, None]:
     service = await services.get_by_id(id)
     output = ServiceOutput.from_obj(service)
@@ -75,7 +75,7 @@ async def get_service(
 
 @router.patch("/{id:int}")
 async def patch_service(
-    id: IdType, data: ServiceUpdate, services: FromDishka[IServiceCRUD]
+    id: IdType, data: ServiceUpdate, services: FromDishka[IShopService]
 ) -> APIResponse[ServiceOutput, None]:
     service = await services.update(id, data)
     output = ServiceOutput.from_obj(service)
@@ -84,7 +84,7 @@ async def patch_service(
 
 @router.delete("/{id:int}")
 async def delete_service(
-    id: IdType, services: FromDishka[IServiceCRUD]
+    id: IdType, services: FromDishka[IShopService]
 ) -> APIResponse[ServiceOutput, None]:
     service = await services.remove(id)
     return APIResponse[ServiceOutput, None].from_data(

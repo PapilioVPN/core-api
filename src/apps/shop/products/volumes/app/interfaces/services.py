@@ -12,7 +12,7 @@ from src.apps.shop.products.volumes.domain.dtos.records import (
 from src.apps.shop.products.volumes.domain.models.records import VolumeModel
 
 
-class IVolumeCRUD(Protocol):
+class IVolumeService(Protocol):
     async def create(self, data: VolumeCreate) -> VolumeModel: ...
 
     async def get_by_id(self, id: int) -> VolumeModel: ...

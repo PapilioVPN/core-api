@@ -14,7 +14,7 @@ from src.apps.shop.products.durations.domain.models.records import (
 )
 
 
-class IDurationCRUD(Protocol):
+class IDurationService(Protocol):
     async def create(self, data: DurationCreate) -> DurationModel: ...
 
     async def get_by_id(self, id: int) -> DurationModel: ...

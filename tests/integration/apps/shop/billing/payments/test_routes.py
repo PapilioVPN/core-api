@@ -32,7 +32,7 @@ from src.apps.shop.billing.payments.domain.enums.records import (
     PaymentSource,
 )
 from src.apps.shop.customers.profiles.app.interfaces.services import (
-    IProfileCRUD,
+    ICustomerService,
 )
 from src.apps.shop.customers.profiles.domain.dtos.records import ProfileCreate
 
@@ -63,7 +63,7 @@ async def test_payments(app: FastAPI, client: AsyncClient) -> None:
             super_admin=False,
         )
         mobile = user.mobile
-        profiles = await scope.get(IProfileCRUD)
+        profiles = await scope.get(ICustomerService)
         customer = await profiles.create(
             ProfileCreate(name="Billing Test Customer")
         )

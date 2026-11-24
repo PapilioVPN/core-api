@@ -13,7 +13,7 @@ from src.apps.shop.products.volume_ranges.domain.models.records import (
 )
 
 
-class IRangeCRUD(Protocol):
+class IVolumeRangeService(Protocol):
     async def create(self, data: VolumeRangeModel) -> VolumeRangeModel: ...
 
     async def get_by_id(

@@ -12,7 +12,7 @@ from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
 from src.apps.shop.products.durations.app.interfaces.services import (
-    IDurationCRUD,
+    IDurationService,
 )
 from src.apps.shop.products.durations.domain.dtos.records import (
     DurationCreate,
@@ -31,7 +31,7 @@ router = APIRouter(
 
 @router.post("", status_code=201)
 async def post_duration(
-    data: DurationCreate, durations: FromDishka[IDurationCRUD]
+    data: DurationCreate, durations: FromDishka[IDurationService]
 ) -> APIResponse[DurationOutput, None]:
     duration = await durations.create(data)
     output = DurationOutput.from_obj(duration)
@@ -41,7 +41,7 @@ async def post_duration(
 @router.get("")
 async def get_durations(
     query: Annotated[DurationList, Query()],
-    durations: FromDishka[IDurationCRUD],
+    durations: FromDishka[IDurationService],
 ) -> APIResponse[DurationOutput, PagerMeta]:
     page = await durations.list(query)
     return APIResponse[DurationOutput, PagerMeta](
@@ -55,7 +55,8 @@ async def get_durations(
 
 @router.get("/batch")
 async def get_durations_batch(
-    ids: Annotated[ListIdType, Query()], durations: FromDishka[IDurationCRUD]
+    ids: Annotated[ListIdType, Query()],
+    durations: FromDishka[IDurationService],
 ) -> APIResponse[DurationOutput, None]:
     rows = await durations.get_by_ids(ids)
     return APIResponse[DurationOutput, None].from_data(
@@ -65,7 +66,7 @@ async def get_durations_batch(
 
 @router.get("/{id:int}")
 async def get_duration(
-    id: IdType, durations: FromDishka[IDurationCRUD]
+    id: IdType, durations: FromDishka[IDurationService]
 ) -> APIResponse[DurationOutput, None]:
     duration = await durations.get_by_id(id)
     output = DurationOutput.from_obj(duration)

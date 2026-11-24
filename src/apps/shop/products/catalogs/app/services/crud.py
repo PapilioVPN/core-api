@@ -14,7 +14,7 @@ from src.apps.shop.products.catalogs.infra.pg.repositories.crud import (
 )
 
 
-class CatalogCRUD(IDChecks[CatalogModel]):
+class CatalogService(IDChecks[CatalogModel]):
     entity = "Catalog"
 
     def __init__(self, repo: CatalogRepository, cache: ICatalogCache) -> None:

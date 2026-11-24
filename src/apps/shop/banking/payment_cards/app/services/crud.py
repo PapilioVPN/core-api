@@ -8,13 +8,13 @@ from papilio.tools.checks import IDChecks
 
 from ...domain.dtos.records import CardList
 from ...domain.models.records import PaymentCardModel
-from ...infra.pg.repositories.crud import CardRepository
+from ...infra.pg.repositories.crud import PaymentCardRepository
 
 
-class CardCRUD(IDChecks[PaymentCardModel]):
+class PaymentCardService(IDChecks[PaymentCardModel]):
     entity = "PaymentCard"
 
-    def __init__(self, repo: CardRepository) -> None:
+    def __init__(self, repo: PaymentCardRepository) -> None:
         """Bind card persistence to the request.
 
         Args:

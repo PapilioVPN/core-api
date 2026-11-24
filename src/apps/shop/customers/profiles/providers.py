@@ -3,17 +3,17 @@
 from dishka import Provider, Scope, provide
 
 from .app.interfaces.queries import IProfileSearch
-from .app.interfaces.services import IProfileCRUD
+from .app.interfaces.services import ICustomerService
 from .app.queries.search import ProfileSearchQuery
-from .app.services.crud import ProfileCRUD
+from .app.services.crud import CustomerService
 from .infra.pg.readers.search import ProfileReader
-from .infra.pg.repositories.crud import ProfileRepository
+from .infra.pg.repositories.crud import CustomerRepository
 
 
 class ProfileProvider(Provider):
     scope = Scope.REQUEST
 
-    repo = provide(ProfileRepository)
-    crud = provide(ProfileCRUD, provides=IProfileCRUD)
+    repo = provide(CustomerRepository)
+    service = provide(CustomerService, provides=ICustomerService)
     reader = provide(ProfileReader)
     search = provide(ProfileSearchQuery, provides=IProfileSearch)

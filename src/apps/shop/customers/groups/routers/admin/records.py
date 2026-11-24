@@ -12,7 +12,7 @@ from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
 
-from ...app.interfaces.services import IGroupCRUD
+from ...app.interfaces.services import ICustomerGroupService
 from ...domain.dtos.records import GroupCreate, GroupList, GroupUpdate
 from ..schemas.records import GroupOutput
 
@@ -25,7 +25,7 @@ router = APIRouter(
 
 @router.post("", status_code=201)
 async def post_group(
-    data: GroupCreate, groups: FromDishka[IGroupCRUD]
+    data: GroupCreate, groups: FromDishka[ICustomerGroupService]
 ) -> APIResponse[GroupOutput, None]:
     group = await groups.create(data)
     return APIResponse[GroupOutput, None].from_data(
@@ -35,7 +35,8 @@ async def post_group(
 
 @router.get("")
 async def get_groups(
-    query: Annotated[GroupList, Query()], groups: FromDishka[IGroupCRUD]
+    query: Annotated[GroupList, Query()],
+    groups: FromDishka[ICustomerGroupService],
 ) -> APIResponse[GroupOutput, PagerMeta]:
     page = await groups.list(query)
     return APIResponse[GroupOutput, PagerMeta](
@@ -49,7 +50,8 @@ async def get_groups(
 
 @router.get("/batch")
 async def get_groups_batch(
-    ids: Annotated[ListIdType, Query()], groups: FromDishka[IGroupCRUD]
+    ids: Annotated[ListIdType, Query()],
+    groups: FromDishka[ICustomerGroupService],
 ) -> APIResponse[GroupOutput, None]:
     rows = await groups.get_by_ids(ids)
     return APIResponse[GroupOutput, None].from_data(
@@ -59,7 +61,7 @@ async def get_groups_batch(
 
 @router.get("/key/{key}")
 async def get_group_by_key(
-    key: SlugType, groups: FromDishka[IGroupCRUD]
+    key: SlugType, groups: FromDishka[ICustomerGroupService]
 ) -> APIResponse[GroupOutput, None]:
     group = await groups.get_by_key(key)
     return APIResponse[GroupOutput, None].from_data(
@@ -69,7 +71,7 @@ async def get_group_by_key(
 
 @router.get("/{id:int}")
 async def get_group(
-    id: IdType, groups: FromDishka[IGroupCRUD]
+    id: IdType, groups: FromDishka[ICustomerGroupService]
 ) -> APIResponse[GroupOutput, None]:
     group = await groups.get_by_id(id)
     return APIResponse[GroupOutput, None].from_data(
@@ -79,7 +81,7 @@ async def get_group(
 
 @router.patch("/{id:int}")
 async def patch_group(
-    id: IdType, data: GroupUpdate, groups: FromDishka[IGroupCRUD]
+    id: IdType, data: GroupUpdate, groups: FromDishka[ICustomerGroupService]
 ) -> APIResponse[GroupOutput, None]:
     group = await groups.update(id, data)
     return APIResponse[GroupOutput, None].from_data(
@@ -89,7 +91,7 @@ async def patch_group(
 
 @router.delete("/{id:int}")
 async def delete_group(
-    id: IdType, groups: FromDishka[IGroupCRUD]
+    id: IdType, groups: FromDishka[ICustomerGroupService]
 ) -> APIResponse[GroupOutput, None]:
     group = await groups.remove(id)
     return APIResponse[GroupOutput, None].from_data(

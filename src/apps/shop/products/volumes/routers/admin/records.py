@@ -11,7 +11,9 @@ from papilio.types.aliases import IdType, ListIdType
 from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
-from src.apps.shop.products.volumes.app.interfaces.services import IVolumeCRUD
+from src.apps.shop.products.volumes.app.interfaces.services import (
+    IVolumeService,
+)
 from src.apps.shop.products.volumes.domain.dtos.records import (
     VolumeCreate,
     VolumeList,
@@ -28,7 +30,7 @@ router = APIRouter(
 @router.post("", status_code=201)
 async def post_volume(
     data: VolumeCreate,
-    volumes: FromDishka[IVolumeCRUD],
+    volumes: FromDishka[IVolumeService],
 ) -> APIResponse[VolumeOutput, None]:
     volume = await volumes.create(data)
     output = VolumeOutput.from_obj(volume)
@@ -38,7 +40,7 @@ async def post_volume(
 @router.get("")
 async def get_volumes(
     query: Annotated[VolumeList, Query()],
-    volumes: FromDishka[IVolumeCRUD],
+    volumes: FromDishka[IVolumeService],
 ) -> APIResponse[VolumeOutput, PagerMeta]:
     page = await volumes.list(query)
     return APIResponse[VolumeOutput, PagerMeta](
@@ -52,7 +54,7 @@ async def get_volumes(
 
 @router.get("/batch")
 async def get_volumes_batch(
-    ids: Annotated[ListIdType, Query()], volumes: FromDishka[IVolumeCRUD]
+    ids: Annotated[ListIdType, Query()], volumes: FromDishka[IVolumeService]
 ) -> APIResponse[VolumeOutput, None]:
     rows = await volumes.get_by_ids(ids)
     return APIResponse[VolumeOutput, None].from_data(
@@ -62,7 +64,7 @@ async def get_volumes_batch(
 
 @router.get("/{id:int}")
 async def get_volume(
-    id: IdType, volumes: FromDishka[IVolumeCRUD]
+    id: IdType, volumes: FromDishka[IVolumeService]
 ) -> APIResponse[VolumeOutput, None]:
     volume = await volumes.get_by_id(id)
     output = VolumeOutput.from_obj(volume)

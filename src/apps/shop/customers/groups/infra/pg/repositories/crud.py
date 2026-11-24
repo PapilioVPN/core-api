@@ -13,7 +13,7 @@ from ....domain.models.records import CustomerGroupModel
 from ..tables import CustomerGroupTable
 
 
-class GroupRepository(PGPersistenceRepository[CustomerGroupModel]):
+class CustomerGroupRepository(PGPersistenceRepository[CustomerGroupModel]):
     table = CustomerGroupTable
 
     async def find_by_key(self, key: str) -> CustomerGroupModel | None:

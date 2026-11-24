@@ -16,7 +16,7 @@ from ...domain.models.records import CardPrefixModel
 from ...infra.pg.repositories.crud import CardPrefixRepository
 
 
-class CardPrefixCRUD(IDChecks[CardPrefixModel]):
+class CardPrefixService(IDChecks[CardPrefixModel]):
     entity = "CardPrefix"
 
     def __init__(self, repo: CardPrefixRepository) -> None:

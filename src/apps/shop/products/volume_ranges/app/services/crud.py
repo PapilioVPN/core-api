@@ -13,14 +13,14 @@ from src.apps.shop.products.volume_ranges.domain.models.records import (
     VolumeRangeModel,
 )
 from src.apps.shop.products.volume_ranges.infra.pg.repositories.crud import (
-    RangeRepository,
+    VolumeRangeRepository,
 )
 
 
-class RangeCRUD(IDChecks[VolumeRangeModel]):
+class VolumeRangeService(IDChecks[VolumeRangeModel]):
     entity = "VolumeRange"
 
-    def __init__(self, repo: RangeRepository) -> None:
+    def __init__(self, repo: VolumeRangeRepository) -> None:
         """Bind the current request's range repository."""
         self.repo = repo
 

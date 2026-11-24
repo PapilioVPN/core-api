@@ -12,7 +12,7 @@ from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
 
-from ...app.interfaces.records import ICardPrefixCommand, ICardPrefixCRUD
+from ...app.interfaces.records import ICardPrefixCommand, ICardPrefixService
 from ...domain.dtos.records import (
     CardPrefixCreate,
     CardPrefixList,
@@ -52,7 +52,7 @@ async def post_card_prefix(
 @router.get("", response_model=APIResponse[CardPrefixOutput, PagerMeta])
 async def get_card_prefixes(
     query: Annotated[CardPrefixList, Query()],
-    service: FromDishka[ICardPrefixCRUD],
+    service: FromDishka[ICardPrefixService],
 ) -> APIResponse[CardPrefixOutput, PagerMeta]:
     """Read an ID-ordered page filtered by bank and activity.
 
@@ -77,7 +77,7 @@ async def get_card_prefixes(
 @router.get("/batch", response_model=APIResponse[CardPrefixOutput, None])
 async def get_card_prefix_batch(
     ids: Annotated[ListIdType, Query()],
-    service: FromDishka[ICardPrefixCRUD],
+    service: FromDishka[ICardPrefixService],
 ) -> APIResponse[CardPrefixOutput, None]:
     """Read a bounded set of prefix records by identity.
 
@@ -101,7 +101,7 @@ async def get_card_prefix_text_batch(
     prefixes: Annotated[
         list[CardPrefixType], Query(min_length=1, max_length=100)
     ],
-    service: FromDishka[ICardPrefixCRUD],
+    service: FromDishka[ICardPrefixService],
 ) -> APIResponse[CardPrefixOutput, None]:
     """Read a bounded set of exact prefix texts.
 
@@ -121,7 +121,7 @@ async def get_card_prefix_text_batch(
 @router.get("/prefix", response_model=APIResponse[CardPrefixOutput, None])
 async def get_card_prefix_by_text(
     prefix: CardPrefixType,
-    service: FromDishka[ICardPrefixCRUD],
+    service: FromDishka[ICardPrefixService],
 ) -> APIResponse[CardPrefixOutput, None]:
     """Read a required prefix record by its exact text.
 
@@ -143,7 +143,7 @@ async def get_card_prefix_by_text(
 @router.get("/{id:int}", response_model=APIResponse[CardPrefixOutput, None])
 async def get_card_prefix(
     id: IdType,
-    service: FromDishka[ICardPrefixCRUD],
+    service: FromDishka[ICardPrefixService],
 ) -> APIResponse[CardPrefixOutput, None]:
     """Read a required prefix record by identity.
 
@@ -183,7 +183,7 @@ async def patch_card_prefix(
 @router.delete("/{id:int}", response_model=APIResponse[CardPrefixOutput, None])
 async def delete_card_prefix(
     id: IdType,
-    service: FromDishka[ICardPrefixCRUD],
+    service: FromDishka[ICardPrefixService],
 ) -> APIResponse[CardPrefixOutput, None]:
     """Remove a prefix record through its owning service.
 

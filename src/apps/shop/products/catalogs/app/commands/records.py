@@ -4,7 +4,7 @@ from papilio.infra.db.tools.decorators import transactional
 from pydantic_core import MISSING
 
 from src.apps.shop.products.catalogs.app.interfaces.services import (
-    ICatalogCRUD,
+    ICatalogService,
 )
 from src.apps.shop.products.catalogs.domain.dtos.records import (
     CatalogCreate,
@@ -15,21 +15,23 @@ from src.apps.shop.products.catalogs.domain.dtos.records import (
 )
 from src.apps.shop.products.catalogs.domain.models.records import CatalogModel
 from src.apps.shop.products.durations.app.interfaces.services import (
-    IDurationCRUD,
+    IDurationService,
 )
 from src.apps.shop.products.services.app.interfaces.services import (
-    IServiceCRUD,
+    IShopService,
 )
-from src.apps.shop.products.volumes.app.interfaces.services import IVolumeCRUD
+from src.apps.shop.products.volumes.app.interfaces.services import (
+    IVolumeService,
+)
 
 
 class CatalogCommand:
     def __init__(
         self,
-        catalogs: ICatalogCRUD,
-        services: IServiceCRUD,
-        volumes: IVolumeCRUD,
-        durations: IDurationCRUD,
+        catalogs: ICatalogService,
+        services: IShopService,
+        volumes: IVolumeService,
+        durations: IDurationService,
     ) -> None:
         """Bind the record service and the owners of its sale definitions.
 

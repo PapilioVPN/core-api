@@ -9,7 +9,7 @@ from ...domain.dtos.records import GroupCreate, GroupList, GroupUpdate
 from ...domain.models.records import CustomerGroupModel
 
 
-class IGroupCRUD(Protocol):
+class ICustomerGroupService(Protocol):
     async def create(self, data: GroupCreate) -> CustomerGroupModel: ...
 
     async def get_by_id(self, id: int) -> CustomerGroupModel: ...

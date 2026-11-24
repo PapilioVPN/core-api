@@ -3,16 +3,18 @@
 from papilio.infra.db.tools.decorators import transactional
 
 from src.apps.shop.customers.profiles.app.interfaces.services import (
-    IProfileCRUD,
+    ICustomerService,
 )
 
 from ...domain.dtos.records import PaymentCreate
 from ...domain.models.records import PaymentModel
-from ..interfaces.services import IPaymentCRUD
+from ..interfaces.services import IPaymentService
 
 
 class PaymentCommand:
-    def __init__(self, payments: IPaymentCRUD, profiles: IProfileCRUD) -> None:
+    def __init__(
+        self, payments: IPaymentService, profiles: ICustomerService
+    ) -> None:
         """Bind registration to the payment and customer owners.
 
         Args:

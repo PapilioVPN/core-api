@@ -3,10 +3,10 @@
 from papilio.infra.db.tools.decorators import transactional
 
 from src.apps.shop.products.services.app.interfaces.services import (
-    IServiceCRUD,
+    IShopService,
 )
 from src.apps.shop.products.volume_ranges.app.interfaces.services import (
-    IRangeCRUD,
+    IVolumeRangeService,
 )
 from src.apps.shop.products.volume_ranges.app.validators.price import (
     validate_price,
@@ -18,7 +18,9 @@ from src.apps.shop.products.volume_ranges.domain.models.records import (
 
 
 class RangeCommand:
-    def __init__(self, services: IServiceCRUD, ranges: IRangeCRUD) -> None:
+    def __init__(
+        self, services: IShopService, ranges: IVolumeRangeService
+    ) -> None:
         """Bind the service reader and range writer."""
         self.services = services
         self.ranges = ranges

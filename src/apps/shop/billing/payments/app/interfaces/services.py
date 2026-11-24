@@ -6,7 +6,7 @@ from typing import Protocol
 from ...domain.models.records import PaymentModel
 
 
-class IPaymentCRUD(Protocol):
+class IPaymentService(Protocol):
     async def create(self, data: PaymentModel) -> PaymentModel: ...
 
     async def get_by_id(self, id: int) -> PaymentModel: ...

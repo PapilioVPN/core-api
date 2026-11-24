@@ -9,7 +9,7 @@ from ...domain.dtos.records import CardList
 from ...domain.models.records import PaymentCardModel
 
 
-class ICardCRUD(Protocol):
+class IPaymentCardService(Protocol):
     async def create(self, data: PaymentCardModel) -> PaymentCardModel: ...
 
     async def get_by_id(self, id: int) -> PaymentCardModel: ...

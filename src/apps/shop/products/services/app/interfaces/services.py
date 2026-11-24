@@ -13,7 +13,7 @@ from src.apps.shop.products.services.domain.dtos.records import (
 from src.apps.shop.products.services.domain.models.records import ServiceModel
 
 
-class IServiceCRUD(Protocol):
+class IShopService(Protocol):
     async def create(self, data: ServiceCreate) -> ServiceModel: ...
 
     async def get_by_id(self, id: int) -> ServiceModel: ...

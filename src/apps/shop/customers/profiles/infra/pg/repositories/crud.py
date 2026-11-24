@@ -8,5 +8,5 @@ from ....domain.models.records import CustomerModel
 from ..tables import CustomerTable
 
 
-class ProfileRepository(PGPersistenceRepository[CustomerModel]):
+class CustomerRepository(PGPersistenceRepository[CustomerModel]):
     table = CustomerTable

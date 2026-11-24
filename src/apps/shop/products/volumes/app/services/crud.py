@@ -16,7 +16,7 @@ from src.apps.shop.products.volumes.infra.pg.repositories.crud import (
 )
 
 
-class VolumeCRUD(IDChecks[VolumeModel]):
+class VolumeService(IDChecks[VolumeModel]):
     entity = "Volume"
 
     def __init__(self, repo: VolumeRepository) -> None:

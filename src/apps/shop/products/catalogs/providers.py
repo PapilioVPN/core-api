@@ -17,7 +17,7 @@ from src.apps.shop.products.catalogs.app.interfaces.queries import (
     ICatalogSearchQuery,
 )
 from src.apps.shop.products.catalogs.app.interfaces.services import (
-    ICatalogCRUD,
+    ICatalogService,
 )
 from src.apps.shop.products.catalogs.app.queries.form import CatalogFormQuery
 from src.apps.shop.products.catalogs.app.queries.public import (
@@ -30,7 +30,7 @@ from src.apps.shop.products.catalogs.app.queries.search import (
 from src.apps.shop.products.catalogs.app.queries.service import (
     ServiceCatalogQuery,
 )
-from src.apps.shop.products.catalogs.app.services.crud import CatalogCRUD
+from src.apps.shop.products.catalogs.app.services.crud import CatalogService
 from src.apps.shop.products.catalogs.infra.pg.readers.details import (
     CatalogReader,
 )
@@ -58,7 +58,7 @@ class CatalogProvider(Provider):
     reader = provide(CatalogReader)
     search_reader = provide(CatalogSearchReader)
     cache = provide(CatalogCache, scope=Scope.APP, provides=ICatalogCache)
-    crud = provide(CatalogCRUD, provides=ICatalogCRUD)
+    catalogs = provide(CatalogService, provides=ICatalogService)
     command = provide(CatalogCommand, provides=ICatalogCommand)
     query = provide(CatalogQuery, provides=ICatalogQuery)
     search = provide(CatalogSearchQuery, provides=ICatalogSearchQuery)

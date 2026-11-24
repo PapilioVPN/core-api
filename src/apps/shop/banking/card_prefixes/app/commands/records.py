@@ -7,11 +7,13 @@ from src.apps.shop.banking.banks.app.interfaces.queries import IBankQuery
 
 from ...domain.dtos.records import CardPrefixCreate, CardPrefixUpdate
 from ...domain.models.records import CardPrefixModel
-from ..interfaces.records import ICardPrefixCRUD
+from ..interfaces.records import ICardPrefixService
 
 
 class CardPrefixCommand:
-    def __init__(self, prefixes: ICardPrefixCRUD, banks: IBankQuery) -> None:
+    def __init__(
+        self, prefixes: ICardPrefixService, banks: IBankQuery
+    ) -> None:
         """Bind prefix writes and bank reads in the current request.
 
         Args:

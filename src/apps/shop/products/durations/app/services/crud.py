@@ -18,7 +18,7 @@ from src.apps.shop.products.durations.infra.pg.repositories.crud import (
 )
 
 
-class DurationCRUD(IDChecks[DurationModel]):
+class DurationService(IDChecks[DurationModel]):
     entity = "Duration"
 
     def __init__(self, repo: DurationRepository) -> None:

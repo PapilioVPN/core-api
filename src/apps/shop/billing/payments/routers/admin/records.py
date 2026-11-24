@@ -11,7 +11,7 @@ from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
 
-from ...app.interfaces.services import IPaymentCRUD
+from ...app.interfaces.services import IPaymentService
 from ..schemas.records import PaymentOutput
 
 router = APIRouter(
@@ -23,7 +23,7 @@ router = APIRouter(
 
 @router.get("/batch")
 async def get_payments_batch(
-    ids: Annotated[ListIdType, Query()], payments: FromDishka[IPaymentCRUD]
+    ids: Annotated[ListIdType, Query()], payments: FromDishka[IPaymentService]
 ) -> APIResponse[PaymentOutput, None]:
     rows = await payments.get_by_ids(ids)
     return APIResponse[PaymentOutput, None].from_data(
@@ -33,7 +33,7 @@ async def get_payments_batch(
 
 @router.get("/{id:int}")
 async def get_payment(
-    id: IdType, payments: FromDishka[IPaymentCRUD]
+    id: IdType, payments: FromDishka[IPaymentService]
 ) -> APIResponse[PaymentOutput, None]:
     payment = await payments.get_by_id(id)
     return APIResponse[PaymentOutput, None].from_data(

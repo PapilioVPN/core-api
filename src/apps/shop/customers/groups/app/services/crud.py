@@ -9,13 +9,13 @@ from papilio.tools.checks import IDChecks
 
 from ...domain.dtos.records import GroupCreate, GroupList, GroupUpdate
 from ...domain.models.records import CustomerGroupModel
-from ...infra.pg.repositories.crud import GroupRepository
+from ...infra.pg.repositories.crud import CustomerGroupRepository
 
 
-class GroupCRUD(IDChecks[CustomerGroupModel]):
+class CustomerGroupService(IDChecks[CustomerGroupModel]):
     entity = "CustomerGroup"
 
-    def __init__(self, repo: GroupRepository) -> None:
+    def __init__(self, repo: CustomerGroupRepository) -> None:
         """Bind the request's group repository.
 
         Args:

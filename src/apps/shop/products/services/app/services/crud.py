@@ -17,7 +17,7 @@ from src.apps.shop.products.services.infra.pg.repositories.crud import (
 )
 
 
-class ServiceCRUD(IDChecks[ServiceModel]):
+class ShopService(IDChecks[ServiceModel]):
     entity = "Service"
 
     def __init__(self, repo: ServiceRepository) -> None:

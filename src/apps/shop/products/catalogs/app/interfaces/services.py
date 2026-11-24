@@ -7,7 +7,7 @@ from src.apps.shop.products.catalogs.domain.dtos.records import CatalogPatch
 from src.apps.shop.products.catalogs.domain.models.records import CatalogModel
 
 
-class ICatalogCRUD(Protocol):
+class ICatalogService(Protocol):
     async def create(self, data: CatalogModel) -> CatalogModel: ...
 
     async def update(self, id: int, data: CatalogPatch) -> CatalogModel: ...

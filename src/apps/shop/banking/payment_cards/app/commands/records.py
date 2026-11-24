@@ -8,11 +8,11 @@ from src.apps.shop.banking.banks.app.interfaces.queries import IBankQuery
 
 from ...domain.dtos.records import CardCreate, CardUpdate
 from ...domain.models.records import PaymentCardModel
-from ..interfaces.services import ICardCRUD
+from ..interfaces.services import IPaymentCardService
 
 
 class CardCommand:
-    def __init__(self, cards: ICardCRUD, banks: IBankQuery) -> None:
+    def __init__(self, cards: IPaymentCardService, banks: IBankQuery) -> None:
         """Bind card configuration to its request.
 
         Args:

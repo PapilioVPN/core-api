@@ -15,7 +15,7 @@ from src.apps.shop.products.volume_ranges.app.interfaces.commands import (
     IRangeCommand,
 )
 from src.apps.shop.products.volume_ranges.app.interfaces.services import (
-    IRangeCRUD,
+    IVolumeRangeService,
 )
 from src.apps.shop.products.volume_ranges.domain.dtos.records import (
     RangeList,
@@ -46,9 +46,9 @@ async def post_range(
 async def get_ranges(
     service_id: IdType,
     data: Annotated[RangeList, Query()],
-    crud: FromDishka[IRangeCRUD],
+    ranges: FromDishka[IVolumeRangeService],
 ) -> APIResponse[AdminRangeOutput, PagerMeta]:
-    page = await crud.list(service_id, data)
+    page = await ranges.list(service_id, data)
     return APIResponse[AdminRangeOutput, PagerMeta](
         success=True,
         data=AdminRangeOutput.from_objs(page.items),
@@ -58,9 +58,9 @@ async def get_ranges(
 
 @router.get("/{id:int}")
 async def get_range(
-    service_id: IdType, id: IdType, crud: FromDishka[IRangeCRUD]
+    service_id: IdType, id: IdType, ranges: FromDishka[IVolumeRangeService]
 ) -> APIResponse[AdminRangeOutput, None]:
-    row = await crud.get_by_id(service_id, id)
+    row = await ranges.get_by_id(service_id, id)
     return APIResponse[AdminRangeOutput, None].from_data(
         AdminRangeOutput.from_obj(row)
     )
@@ -81,9 +81,9 @@ async def put_range(
 
 @router.delete("/{id:int}")
 async def delete_range(
-    service_id: IdType, id: IdType, crud: FromDishka[IRangeCRUD]
+    service_id: IdType, id: IdType, ranges: FromDishka[IVolumeRangeService]
 ) -> APIResponse[AdminRangeOutput, None]:
-    row = await crud.remove(service_id, id)
+    row = await ranges.remove(service_id, id)
     return APIResponse[AdminRangeOutput, None].from_data(
         AdminRangeOutput.from_obj(row)
     )

@@ -9,7 +9,7 @@ from ...domain.models.records import PaymentModel
 from ...infra.pg.repositories.crud import PaymentRepository
 
 
-class PaymentCRUD(IDChecks[PaymentModel]):
+class PaymentService(IDChecks[PaymentModel]):
     entity = "Payment"
 
     def __init__(self, repo: PaymentRepository) -> None:

@@ -14,7 +14,7 @@ from src.apps.core.access.users.app.interfaces.commands import (
 )
 from src.apps.core.access.users.domain.dtos.records import UserCreate
 from src.apps.shop.products.catalogs.app.interfaces.services import (
-    ICatalogCRUD,
+    ICatalogService,
 )
 
 pytestmark = pytest.mark.integration
@@ -120,12 +120,12 @@ async def test_catalogs(app: FastAPI, client: AsyncClient) -> None:
     assert second["duration_id"] == first["duration_id"]
 
     async with container() as scope:
-        crud = await scope.get(ICatalogCRUD)
-        assert (await crud.get_by_id(first["id"])).price == body["price"]
-        assert await crud.find_by_id(99999) is None
-        rows = await crud.get_by_ids([second["id"], second["id"], 99999])
+        catalogs = await scope.get(ICatalogService)
+        assert (await catalogs.get_by_id(first["id"])).price == body["price"]
+        assert await catalogs.find_by_id(99999) is None
+        rows = await catalogs.get_by_ids([second["id"], second["id"], 99999])
         assert [row.id for row in rows] == [second["id"]]
-        assert await crud.get_by_ids([]) == []
+        assert await catalogs.get_by_ids([]) == []
 
     bad = await client.patch(
         path,

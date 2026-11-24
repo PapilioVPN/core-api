@@ -24,7 +24,7 @@ def _duplicate() -> ConflictException:
     )
 
 
-class CardRepository(PGPersistenceRepository[PaymentCardModel]):
+class PaymentCardRepository(PGPersistenceRepository[PaymentCardModel]):
     table = PaymentCardTable
 
     async def create(self, data: PaymentCardModel) -> PaymentCardModel:

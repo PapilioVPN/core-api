@@ -13,7 +13,7 @@ from src.apps.core.access.auth.routers.dependencies.authorization import (
 )
 
 from ...app.interfaces.commands import ICardCommand
-from ...app.interfaces.services import ICardCRUD
+from ...app.interfaces.services import IPaymentCardService
 from ...domain.dtos.records import CardCreate, CardList, CardUpdate
 from ..schemas.records import CardOutput
 
@@ -34,7 +34,7 @@ async def post_card(
 
 @router.get("")
 async def get_cards(
-    query: Annotated[CardList, Query()], cards: FromDishka[ICardCRUD]
+    query: Annotated[CardList, Query()], cards: FromDishka[IPaymentCardService]
 ) -> APIResponse[CardOutput, PagerMeta]:
     page = await cards.list(query)
     return APIResponse[CardOutput, PagerMeta](
@@ -48,7 +48,7 @@ async def get_cards(
 
 @router.get("/batch")
 async def get_cards_batch(
-    ids: Annotated[ListIdType, Query()], cards: FromDishka[ICardCRUD]
+    ids: Annotated[ListIdType, Query()], cards: FromDishka[IPaymentCardService]
 ) -> APIResponse[CardOutput, None]:
     rows = await cards.get_by_ids(ids)
     return APIResponse[CardOutput, None].from_data(CardOutput.from_objs(rows))
@@ -56,7 +56,7 @@ async def get_cards_batch(
 
 @router.get("/{id:int}")
 async def get_card(
-    id: IdType, cards: FromDishka[ICardCRUD]
+    id: IdType, cards: FromDishka[IPaymentCardService]
 ) -> APIResponse[CardOutput, None]:
     card = await cards.get_by_id(id)
     return APIResponse[CardOutput, None].from_data(CardOutput.from_obj(card))
@@ -72,7 +72,7 @@ async def patch_card(
 
 @router.delete("/{id:int}")
 async def delete_card(
-    id: IdType, cards: FromDishka[ICardCRUD]
+    id: IdType, cards: FromDishka[IPaymentCardService]
 ) -> APIResponse[CardOutput, None]:
     card = await cards.remove(id)
     return APIResponse[CardOutput, None].from_data(CardOutput.from_obj(card))

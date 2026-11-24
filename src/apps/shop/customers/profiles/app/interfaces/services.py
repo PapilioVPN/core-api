@@ -7,7 +7,7 @@ from ...domain.dtos.records import ProfileCreate, ProfileUpdate
 from ...domain.models.records import CustomerModel
 
 
-class IProfileCRUD(Protocol):
+class ICustomerService(Protocol):
     async def create(self, data: ProfileCreate) -> CustomerModel: ...
 
     async def get_by_id(self, id: int) -> CustomerModel: ...
