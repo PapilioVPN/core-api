@@ -43,6 +43,9 @@ cli:
 storage:
   path: var/media
   temp_dir: var/tmp
+  # Public server/CDN root serving path/digest-prefix/digest.
+  # Configure before uploading; this setting does not start a file server.
+  # public_base_url: https://media.example.org/files/
   max_file_size: 5242880
   allowed_extensions: []
 logging:

@@ -1,0 +1,1 @@
+"""Administrator storage connection resources."""

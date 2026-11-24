@@ -1,0 +1,1 @@
+"""Authorized file HTTP boundaries."""

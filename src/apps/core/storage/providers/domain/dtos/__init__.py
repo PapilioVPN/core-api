@@ -1,0 +1,1 @@
+"""Storage connection input contracts."""

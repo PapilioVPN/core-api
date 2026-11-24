@@ -3,6 +3,7 @@
 from papilio.core.config import AppConfig, Settings
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.apps.core.storage.files.config import FileStorageConfig
 from src.settings.cli import CLIConfig
 
 
@@ -27,6 +28,7 @@ class CoreSettings(Settings):
         modules=["src.apps.core", "src.apps.shop"],
         tables_path="infra.pg.tables",
     )
+    storage: FileStorageConfig  # pyright: ignore[reportIncompatibleVariableOverride]
     nats: NatsConfig | None = None
     scheduler: SchedulerConfig = Field(default_factory=SchedulerConfig)
     cli: CLIConfig = Field(default_factory=CLIConfig)

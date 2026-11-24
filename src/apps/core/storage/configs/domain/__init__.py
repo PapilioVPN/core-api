@@ -1,0 +1,1 @@
+"""Storage destination declarations."""

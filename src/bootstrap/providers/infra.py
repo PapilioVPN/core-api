@@ -1,11 +1,14 @@
 """Native infrastructure selected by the application configuration."""
 
 from dishka import Provider, Scope, provide
-from papilio.core.config import Settings
 from papilio.infra.redis.client import RedisClient
 from papilio.providers.db import PGProvider
 from papilio.providers.passwords import PasswordProvider
 from papilio.providers.redis import RedisProvider
+
+from src.bootstrap.providers.storage import StorageInfraProvider
+from src.settings.config import CoreSettings
+from src.shared.providers.asyncio import AsyncioProvider
 
 
 class DisabledRedisProvider(Provider):
@@ -15,12 +18,14 @@ class DisabledRedisProvider(Provider):
         return None
 
 
-def infra_providers(settings: Settings) -> list[Provider]:
-    """Select configured native database, password and Redis providers."""
+def infra_providers(settings: CoreSettings) -> list[Provider]:
+    """Select application-owned infrastructure from native settings."""
     if settings.db is None or settings.crypto is None or settings.jwt is None:
         raise ValueError("Core API requires db, crypto and jwt settings")
 
     providers: list[Provider] = [
+        AsyncioProvider(),
+        StorageInfraProvider(settings.storage),
         PGProvider(settings.db),
         PasswordProvider(settings.crypto.password_salt),
     ]
