@@ -8,13 +8,13 @@ from ..app.executions.records import OCRExecution
 from ..app.interfaces.gateways import IOCRGateway
 from ..app.interfaces.processing import IOCRPipeline
 from ..app.pipelines.receipts import OCRPipeline
-from ..infra.paddle.gateway import PaddleOCR
+from ..infra.gateways.clients import PaddleGateway
 
 
 class AppProvider(Provider):
     scope = Scope.APP
 
-    gateway = provide(PaddleOCR, provides=IOCRGateway)
+    gateway = provide(PaddleGateway, provides=IOCRGateway)
     execution = provide(OCRExecution)
     pipeline = provide(OCRPipeline, provides=IOCRPipeline)
 

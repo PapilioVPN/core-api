@@ -16,6 +16,11 @@ class OCRSource:
 
 
 @dataclass(frozen=True, slots=True)
+class OCRFailure:
+    code: str
+
+
+@dataclass(frozen=True, slots=True)
 class OCROutcome:
     status: ExtractionStatus
     fields: ReceiptFields = ReceiptFields()

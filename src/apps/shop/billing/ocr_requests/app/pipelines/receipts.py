@@ -10,9 +10,8 @@ from src.apps.shop.billing.receipts.domain.enums.extraction import (
     ExtractionStatus,
 )
 
-from ...domain.errors import OCRFailure
 from ...domain.parsers.receipts import fields
-from ...domain.results.records import OCROutcome
+from ...domain.results.records import OCRFailure, OCROutcome
 from ..executions.records import OCRExecution
 from ..interfaces.gateways import IOCRGateway
 
@@ -64,17 +63,20 @@ class OCRPipeline:
             async with self.files.open(file_id) as download:
                 size = download.metadata.size_bytes
                 if not 0 < size <= self.max_bytes:
-                    raise OCRFailure("image_size_invalid")
+                    return OCROutcome(
+                        ExtractionStatus.FAILED,
+                        error_code="image_size_invalid",
+                    )
                 stream = BufferedByteReceiveStream(download.source)
                 image = await stream.receive_exactly(size)
-            lines = await self.gateway.read(image)
-        except OCRFailure as error:
-            return OCROutcome(ExtractionStatus.FAILED, error_code=error.code)
         except (APPException, OSError, IncompleteRead, BrokenResourceError):
             return OCROutcome(
                 ExtractionStatus.FAILED, error_code="image_unavailable"
             )
 
+        lines = await self.gateway.read(image)
+        if isinstance(lines, OCRFailure):
+            return OCROutcome(ExtractionStatus.FAILED, error_code=lines.code)
         result = fields(lines)
         status = (
             ExtractionStatus.EXTRACTED

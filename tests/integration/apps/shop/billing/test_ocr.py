@@ -102,7 +102,9 @@ async def test_ocr_pipeline(pg: CoreSettings, tmp_path: Path) -> None:
                                     "مبلغ: ۱۲۳ تومان",
                                     "کد رهگیری: ۰۰۰۴۲",
                                 ],
-                                "rec_scores": [0.99, 0.6],
+                                "rec_scores": [0.99, 0.6]
+                                if len(calls) == 1
+                                else [0.99],
                             }
                         }
                     ],
@@ -163,29 +165,34 @@ async def test_ocr_pipeline(pg: CoreSettings, tmp_path: Path) -> None:
                         and receipt.paid_at is None
                     )
 
-                await pipeline.process(
-                    payment.receipt_id, event_id="ocr-example-2"
-                )
-                async with container() as scope:
-                    requests = await scope.get(OCRRequestRepository)
-                    receipts = await scope.get(ReceiptRepository)
-                    payments = await scope.get(PaymentRepository)
-                    attempt = await requests.get_one(
-                        col(requests.table.event_id) == "ocr-example-2"
+                for event_id, error_code in (
+                    ("ocr-example-2", "ocr_api_unavailable"),
+                    ("ocr-example-3", "ocr_response_invalid"),
+                ):
+                    await pipeline.process(
+                        payment.receipt_id, event_id=event_id
                     )
-                    receipt = await receipts.get_by_id(payment.receipt_id)
-                    stored = await payments.get_by_id(payment.id)
-                    assert attempt is not None and receipt is not None
-                    assert (
-                        attempt.status
-                        == receipt.extraction_status
-                        == ExtractionStatus.FAILED
-                    )
-                    assert attempt.error_code == "ocr_api_unavailable"
-                    assert receipt.amount == 1_230
-                    assert (
-                        stored is not None and stored.status == payment.status
-                    )
+                    async with container() as scope:
+                        requests = await scope.get(OCRRequestRepository)
+                        receipts = await scope.get(ReceiptRepository)
+                        payments = await scope.get(PaymentRepository)
+                        attempt = await requests.get_one(
+                            col(requests.table.event_id) == event_id
+                        )
+                        receipt = await receipts.get_by_id(payment.receipt_id)
+                        stored = await payments.get_by_id(payment.id)
+                        assert attempt is not None and receipt is not None
+                        assert (
+                            attempt.status
+                            == receipt.extraction_status
+                            == ExtractionStatus.FAILED
+                        )
+                        assert attempt.error_code == error_code
+                        assert receipt.amount == 1_230
+                        assert (
+                            stored is not None
+                            and stored.status == payment.status
+                        )
             finally:
                 async with container() as scope:
                     requests = await scope.get(OCRRequestRepository)
