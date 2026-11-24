@@ -1,6 +1,7 @@
 """Persist prepared receipt records."""
 
 from papilio.infra.db.tools.decorators import transactional
+from papilio.tools.checks import IDChecks
 from papilio_tasks.apps.outbox import OutboxWriter
 from papilio_tasks.apps.outbox import decorators as outbox
 
@@ -12,7 +13,9 @@ from ...infra.broker.publishers import receipt_created
 from ...infra.pg.repositories.crud import ReceiptRepository
 
 
-class ReceiptService:
+class ReceiptService(IDChecks[ReceiptModel]):
+    entity = "Receipt"
+
     def __init__(self, repo: ReceiptRepository, outbox: OutboxWriter) -> None:
         """Bind receipt persistence and publication to the same request."""
         self.repo = repo
@@ -31,6 +34,21 @@ class ReceiptService:
         """
         receipt = await self.repo.create(data)
         return receipt
+
+    async def get_by_id(self, id: int) -> ReceiptModel:
+        """Read receipt evidence by identity.
+
+        Args:
+            id: Stored receipt identity.
+
+        Returns:
+            The matching receipt.
+
+        Raises:
+            NotFoundException: No receipt has this identity.
+        """
+        receipt = await self.repo.get_by_id(id)
+        return self._check_for_id_existence(id, receipt)
 
     async def find_by_id(self, id: int) -> ReceiptModel | None:
         """Read one receipt for a background extraction."""

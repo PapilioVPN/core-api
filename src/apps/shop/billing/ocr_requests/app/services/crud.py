@@ -3,6 +3,7 @@
 from papilio.infra.db.tools.decorators import transactional
 from papilio.schemas.results import PagedType
 from papilio.tools.checks import IDChecks
+from papilio.types.constants import INT64_MAX
 
 from ...domain.dtos.records import OCRRequestList
 from ...domain.models.records import OCRRequestModel
@@ -79,7 +80,7 @@ class OCRRequestService(IDChecks[OCRRequestModel]):
         """
         page = await self.repo.list(
             limit=query.per_page,
-            offset=(query.page - 1) * query.per_page,
+            offset=min((query.page - 1) * query.per_page, INT64_MAX),
             receipt_id=query.receipt_id,
             status=query.status,
         )

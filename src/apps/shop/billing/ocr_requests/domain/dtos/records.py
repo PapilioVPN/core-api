@@ -8,8 +8,11 @@ from src.apps.shop.billing.receipts.domain.enums.extraction import (
 )
 
 
-class OCRRequestList(BaseDTO):
+class OCRRequestPage(BaseDTO):
     page: PageType = 1
     per_page: PerPageType = 20
-    receipt_id: IdType | None = None
     status: ExtractionStatus | None = None
+
+
+class OCRRequestList(OCRRequestPage):
+    receipt_id: IdType | None = None
