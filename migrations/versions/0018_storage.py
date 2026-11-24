@@ -1,7 +1,7 @@
 """Create the shared storage tables.
 
 Revision ID: 0018
-Revises: 0017
+Revises: 0014
 """
 
 import sqlalchemy as sa
@@ -9,7 +9,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = "0018"
-down_revision = "0017"
+down_revision = "0014"
 branch_labels = None
 depends_on = None
 
