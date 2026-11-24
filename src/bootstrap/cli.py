@@ -8,7 +8,7 @@ from papilio.providers.base import CoreProvider
 from rich.console import Console
 from rich.theme import Theme
 
-from src.apps.core.users.cli.owner import cli as users
+from src.apps.core.access.users.cli.owner import cli as users
 from src.bootstrap.providers.infra import infra_providers
 from src.settings.config import CoreSettings
 from src.shared.cli import CLI

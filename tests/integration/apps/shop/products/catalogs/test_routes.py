@@ -7,10 +7,12 @@ from dishka import AsyncContainer
 from fastapi import FastAPI
 from httpx import AsyncClient
 
-from src.apps.core.roles.app.interfaces.services import IRoleService
-from src.apps.core.roles.domain.dtos.records import RoleCreate
-from src.apps.core.users.app.interfaces.commands import IUserCreateCommand
-from src.apps.core.users.domain.dtos.records import UserCreate
+from src.apps.core.access.roles.app.interfaces.services import IRoleService
+from src.apps.core.access.roles.domain.dtos.records import RoleCreate
+from src.apps.core.access.users.app.interfaces.commands import (
+    IUserCreateCommand,
+)
+from src.apps.core.access.users.domain.dtos.records import UserCreate
 from src.apps.shop.products.catalogs.app.interfaces.services import (
     ICatalogCRUD,
 )

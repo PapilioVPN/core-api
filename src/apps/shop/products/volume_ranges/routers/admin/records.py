@@ -8,7 +8,9 @@ from papilio.api.responses.envelope import APIResponse
 from papilio.api.responses.meta import PagerMeta
 from papilio.types.aliases import IdType
 
-from src.apps.core.auth.routers.dependencies.authorization import require_admin
+from src.apps.core.access.auth.routers.dependencies.authorization import (
+    require_admin,
+)
 from src.apps.shop.products.volume_ranges.app.interfaces.commands import (
     IRangeCommand,
 )

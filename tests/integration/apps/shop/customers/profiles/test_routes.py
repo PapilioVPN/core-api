@@ -7,14 +7,14 @@ from dishka import AsyncContainer
 from fastapi import FastAPI
 from httpx import AsyncClient
 
-from src.apps.core.auth.domain.enums.permissions import AdminPermission
-from src.apps.core.roles.app.interfaces.services import (
+from src.apps.core.access.auth.domain.enums.permissions import AdminPermission
+from src.apps.core.access.roles.app.interfaces.services import (
     IRoleScopeService,
     IRoleService,
 )
-from src.apps.core.roles.domain.dtos.role_scopes import RoleScopeCreate
-from src.apps.core.scopes.app.interfaces.services import IScopeService
-from src.apps.core.scopes.domain.dtos.records import ScopeCreate
+from src.apps.core.access.roles.domain.dtos.role_scopes import RoleScopeCreate
+from src.apps.core.access.scopes.app.interfaces.services import IScopeService
+from src.apps.core.access.scopes.domain.dtos.records import ScopeCreate
 
 pytestmark = pytest.mark.integration
 URL = "/admin/customers"

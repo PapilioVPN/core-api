@@ -7,7 +7,9 @@ from fastapi import APIRouter, Depends, Query
 from papilio.api.responses.envelope import APIResponse
 from papilio.types.aliases import IdType, ListIdType
 
-from src.apps.core.auth.routers.dependencies.authorization import require_admin
+from src.apps.core.access.auth.routers.dependencies.authorization import (
+    require_admin,
+)
 
 from ...app.interfaces.services import IProfileCRUD
 from ...domain.dtos.records import ProfileCreate, ProfileUpdate

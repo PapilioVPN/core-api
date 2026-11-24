@@ -9,10 +9,12 @@ from httpx import AsyncClient
 
 from scripts.seeders.registry import registered_seeds, select_seeds
 from scripts.seeders.run import run_seeds
-from src.apps.core.roles.app.interfaces.services import IRoleService
-from src.apps.core.roles.domain.dtos.records import RoleCreate
-from src.apps.core.users.app.interfaces.commands import IUserCreateCommand
-from src.apps.core.users.domain.dtos.records import UserCreate
+from src.apps.core.access.roles.app.interfaces.services import IRoleService
+from src.apps.core.access.roles.domain.dtos.records import RoleCreate
+from src.apps.core.access.users.app.interfaces.commands import (
+    IUserCreateCommand,
+)
+from src.apps.core.access.users.domain.dtos.records import UserCreate
 from src.apps.shop.banking.payment_cards.app.interfaces.queries import (
     ICardPickQuery,
 )

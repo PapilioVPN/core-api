@@ -9,17 +9,19 @@ from httpx import AsyncClient
 from papilio.errors.exceptions import NotFoundException
 from pydantic import ValidationError
 
-from src.apps.core.auth.domain.enums.permissions import AdminPermission
-from src.apps.core.roles.app.interfaces.services import (
+from src.apps.core.access.auth.domain.enums.permissions import AdminPermission
+from src.apps.core.access.roles.app.interfaces.services import (
     IRoleScopeService,
     IRoleService,
 )
-from src.apps.core.roles.domain.dtos.records import RoleCreate
-from src.apps.core.roles.domain.dtos.role_scopes import RoleScopeCreate
-from src.apps.core.scopes.app.interfaces.services import IScopeService
-from src.apps.core.scopes.domain.dtos.records import ScopeCreate
-from src.apps.core.users.app.interfaces.commands import IUserCreateCommand
-from src.apps.core.users.domain.dtos.records import UserCreate
+from src.apps.core.access.roles.domain.dtos.records import RoleCreate
+from src.apps.core.access.roles.domain.dtos.role_scopes import RoleScopeCreate
+from src.apps.core.access.scopes.app.interfaces.services import IScopeService
+from src.apps.core.access.scopes.domain.dtos.records import ScopeCreate
+from src.apps.core.access.users.app.interfaces.commands import (
+    IUserCreateCommand,
+)
+from src.apps.core.access.users.domain.dtos.records import UserCreate
 from src.apps.shop.billing.payments.app.interfaces.commands import (
     IPaymentCommand,
 )
