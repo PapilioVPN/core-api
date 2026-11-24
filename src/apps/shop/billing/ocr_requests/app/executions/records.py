@@ -42,13 +42,14 @@ class OCRExecution:
             A source whose file ID can be absent, or None when already handled
             or when the receipt is gone.
         """
-        if await requests.exists_by_event(event_id):
-            return None
-        receipt = await receipts.find_by_id(receipt_id)
-        if receipt is None:
-            return None
-        file_id = await files.find_id_by_url(receipt.image_url)
-        return OCRSource(file_id)
+        source = None
+        handled = await requests.exists_by_event(event_id)
+        if not handled:
+            receipt = await receipts.find_by_id(receipt_id)
+            if receipt is not None:
+                file_id = await files.find_id_by_url(receipt.image_url)
+                source = OCRSource(file_id)
+        return source
 
     @request_scoped
     @transactional
