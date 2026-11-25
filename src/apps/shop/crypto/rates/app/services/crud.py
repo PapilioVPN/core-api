@@ -13,3 +13,8 @@ class CryptoRateService:
         """Save a prepared observation in the caller's transaction."""
         rate = await self.repo.save(data)
         return rate
+
+    async def find_by_currency(self, currency: str) -> CryptoRateModel | None:
+        """Read the stored rate for a currency, or None when absent."""
+        rate = await self.repo.find_by_currency(currency)
+        return rate
