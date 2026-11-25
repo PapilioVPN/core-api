@@ -1,5 +1,7 @@
 """Persist cryptocurrency payment records."""
 
+from datetime import datetime
+
 from papilio.tools.checks import IDChecks
 
 from ...domain.models.quote import Quote
@@ -32,6 +34,13 @@ class CryptoPaymentService(IDChecks[CryptoPaymentModel]):
         payment = await self.repo.get_by_id(id)
         return self._check_for_id_existence(id, payment)
 
+    async def claim(
+        self, *, now: datetime, before: datetime, limit: int
+    ) -> tuple[int, ...]:
+        """Mark and return at most one batch of due records."""
+        ids = await self.repo.claim(now=now, before=before, limit=limit)
+        return ids
+
     async def set_quote(
         self, id: int, data: Quote
     ) -> CryptoPaymentModel | None:
@@ -52,4 +61,27 @@ class CryptoPaymentService(IDChecks[CryptoPaymentModel]):
             The updated payment, or None if an invoice is already stored.
         """
         payment = await self.repo.set_invoice(id, data)
+        return payment
+
+    async def confirm(
+        self,
+        id: int,
+        invoice_id: str,
+        settlement_id: str,
+        confirmed_at: datetime,
+    ) -> CryptoPaymentModel | None:
+        """Confirm a payment against its unchanged original invoice.
+
+        Args:
+            id: Local payment identity.
+            invoice_id: Original provider invoice identity.
+            settlement_id: Provider operation that received the payment.
+            confirmed_at: UTC confirmation time.
+
+        Returns:
+            The confirmed record, or None when the write no longer applies.
+        """
+        payment = await self.repo.confirm(
+            id, invoice_id, settlement_id, confirmed_at
+        )
         return payment

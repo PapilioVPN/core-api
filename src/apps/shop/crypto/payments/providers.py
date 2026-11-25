@@ -8,10 +8,15 @@ from papilio.infra.http.connection import HTTPConnection
 
 from .app.commands.create import PaymentCreateCommand
 from .app.commands.quote import PaymentQuoteCommand
+from .app.executions.check import PaymentCheckExecution
 from .app.executions.issue import PaymentIssueExecution
-from .app.interfaces.issue import IPaymentIssueExecution, IPlisioGateway
+from .app.interfaces.check import IPaymentCheckExecution
+from .app.interfaces.gateways import IPlisioGateway
+from .app.interfaces.issue import IPaymentIssueExecution
 from .app.interfaces.services import ICryptoPaymentService
+from .app.pipelines.check import PaymentCheckPipeline
 from .app.pipelines.issue import PaymentIssuePipeline
+from .app.pipelines.recheck import PaymentRecheckPipeline
 from .app.services.crud import CryptoPaymentService
 from .infra.pg.repositories.crud import CryptoPaymentRepository
 from .infra.plisio.client import PlisioGateway
@@ -29,6 +34,11 @@ class CryptoPaymentProvider(Provider):
         PaymentIssueExecution, provides=IPaymentIssueExecution, scope=Scope.APP
     )
     issue = provide(PaymentIssuePipeline, scope=Scope.APP)
+    check_execution = provide(
+        PaymentCheckExecution, provides=IPaymentCheckExecution, scope=Scope.APP
+    )
+    check = provide(PaymentCheckPipeline, scope=Scope.APP)
+    recheck = provide(PaymentRecheckPipeline, scope=Scope.APP)
 
     @provide(scope=Scope.APP)
     async def plisio(

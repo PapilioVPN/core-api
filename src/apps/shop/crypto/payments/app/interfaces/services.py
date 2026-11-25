@@ -1,5 +1,6 @@
 """Operations owned by the cryptocurrency payment service."""
 
+from datetime import datetime
 from typing import Protocol
 
 from ...domain.models.quote import Quote
@@ -12,10 +13,22 @@ class ICryptoPaymentService(Protocol):
 
     async def get_by_id(self, id: int) -> CryptoPaymentModel: ...
 
+    async def claim(
+        self, *, now: datetime, before: datetime, limit: int
+    ) -> tuple[int, ...]: ...
+
     async def set_quote(
         self, id: int, data: Quote
     ) -> CryptoPaymentModel | None: ...
 
     async def set_invoice(
         self, id: int, data: Invoice
+    ) -> CryptoPaymentModel | None: ...
+
+    async def confirm(
+        self,
+        id: int,
+        invoice_id: str,
+        settlement_id: str,
+        confirmed_at: datetime,
     ) -> CryptoPaymentModel | None: ...

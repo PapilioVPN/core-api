@@ -18,3 +18,17 @@ class InvoiceUnavailable(APPException[BaseErrorOut]):
         return BaseErrorOut(
             message=self.message, message_code=self.message_code
         )
+
+
+class CheckUnavailable(APPException[BaseErrorOut]):
+    def __init__(self) -> None:
+        super().__init__(
+            "The payment gateway could not be checked.",
+            "crypto_payment_check_unavailable",
+            HTTPStatus.BAD_GATEWAY,
+        )
+
+    def as_schema(self) -> BaseErrorOut:
+        return BaseErrorOut(
+            message=self.message, message_code=self.message_code
+        )

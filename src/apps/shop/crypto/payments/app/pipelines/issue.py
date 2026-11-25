@@ -1,7 +1,8 @@
 """Issue a hosted invoice after releasing database resources."""
 
 from ...domain.results.invoice import Invoice, PlisioIssue
-from ..interfaces.issue import IPaymentIssueExecution, IPlisioGateway
+from ..interfaces.gateways import IPlisioGateway
+from ..interfaces.issue import IPaymentIssueExecution
 
 
 class PaymentIssuePipeline:
