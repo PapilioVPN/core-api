@@ -42,6 +42,10 @@ cli:
 # Enable NATS for the optional Scheduler and Events processes.
 # nats:
 #   servers: [nats://127.0.0.1:4222]
+# Set an interval in seconds to refresh the USD rate automatically.
+# Both scheduled and manual refreshes use the jobs worker and Redis.
+# scheduler:
+#   rate_refresh_interval: 60
 storage:
   path: var/media
   temp_dir: var/tmp

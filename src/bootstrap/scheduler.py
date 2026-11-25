@@ -1,6 +1,5 @@
 """Compose the native Papilio Tasks broker and module schedules."""
 
-from nats.js.api import RetentionPolicy, StreamConfig
 from papilio.core.bootstrap import Bootstrapper
 from papilio.providers.base import CoreProvider
 from papilio_tasks.apps.schedulers.application import (
@@ -9,13 +8,16 @@ from papilio_tasks.apps.schedulers.application import (
 )
 from papilio_tasks.apps.schedulers.backends.nats import JetStreamBroker
 from papilio_tasks.apps.schedulers.registry.nats import NatsRegistrar
+from papilio_tasks.infra.taskiq.sources.backends.memory import MemorySource
 from papilio_tasks.infra.taskiq.sources.base import Source
+from papilio_tasks.infra.taskiq.sources.contracts.base import SourceContract
 from taskiq import AsyncBroker, TaskiqScheduler
 from taskiq.schedule_sources import LabelScheduleSource
-from taskiq_nats import PullBasedJetStreamBroker
 
+from src.apps.shop.crypto.rates.infra.broker.config import BrokerConfig
 from src.bootstrap.providers.infra import infra_providers
 from src.settings.config import CoreSettings
+from src.shared.jobs import create_job_transport
 
 
 def create_scheduler(
@@ -32,15 +34,7 @@ def create_scheduler(
     nats = settings.nats
     if nats is None:
         raise ValueError("Configure nats.servers to start the scheduler")
-    config = settings.scheduler
-    transport = PullBasedJetStreamBroker(
-        nats.servers,
-        stream_name=config.stream,
-        subject=config.subject,
-        durable=config.durable,
-        stream_config=StreamConfig(retention=RetentionPolicy.WORK_QUEUE),
-        connect_timeout=nats.connect_timeout,
-    )
+    transport = create_job_transport(nats, settings.scheduler)
     discovery = Bootstrapper(
         settings.app.modules, tables_path=settings.app.tables_path
     )
@@ -53,5 +47,9 @@ def create_scheduler(
         ],
         modules=settings.app.modules,
     )
-    beat = create_beat(broker, sources=[Source(LabelScheduleSource(broker))])
+    sources: list[SourceContract] = [Source(LabelScheduleSource(broker))]
+    interval = settings.scheduler.rate_refresh_interval
+    if interval is not None and broker.find_task(BrokerConfig.refresh_task):
+        sources.append(MemorySource([BrokerConfig.refresh_schedule(interval)]))
+    beat = create_beat(broker, sources=sources)
     return broker, beat
