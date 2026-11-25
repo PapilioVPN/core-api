@@ -4,13 +4,14 @@ from asyncio import gather
 from datetime import UTC, datetime, timedelta
 from os import getpid
 from typing import cast
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from dishka import AsyncContainer
 from fastapi import FastAPI
 from httpx import AsyncClient
 from papilio.errors.exceptions import ConflictException
+from papilio.infra.db.transaction import transaction
 
 from src.apps.core.access.auth.app.interfaces.services import ISessionService
 from src.apps.core.access.tokens.app.interfaces.services import ITokenService
@@ -296,12 +297,15 @@ async def test_core_access(app: FastAPI, client: AsyncClient) -> None:
 
     async with container() as scope:
         service = await scope.get(ISessionService)
-        await service.create(
+        expired_id = uuid4()
+        expired = await service.create(
             profile["id"],
-            uuid4(),
+            expired_id,
             expires_at=datetime.now(UTC) - timedelta(seconds=1),
             user_agent=None,
         )
+        assert expired.id == expired_id
+        assert expired.user_id == profile["id"]
         legacy = await (await scope.get(ITokenService)).issue(
             TokenIdentity(
                 subject=str(profile["id"]),
@@ -336,6 +340,14 @@ async def test_core_access(app: FastAPI, client: AsyncClient) -> None:
         service = await scope.get(ISessionService)
         assert await service.remove_expired(limit=100) == 1
         assert await service.remove_expired(limit=100) == 0
+        session_id = UUID(current["id"])
+        expires_at = datetime.now(UTC) + timedelta(days=1)
+        async with transaction():
+            extended = await service.rotate(
+                profile["id"], session_id, expires_at=expires_at
+            )
+        assert extended.id == session_id
+        assert extended.expires_at == expires_at
     current_url = f"{sessions_url}/{current['id']}"
     assert (
         await client.delete(current_url, headers=viewer_headers)

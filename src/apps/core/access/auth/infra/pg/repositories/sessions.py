@@ -3,30 +3,22 @@
 from datetime import datetime
 from uuid import UUID
 
-from papilio.infra.db.repositories.backends.postgresql import PGReader
+from papilio.infra.db.repositories.backends.postgresql import PGRepository
 from papilio.infra.db.tools.read import fetch_page
 from papilio.schemas.results import PagedType
-from sqlalchemy import CursorResult, delete, insert, select, update
+from sqlalchemy import CursorResult, delete, select, update
 from sqlmodel import col
 
 from src.apps.core.access.auth.domain.models.sessions import SessionModel
 from src.apps.core.access.auth.infra.pg.tables import SessionTable
 
 
-class SessionRepository(PGReader):
-    async def create(self, session: SessionModel) -> None:
-        """Insert one session in the caller's transaction.
+class SessionRepository(PGRepository[SessionModel]):
+    table = SessionTable
 
-        Args:
-            session: New session with an assigned UUID and aware deadlines.
-
-        Returns:
-            None after the insert.
-        """
-        stmt = insert(SessionTable).values(session.to_row())
-        await self.uow.execute(stmt)
-
-    async def exists(self, user_id: int, id: UUID, *, now: datetime) -> bool:
+    async def exists_active(
+        self, user_id: int, id: UUID, *, now: datetime
+    ) -> bool:
         """Check whether the account still owns an active session.
 
         Args:
@@ -37,13 +29,12 @@ class SessionRepository(PGReader):
         Returns:
             True if the owned session expires after the cutoff.
         """
-        stmt = select(col(SessionTable.id)).where(
+        active = await self.exists(
             col(SessionTable.user_id) == user_id,
             col(SessionTable.id) == id,
             col(SessionTable.expires_at) > now,
         )
-        result = await self.uow.execute(stmt)
-        return result.scalar_one_or_none() is not None
+        return active
 
     async def list(
         self, user_id: int, *, now: datetime, limit: int, offset: int
@@ -75,7 +66,7 @@ class SessionRepository(PGReader):
 
     async def rotate(
         self, user_id: int, id: UUID, *, now: datetime, expires_at: datetime
-    ) -> bool:
+    ) -> SessionModel | None:
         """Extend a still-active session after a successful refresh.
 
         Args:
@@ -85,7 +76,7 @@ class SessionRepository(PGReader):
             expires_at: New aware UTC session deadline.
 
         Returns:
-            True if the owned session was extended.
+            The updated session, or None if no active owned session matched.
         """
         stmt = (
             update(SessionTable)
@@ -95,10 +86,13 @@ class SessionRepository(PGReader):
                 col(SessionTable.expires_at) > now,
             )
             .values(last_seen_at=now, expires_at=expires_at)
-            .returning(col(SessionTable.id))
+            .returning(SessionTable)
+            .execution_options(
+                populate_existing=True, synchronize_session=False
+            )
         )
         result = await self.uow.execute(stmt)
-        return result.scalar_one_or_none() is not None
+        return result.scalar_one_or_none()
 
     async def revoke(self, user_id: int, id: UUID, *, now: datetime) -> bool:
         """Delete an owned session while it is still active.

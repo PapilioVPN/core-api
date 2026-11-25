@@ -7,6 +7,7 @@ from uuid import UUID
 from papilio.schemas.results import PagedType
 
 from src.apps.core.access.auth.domain.dtos.sessions import SessionList
+from src.apps.core.access.auth.domain.models.sessions import SessionModel
 from src.apps.core.access.auth.domain.results.identity import AdminIdentity
 from src.apps.core.access.auth.domain.results.sessions import SessionResult
 
@@ -35,13 +36,13 @@ class ISessionService(Protocol):
         *,
         expires_at: datetime,
         user_agent: str | None,
-    ) -> None: ...
+    ) -> SessionModel: ...
 
     async def require(self, user_id: int, id: UUID) -> None: ...
 
     async def rotate(
         self, user_id: int, id: UUID, *, expires_at: datetime
-    ) -> None: ...
+    ) -> SessionModel: ...
 
     async def list(
         self, identity: AdminIdentity, query: SessionList

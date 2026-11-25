@@ -9,6 +9,9 @@ from fastapi import FastAPI
 from httpx import AsyncClient
 from papilio.infra.db.transaction import transaction
 
+from src.apps.core.access.audit.app.interfaces.records import IAuditWriter
+from src.apps.core.access.audit.domain.dtos.event import AuditEvent
+from src.apps.core.access.audit.domain.enums.actions import AuditAction
 from src.apps.core.access.roles.app.interfaces.services import IRoleService
 from src.apps.core.access.roles.domain.dtos.records import RoleCreate
 from src.apps.core.access.users.app.interfaces.commands import (
@@ -267,3 +270,14 @@ async def test_audit_records(app: FastAPI, client: AsyncClient) -> None:
     )
     assert invalid.status_code == 400
     assert invalid.json()["error"]["message_code"] == "invalid_audit_range"
+
+    async with container() as scope:
+        writer = await scope.get(IAuditWriter)
+        assert await writer.record_many(admin.id, []) == []
+        event = AuditEvent(AuditAction.USER_ROLE_UPDATE, viewer.id)
+        async with transaction():
+            recorded = await writer.record(admin.id, event)
+            batch = await writer.record_many(admin.id, [event, event])
+    assert recorded.actor_id == admin.id
+    assert len({recorded.id, *(row.id for row in batch)}) == 3
+    assert all(row.target_id == str(viewer.id) for row in batch)

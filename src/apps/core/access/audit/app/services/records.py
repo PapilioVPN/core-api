@@ -38,7 +38,7 @@ class AuditService:
         """
         self.repo = repo
 
-    async def record(self, actor_id: int, event: AuditEvent) -> None:
+    async def record(self, actor_id: int, event: AuditEvent) -> AuditModel:
         """Append one event in the caller's active transaction.
 
         Args:
@@ -46,17 +46,20 @@ class AuditService:
             event: Facts returned by the successful mutation.
 
         Returns:
-            None after inserting the event.
+            The inserted audit record.
 
         Raises:
             RuntimeError: There is no active originating transaction.
         """
         current_transaction()
-        await self.repo.create(_record(actor_id, event, datetime.now(UTC)))
+        record = await self.repo.create(
+            _record(actor_id, event, datetime.now(UTC))
+        )
+        return record
 
     async def record_many(
         self, actor_id: int, events: Sequence[AuditEvent]
-    ) -> None:
+    ) -> Sequence[AuditModel]:
         """Append the actual results of one bounded batch in one write.
 
         Args:
@@ -64,14 +67,16 @@ class AuditService:
             events: One event per written item. An empty batch skips I/O.
 
         Returns:
-            None after the audit batch is inserted.
+            The inserted audit records, or an empty sequence for no events.
 
         Raises:
             RuntimeError: A nonempty batch has no active transaction.
         """
+        records: Sequence[AuditModel] = []
         if events:
             current_transaction()
             at = datetime.now(UTC)
-            await self.repo.bulk_create(
+            records = await self.repo.bulk_create(
                 [_record(actor_id, event, at) for event in events]
             )
+        return records

@@ -38,7 +38,7 @@ class SessionService:
         *,
         expires_at: datetime,
         user_agent: str | None,
-    ) -> None:
+    ) -> SessionModel:
         """Store the login and its refresh expiry.
 
         Args:
@@ -48,10 +48,10 @@ class SessionService:
             user_agent: Bounded device label, if supplied.
 
         Returns:
-            None after the session is saved.
+            The inserted administrator session.
         """
         now = datetime.now(UTC)
-        await self.repo.create(
+        session = await self.repo.create(
             SessionModel(
                 id=id,
                 user_id=user_id,
@@ -61,6 +61,7 @@ class SessionService:
                 user_agent=user_agent,
             )
         )
+        return session
 
     async def require(self, user_id: int, id: UUID) -> None:
         """Require the current account's live session.
@@ -75,12 +76,14 @@ class SessionService:
         Raises:
             UnAuthorizedException: Session is absent, expired or foreign.
         """
-        if not await self.repo.exists(user_id, id, now=datetime.now(UTC)):
+        if not await self.repo.exists_active(
+            user_id, id, now=datetime.now(UTC)
+        ):
             raise session_unavailable()
 
     async def rotate(
         self, user_id: int, id: UUID, *, expires_at: datetime
-    ) -> None:
+    ) -> SessionModel:
         """Record refresh time and expiry in the owning transaction.
 
         Args:
@@ -89,7 +92,7 @@ class SessionService:
             expires_at: Aware UTC deadline of the replacement credential.
 
         Returns:
-            None after extending the session.
+            The session with its updated refresh time and expiry.
 
         Raises:
             UnAuthorizedException: The session is no longer active.
@@ -97,8 +100,9 @@ class SessionService:
         rotated = await self.repo.rotate(
             user_id, id, now=datetime.now(UTC), expires_at=expires_at
         )
-        if not rotated:
+        if rotated is None:
             raise session_unavailable()
+        return rotated
 
     async def list(
         self, identity: AdminIdentity, query: SessionList
