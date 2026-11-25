@@ -23,8 +23,12 @@ def test_scheduler_rejects_empty_transport_values() -> None:
         SchedulerConfig(stream="")
 
 
-def test_rate_schedule_is_opt_in_and_uses_whole_seconds() -> None:
-    assert SchedulerConfig().rate_refresh_interval is None
+def test_rate_schedule_defaults_to_twenty_and_uses_whole_seconds() -> None:
+    assert SchedulerConfig().rate_refresh_interval == 20
+    assert (
+        SchedulerConfig(rate_refresh_interval=None).rate_refresh_interval
+        is None
+    )
     assert (
         SchedulerConfig(rate_refresh_interval=45).rate_refresh_interval == 45
     )

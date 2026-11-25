@@ -30,7 +30,7 @@ class SchedulerConfig(BaseModel):
     stream: str = Field(default="papiliovpn_core_jobs", min_length=1)
     subject: str = Field(default="papiliovpn.core.jobs", min_length=1)
     durable: str = Field(default="papiliovpn_core_workers", min_length=1)
-    rate_refresh_interval: int | None = Field(default=None, gt=0, strict=True)
+    rate_refresh_interval: int | None = Field(default=20, gt=0, strict=True)
 
 
 class CoreSettings(Settings):

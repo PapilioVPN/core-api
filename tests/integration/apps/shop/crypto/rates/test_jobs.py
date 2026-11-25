@@ -25,7 +25,8 @@ from src.apps.shop.crypto.rates.app.interfaces.cache import IRateCache
 from src.settings.config import CoreSettings, NatsConfig, SchedulerConfig
 
 pytestmark = pytest.mark.integration
-PATH = "/admin/crypto-rates/refresh"
+RATES = "/admin/crypto-rates"
+PATH = f"{RATES}/refresh"
 
 
 async def _headers(
@@ -80,9 +81,20 @@ async def test_refresh_without_job_transport(
     assert response.status_code == 503, response.text
 
 
-@pytest.mark.parametrize("interval", [None, 37])
+@pytest.mark.parametrize(
+    ("override", "interval"),
+    [
+        ({}, 20),
+        ({"rate_refresh_interval": None}, None),
+        ({"rate_refresh_interval": 37}, 37),
+    ],
+)
 async def test_refresh_jobs(
-    app: FastAPI, client: AsyncClient, pg: CoreSettings, interval: int | None
+    app: FastAPI,
+    client: AsyncClient,
+    pg: CoreSettings,
+    override: dict[str, int | None],
+    interval: int | None,
 ) -> None:
     pytest.importorskip("taskiq_nats")
     from taskiq.receiver import Receiver
@@ -94,11 +106,13 @@ async def test_refresh_jobs(
         pytest.skip("Set isolated test Redis and NATS URLs")
     suffix = randbelow(10**7)
     pg.nats = NatsConfig(servers=[url])
-    pg.scheduler = SchedulerConfig(
-        stream=f"rates_{suffix}",
-        subject=f"rates.{suffix}",
-        durable=f"rates_{suffix}",
-        rate_refresh_interval=interval,
+    pg.scheduler = SchedulerConfig.model_validate(
+        {
+            "stream": f"rates_{suffix}",
+            "subject": f"rates.{suffix}",
+            "durable": f"rates_{suffix}",
+            **override,
+        }
     )
 
     calls = 0
@@ -146,7 +160,12 @@ async def test_refresh_jobs(
 
         deny = await _headers(app, client, super_admin=False)
         assert (await client.post(PATH, headers=deny)).status_code == 403
+        assert (await client.get(RATES)).status_code == 401
+        assert (await client.get(RATES, headers=deny)).status_code == 403
         headers = await _headers(app, client, super_admin=True)
+        empty = await client.get(RATES, headers=headers)
+        assert empty.status_code == 200, empty.text
+        assert empty.json()["data"] == []
         queued = await client.post(PATH, headers=headers)
         assert queued.status_code == 202, queued.text
         assert calls == 0
@@ -163,6 +182,20 @@ async def test_refresh_jobs(
         await receiver.callback(message)
         rate = await cache.find("USD")
         assert rate is not None and rate.rial_rate == Decimal("600010")
+        current = await client.get(RATES, headers=headers)
+        assert current.status_code == 200, current.text
+        assert current.headers["cache-control"] == "no-store"
+        assert current.json()["data"] == [
+            {
+                "currency": "USD",
+                "rial_rate": "600010",
+                "source": "wallex_usdt",
+                "fetched_at": rate.fetched_at.isoformat().replace(
+                    "+00:00", "Z"
+                ),
+            }
+        ]
+        assert calls == 1
 
         schedules = [
             (source, schedule)
@@ -180,3 +213,7 @@ async def test_refresh_jobs(
             await receiver.callback(scheduled)
             rate = await cache.find("USD")
             assert rate is not None and rate.rial_rate == Decimal("600020")
+            updated = await client.get(RATES, headers=headers)
+            assert updated.status_code == 200, updated.text
+            assert updated.json()["data"][0]["rial_rate"] == "600020"
+            assert calls == 2

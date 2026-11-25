@@ -1,5 +1,7 @@
 """Keep the latest successful rate for each currency in Redis."""
 
+from typing import cast
+
 from papilio.infra.redis.client import RedisClient, resolve
 from pydantic import TypeAdapter, ValidationError
 from redis.exceptions import RedisError
@@ -8,6 +10,13 @@ from ...domain.errors import RateUnavailable
 from ...domain.models.records import Rate
 
 _rate = TypeAdapter(Rate)
+
+
+def _decode(currency: str, raw: str | bytes) -> Rate:
+    rate = _rate.validate_json(raw)
+    if rate.currency != currency:
+        raise RateUnavailable()
+    return rate
 
 
 class RateCache:
@@ -59,9 +68,28 @@ class RateCache:
             raise RateUnavailable()
         try:
             raw = await resolve(redis.client.hget(self.key, currency))
-            rate = _rate.validate_json(raw) if raw is not None else None
+            rate = _decode(currency, raw) if raw is not None else None
         except (RedisError, ValidationError) as error:
             raise RateUnavailable() from error
-        if rate is not None and rate.currency != currency:
-            raise RateUnavailable()
         return rate
+
+    async def find_all(self) -> list[Rate]:
+        """Read the current observations without refreshing or extending them.
+
+        Returns:
+            Cached rates in currency order, empty before the first refresh.
+
+        Raises:
+            RateUnavailable: Redis is unavailable or an observation is invalid.
+        """
+        redis = self.redis
+        if redis is None:
+            raise RateUnavailable()
+        try:
+            values = cast(
+                dict[str, str], await resolve(redis.client.hgetall(self.key))
+            )
+            rates = [_decode(code, values[code]) for code in sorted(values)]
+        except (RedisError, ValidationError) as error:
+            raise RateUnavailable() from error
+        return rates

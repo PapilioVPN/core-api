@@ -49,7 +49,11 @@ def create_scheduler(
     )
     sources: list[SourceContract] = [Source(LabelScheduleSource(broker))]
     interval = settings.scheduler.rate_refresh_interval
-    if interval is not None and broker.find_task(BrokerConfig.refresh_task):
+    if (
+        interval is not None
+        and settings.redis is not None
+        and broker.find_task(BrokerConfig.refresh_task)
+    ):
         sources.append(MemorySource([BrokerConfig.refresh_schedule(interval)]))
     beat = create_beat(broker, sources=sources)
     return broker, beat
