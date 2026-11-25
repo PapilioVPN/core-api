@@ -13,8 +13,11 @@ from ...domain.enums.records import PaymentStatus
 
 class PaymentOutput(BaseOutput):
     id: int
-    receipt_id: int
+    receipt_id: int | None
     amount: int
+    transfer_amount: int | None
+    confirmation_code: str | None
+    auto_confirm: bool
     status: PaymentStatus
     confirmed_at: datetime | None
     created_at: datetime
@@ -27,4 +30,4 @@ class PaymentReviewOutput(PaymentOutput):
 
 class PaymentDetailOutput(BaseOutput):
     payment: PaymentReviewOutput
-    receipt: ReceiptOutput
+    receipt: ReceiptOutput | None

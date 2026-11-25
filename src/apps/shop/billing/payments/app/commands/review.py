@@ -1,4 +1,6 @@
-"""Record a manual payment decision and its event."""
+"""Record payment decisions and publish their events."""
+
+from datetime import datetime
 
 from papilio.infra.db.tools.decorators import transactional
 from papilio_tasks.apps.outbox import OutboxWriter
@@ -24,6 +26,20 @@ class PaymentReviewCommand:
     async def confirm(self, id: int) -> PaymentModel:
         """Confirm a pending payment and register its event."""
         payment = await self.payments.review(id, PaymentStatus.CONFIRMED)
+        return payment
+
+    @transactional
+    async def confirm_auto(
+        self, amount: int, *, since: datetime, until: datetime
+    ) -> PaymentModel | None:
+        """Record a confirmed payment event only when a deposit matched."""
+        payment = await self.payments.confirm_auto(
+            amount, since=since, until=until
+        )
+        if payment is not None:
+            await self.outbox.append(
+                payment_confirmed, PaymentEvent.from_record(payment)
+            )
         return payment
 
     @transactional

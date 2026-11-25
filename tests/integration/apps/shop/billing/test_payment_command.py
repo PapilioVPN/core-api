@@ -37,6 +37,8 @@ async def test_create_payment(app: FastAPI) -> None:
         async with container() as scope:
             command = await scope.get(IPaymentCommand)
             payment = await command.create(data)
+        receipt_id = payment.receipt_id
+        assert receipt_id is not None
 
         async with container() as scope:
             payments = await scope.get(PaymentRepository)
@@ -49,9 +51,9 @@ async def test_create_payment(app: FastAPI) -> None:
                 assert stored.amount == data.amount
                 assert stored.status == PaymentStatus.PENDING
                 assert stored.confirmed_at is None
-                assert stored.receipt_id == payment.receipt_id
+                assert stored.receipt_id == receipt_id
 
-                receipt = await receipts.get_by_id(stored.receipt_id)
+                receipt = await receipts.get_by_id(receipt_id)
                 assert receipt is not None
                 assert receipt.image_url == data.image_url
                 assert receipt.status == ReceiptStatus.PENDING
@@ -80,7 +82,7 @@ async def test_create_payment(app: FastAPI) -> None:
                             delete(pending).where(pending.c.id.in_(event_ids))
                         )
                     await payments.remove_by_id(payment.id)
-                    await receipts.remove_by_id(payment.receipt_id)
+                    await receipts.remove_by_id(receipt_id)
 
 
 async def test_payment_failure_rolls_back_receipt(

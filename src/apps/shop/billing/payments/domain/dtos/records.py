@@ -9,4 +9,4 @@ from pydantic import Field
 
 class PaymentCreate(BaseDTO):
     amount: Annotated[RialType, Field(gt=0, strict=True)]
-    image_url: MediaUrlType
+    image_url: MediaUrlType | None = None

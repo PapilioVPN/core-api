@@ -1,5 +1,6 @@
 """Payment registration and manual review contracts."""
 
+from datetime import datetime
 from typing import Protocol
 
 from ...domain.dtos.records import PaymentCreate
@@ -12,6 +13,10 @@ class IPaymentCommand(Protocol):
 
 class IPaymentReviewCommand(Protocol):
     async def confirm(self, id: int) -> PaymentModel: ...
+
+    async def confirm_auto(
+        self, amount: int, *, since: datetime, until: datetime
+    ) -> PaymentModel | None: ...
 
     async def reject(
         self, id: int, *, reason: str | None = None

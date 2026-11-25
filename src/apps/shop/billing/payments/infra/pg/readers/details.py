@@ -22,7 +22,7 @@ class PaymentReader(PGReader):
         """
         stmt = (
             select(PaymentTable, ReceiptTable)
-            .join(
+            .outerjoin(
                 ReceiptTable,
                 col(ReceiptTable.id) == col(PaymentTable.receipt_id),
             )

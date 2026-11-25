@@ -6,17 +6,95 @@ from papilio.infra.db.repositories.backends.postgresql import (
     PGPersistenceRepository,
 )
 from papilio.schemas.results import PagedType
-from sqlalchemy import and_
+from sqlalchemy import (
+    BigInteger,
+    String,
+    and_,
+    cast,
+    exists,
+    func,
+    literal,
+    select,
+)
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.sql import ColumnElement
 from sqlmodel import col
 
+from src.apps.shop.billing.deposits.infra.pg.tables import DepositTable
+
 from ....domain.enums.records import PaymentStatus
 from ....domain.models.records import PaymentModel
+from ..sql.auto import candidates
 from ..tables import PaymentTable
 
 
 class PaymentRepository(PGPersistenceRepository[PaymentModel]):
     table = PaymentTable
+
+    async def create_auto(
+        self, data: PaymentModel, digits: int
+    ) -> PaymentModel | None:
+        """Insert a transfer instruction or report a concurrent collision."""
+        table = self.table
+        candidate = candidates(data.amount, digits).subquery()
+        value = candidate.c.value
+        stmt = (
+            insert(table)
+            .from_select(
+                [
+                    "receipt_id",
+                    "amount",
+                    "status",
+                    "transfer_amount",
+                    "confirmation_code",
+                ],
+                select(
+                    literal(data.receipt_id, type_=BigInteger),
+                    literal(data.amount, type_=BigInteger),
+                    literal(PaymentStatus.PENDING.value),
+                    value,
+                    func.lpad(cast(value % (10**digits), String), digits, "0"),
+                ),
+            )
+            .on_conflict_do_nothing(
+                index_elements=[col(table.transfer_amount)]
+            )
+            .returning(table)
+        )
+        result = await self.uow.execute(stmt)
+        payment = result.scalar_one_or_none()
+        return payment
+
+    async def confirm_auto(
+        self,
+        amount: int,
+        *,
+        since: datetime,
+        until: datetime,
+        confirmed_at: datetime,
+    ) -> PaymentModel | None:
+        """Confirm the pending payment bearing this exact transfer amount."""
+        table = self.table
+        earlier_report = exists(
+            select(1)
+            .where(
+                col(DepositTable.amount) == amount,
+                col(DepositTable.created_at) < col(table.created_at),
+            )
+            .correlate(table)
+        )
+        predicates = [
+            col(table.transfer_amount) == amount,
+            col(table.status) == PaymentStatus.PENDING,
+            col(table.created_at) >= since,
+            col(table.created_at) <= until,
+            ~earlier_report,
+        ]
+        rows = await self.update(
+            and_(*predicates),
+            {"status": PaymentStatus.CONFIRMED, "confirmed_at": confirmed_at},
+        )
+        return rows[0] if rows else None
 
     async def review(
         self,

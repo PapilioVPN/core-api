@@ -10,4 +10,4 @@ from ..models.records import PaymentModel
 @dataclass(frozen=True, slots=True)
 class PaymentDetail:
     payment: PaymentModel
-    receipt: ReceiptModel
+    receipt: ReceiptModel | None

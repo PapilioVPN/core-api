@@ -187,6 +187,7 @@ async def test_post_payment(
             stored = await payments.get_by_id(payment["id"])
             assert (
                 stored is not None
+                and stored.receipt_id is not None
                 and stored.receipt_id == payment["receipt_id"]
             )
             receipt = await receipts.get_by_id(stored.receipt_id)
