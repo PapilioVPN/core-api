@@ -7,6 +7,7 @@ from papilio.errors.exceptions import ConflictException
 from papilio.infra.db.tools.decorators import transactional
 from papilio.infra.scopes import Inject, request_scoped
 from papilio.utils.dates import utc_now
+from papilio_tasks.apps.outbox import OutboxWriter
 
 from src.apps.shop.crypto.gateways.app.interfaces.configs import (
     IPlisioConfigQuery,
@@ -15,8 +16,10 @@ from src.apps.shop.crypto.gateways.app.interfaces.services import (
     ICryptoGatewayService,
 )
 
+from ...domain.events.records import PaymentConfirmed
 from ...domain.models.records import CryptoPaymentModel
 from ...domain.results.check import PlisioCheck
+from ...infra.broker.publishers import payment_confirmed
 from ..interfaces.services import ICryptoPaymentService
 
 
@@ -101,14 +104,16 @@ class PaymentCheckExecution:
         settlement_id: str,
         *,
         payments: ICryptoPaymentService = Inject(),
+        outbox: OutboxWriter = Inject(),
     ) -> CryptoPaymentModel:
-        """Persist the first verified settlement and return the saved state.
+        """Persist the first verified settlement and register its event.
 
         Args:
             id: Local payment identity.
             invoice_id: Original provider invoice identity.
             settlement_id: Verified operation that received the payment.
             payments: Payment service injected for the short write.
+            outbox: Native writer for the same transaction.
 
         Returns:
             The stored payment, including after a concurrent confirmation.
@@ -116,6 +121,10 @@ class PaymentCheckExecution:
         payment = await payments.confirm(
             id, invoice_id, settlement_id, utc_now()
         )
-        if payment is None:
+        if payment is not None:
+            await outbox.append(
+                payment_confirmed, PaymentConfirmed(payment_id=payment.id)
+            )
+        else:
             payment = await payments.get_by_id(id)
         return payment

@@ -22,6 +22,9 @@ from src.apps.shop.billing.payments.infra.broker.config import BrokerConfig
 from src.apps.shop.billing.payments.infra.pg.repositories.crud import (
     PaymentRepository,
 )
+from src.apps.shop.billing.receipts.infra.broker.config import (
+    BrokerConfig as ReceiptBrokerConfig,
+)
 from src.apps.shop.billing.receipts.infra.pg.repositories.crud import (
     ReceiptRepository,
 )
@@ -159,9 +162,13 @@ async def test_review_payment(
         async with container() as scope:
             uow = await scope.get(PGUnitOfWork)
             rows = await uow.execute(
-                select(pending.c.queue, pending.c.payload).order_by(
-                    pending.c.id
+                select(pending.c.queue, pending.c.payload)
+                .where(
+                    pending.c.queue.in_(
+                        (BrokerConfig.confirmed, BrokerConfig.rejected)
+                    )
                 )
+                .order_by(pending.c.id)
             )
             events = []
             for queue, payload in rows.tuples():
@@ -180,7 +187,15 @@ async def test_review_payment(
             receipts = await scope.get(ReceiptRepository)
             async with transaction():
                 rows = await uow.execute(
-                    select(pending.c.id, pending.c.payload)
+                    select(pending.c.id, pending.c.payload).where(
+                        pending.c.queue.in_(
+                            (
+                                BrokerConfig.confirmed,
+                                BrokerConfig.rejected,
+                                ReceiptBrokerConfig.created,
+                            )
+                        )
+                    )
                 )
                 event_ids = []
                 for event_id, payload in rows.tuples():

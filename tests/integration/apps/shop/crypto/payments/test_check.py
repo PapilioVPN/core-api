@@ -1,9 +1,10 @@
 """Verify Plisio settlement against the exact original quote."""
 
-from asyncio import sleep, wait_for
+from asyncio import gather, sleep, wait_for
 from contextlib import AsyncExitStack
 from datetime import timedelta
 from decimal import Decimal
+from json import loads
 from os import environ
 from secrets import token_hex
 from typing import cast
@@ -12,10 +13,13 @@ import pytest
 from dishka import AsyncContainer
 from fastapi import FastAPI
 from httpx import AsyncClient, MockTransport, Request, Response
+from nats import connect
+from nats.js.errors import NotFoundError
 from papilio.infra.db.transaction import transaction
 from papilio.infra.db.uow import PGUnitOfWork, UnitOfWork
 from papilio.infra.http.connection import HTTPConnection
-from sqlalchemy import insert
+from papilio_tasks.apps.outbox import OutboxWriter
+from sqlalchemy import insert, select
 
 from src.apps.shop.crypto.gateways.app.commands.configs import (
     GatewayConfigCommand,
@@ -31,6 +35,9 @@ from src.apps.shop.crypto.payments.app.commands.create import (
 from src.apps.shop.crypto.payments.app.commands.quote import (
     PaymentQuoteCommand,
 )
+from src.apps.shop.crypto.payments.app.interfaces.check import (
+    IPaymentCheckExecution,
+)
 from src.apps.shop.crypto.payments.app.interfaces.services import (
     ICryptoPaymentService,
 )
@@ -41,6 +48,8 @@ from src.apps.shop.crypto.payments.domain.dtos.records import PaymentCreate
 from src.apps.shop.crypto.payments.domain.errors import CheckUnavailable
 from src.apps.shop.crypto.payments.domain.results.invoice import Invoice
 from src.apps.shop.crypto.payments.infra.pg.tables import CryptoPaymentTable
+from src.bootstrap.outbox import pending as outbox
+from src.bootstrap.relay import create_relay_app
 from src.settings.config import CoreSettings, NatsConfig, SchedulerConfig
 
 pytestmark = pytest.mark.integration
@@ -174,6 +183,86 @@ async def test_check_plisio_payment(
             assert len(calls) == before
         finally:
             connection.client = original
+
+
+async def test_confirmation_event_is_atomic_and_emitted_once(
+    app: FastAPI, client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    container = cast(AsyncContainer, app.state.dishka_container)
+    id = await _payment(container, "event-invoice")
+    execution = await container.get(IPaymentCheckExecution)
+    subject = "papiliovpn.shop.crypto.payments.confirmed"
+    stmt = select(outbox.c.payload).where(outbox.c.queue == subject)
+
+    async def fail_append(*args: object, **kwargs: object) -> int:
+        raise RuntimeError("event write failed")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(OutboxWriter, "append", fail_append)
+        with pytest.raises(RuntimeError, match="event write failed"):
+            await execution.complete(id, "event-invoice", "event-invoice")
+
+    async with container() as scope:
+        payments = await scope.get(ICryptoPaymentService)
+        unit = await scope.get(PGUnitOfWork)
+        async with transaction():
+            unpaid = await payments.get_by_id(id)
+            attempts = await unit.execute(stmt)
+        assert unpaid.confirmed_at is None and unpaid.settlement_id is None
+        assert not any(
+            loads(raw)["event"].get("payment_id") == id
+            for raw in attempts.scalars()
+        )
+
+    first, repeat = await gather(
+        execution.complete(id, "event-invoice", "event-invoice"),
+        execution.complete(id, "event-invoice", "event-invoice"),
+    )
+    assert first.confirmed_at is not None
+    assert repeat.confirmed_at == first.confirmed_at
+    assert first.settlement_id == repeat.settlement_id == "event-invoice"
+
+    async with container() as scope:
+        unit = await scope.get(PGUnitOfWork)
+        rows = await unit.execute(stmt)
+        events = [loads(raw)["event"] for raw in rows.scalars()]
+    assert [event for event in events if event.get("payment_id") == id] == [
+        {"payment_id": id}
+    ]
+
+
+async def test_confirmation_event_reaches_jetstream(
+    app: FastAPI, client: AsyncClient, pg: CoreSettings
+) -> None:
+    url = environ.get("PAPILIOVPN_TEST_NATS_URL")
+    if not url:
+        pytest.skip("Set PAPILIOVPN_TEST_NATS_URL to isolated JetStream")
+    container = cast(AsyncContainer, app.state.dishka_container)
+    id = await _payment(container, "relay-invoice")
+    execution = await container.get(IPaymentCheckExecution)
+    await execution.complete(id, "relay-invoice", "relay-invoice")
+    pg.nats = NatsConfig(servers=[url])
+    relay = create_relay_app(pg)
+    async with AsyncExitStack() as stack:
+        connection = await connect(url)
+        stack.push_async_callback(connection.close)
+        stack.push_async_callback(relay.stop)
+        await relay.start()
+        stream = connection.jetstream()
+        for _ in range(60):
+            try:
+                message = await stream.get_last_msg(
+                    "papiliovpn_shop_crypto_payments",
+                    "papiliovpn.shop.crypto.payments.confirmed",
+                )
+            except NotFoundError:
+                pass
+            else:
+                if message.data and loads(message.data) == {"payment_id": id}:
+                    break
+            await sleep(0.1)
+        else:
+            pytest.fail("The confirmation did not reach JetStream")
 
 
 async def test_scheduled_plisio_batch(pg: CoreSettings) -> None:
