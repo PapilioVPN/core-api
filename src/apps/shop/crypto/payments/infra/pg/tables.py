@@ -9,6 +9,6 @@ from ...domain.models.records import CryptoPaymentModel
 class CryptoPaymentTable(CryptoPaymentModel, BaseTable, table=True):
     __table_args__ = (
         UniqueConstraint(
-            "gateway", "invoice_id", name="uq_crypto_payment_invoice"
+            "gateway_id", "invoice_id", name="uq_crypto_payment_invoice"
         ),
     )

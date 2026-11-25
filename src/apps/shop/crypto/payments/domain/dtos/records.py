@@ -4,16 +4,14 @@ from decimal import Decimal
 from typing import Annotated
 
 from papilio.schemas.inputs import BaseDTO
-from papilio.types.aliases import RialType, SlugType
+from papilio.types.aliases import IdType, RialType
 from pydantic import Field
 
-CurrencyCode = Annotated[
-    str, Field(max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:-]*$")
-]
+from src.apps.shop.crypto.types import CurrencyCode
 
 
 class CryptoPaymentCreate(BaseDTO):
-    gateway: SlugType
+    gateway_id: IdType
     amount: Annotated[RialType, Field(gt=0, strict=True)]
     price_amount: Annotated[Decimal, Field(gt=0, strict=True)]
     price_currency: CurrencyCode

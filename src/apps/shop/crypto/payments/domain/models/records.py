@@ -7,6 +7,7 @@ from papilio.infra.db.schema.fields import (
     BigIntField,
     CharField,
     EnumField,
+    ForeignKeyField,
     NumericField,
     TextField,
 )
@@ -15,7 +16,9 @@ from ..enums.records import CryptoPaymentStatus
 
 
 class CryptoPaymentModel(PersistenceEntity):
-    gateway: str = CharField(55)
+    gateway_id: int = ForeignKeyField(
+        "tbl_crypto_gateways.id", ondelete="RESTRICT"
+    )
     amount: int = BigIntField()
     price_amount: Decimal = NumericField()
     price_currency: str = CharField(64)

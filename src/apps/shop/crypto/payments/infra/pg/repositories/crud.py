@@ -39,12 +39,12 @@ class CryptoPaymentRepository(PGPersistenceRepository[CryptoPaymentModel]):
         return rows[0] if rows else None
 
     async def find_by_invoice(
-        self, gateway: str, invoice_id: str
+        self, gateway_id: int, invoice_id: str
     ) -> CryptoPaymentModel | None:
         """Resolve an invoice within its configured gateway account.
 
         Args:
-            gateway: Stable configuration key of the issuing account.
+            gateway_id: Stored identity of the issuing account.
             invoice_id: Opaque invoice identity from that account.
 
         Returns:
@@ -52,6 +52,7 @@ class CryptoPaymentRepository(PGPersistenceRepository[CryptoPaymentModel]):
         """
         table = self.table
         payment = await self.get_one(
-            col(table.gateway) == gateway, col(table.invoice_id) == invoice_id
+            col(table.gateway_id) == gateway_id,
+            col(table.invoice_id) == invoice_id,
         )
         return payment
