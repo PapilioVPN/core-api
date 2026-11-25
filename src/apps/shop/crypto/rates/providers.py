@@ -3,9 +3,11 @@
 from dishka import Provider, Scope, provide
 from papilio.infra.http.connection import HTTPConnection
 
-from .app.commands.refresh import RateRefreshCommand
+from .app.executions.refresh import RateRefreshExecution
 from .app.interfaces.feed import IWallexRate
+from .app.interfaces.refresh import IRateRefreshExecution
 from .app.interfaces.services import ICryptoRateService
+from .app.pipelines.refresh import RateRefreshPipeline
 from .app.services.crud import CryptoRateService
 from .infra.pg.repositories.crud import CryptoRateRepository
 from .infra.wallex.client import WallexRateGateway
@@ -16,7 +18,10 @@ class CryptoRateProvider(Provider):
 
     repo = provide(CryptoRateRepository)
     rates = provide(CryptoRateService, provides=ICryptoRateService)
-    refresh = provide(RateRefreshCommand)
+    execution = provide(
+        RateRefreshExecution, scope=Scope.APP, provides=IRateRefreshExecution
+    )
+    refresh = provide(RateRefreshPipeline, scope=Scope.APP)
 
     @provide(scope=Scope.APP)
     def feed(self, connection: HTTPConnection) -> IWallexRate:

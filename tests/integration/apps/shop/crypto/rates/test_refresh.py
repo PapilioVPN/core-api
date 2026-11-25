@@ -7,11 +7,14 @@ import pytest
 from dishka import AsyncContainer
 from fastapi import FastAPI
 from httpx import AsyncClient, MockTransport, Request, Response
-from papilio.infra.db.transaction import active_transaction, transaction
+from papilio.infra.db.transaction import transaction
+from papilio.infra.db.uow import UnitOfWork
 from papilio.infra.http.connection import HTTPConnection
 from papilio.utils.dates import utc_now
 
-from src.apps.shop.crypto.rates.app.commands.refresh import RateRefreshCommand
+from src.apps.shop.crypto.rates.app.pipelines.refresh import (
+    RateRefreshPipeline,
+)
 from src.apps.shop.crypto.rates.domain.errors import RateUnavailable
 from src.apps.shop.crypto.rates.infra.pg.repositories.crud import (
     CryptoRateRepository,
@@ -29,7 +32,7 @@ async def test_refresh_rate(app: FastAPI, client: AsyncClient) -> None:
     quote = "TMN"
 
     def market(request: Request) -> Response:
-        assert active_transaction() is None
+        assert UnitOfWork.current() is None
         assert request.method == "GET"
         assert str(request.url) == "https://api.wallex.ir/v1/markets"
         return Response(
@@ -51,36 +54,35 @@ async def test_refresh_rate(app: FastAPI, client: AsyncClient) -> None:
     async with AsyncClient(transport=MockTransport(market)) as upstream:
         connection.client = upstream
         try:
-            async with container() as scope:
-                command = await scope.get(RateRefreshCommand)
-                before = utc_now()
-                first = await command.refresh()
-                assert first.currency == "USD"
-                assert first.source == "wallex_usdt"
-                assert first.rial_rate == Decimal("123456.78901234567890")
-                assert first.fetched_at is not None
-                assert before <= first.fetched_at <= utc_now()
-                id = first.id
+            pipeline = await container.get(RateRefreshPipeline)
+            before = utc_now()
+            first = await pipeline.run()
+            assert first.currency == "USD"
+            assert first.source == "wallex_usdt"
+            assert first.rial_rate == Decimal("123456.78901234567890")
+            assert first.fetched_at is not None
+            assert before <= first.fetched_at <= utc_now()
+            id = first.id
 
-                price = "22345.1"
-                updated = await command.refresh()
-                assert updated.id == id
-                expected_rate = updated.rial_rate
-                fetched_at = updated.fetched_at
-                assert expected_rate == Decimal("223451")
+            price = "22345.1"
+            updated = await pipeline.run()
+            assert updated.id == id
+            expected_rate = updated.rial_rate
+            fetched_at = updated.fetched_at
+            assert expected_rate == Decimal("223451")
 
-                for invalid_price in ("0", "NaN"):
-                    price = invalid_price
-                    with pytest.raises(RateUnavailable):
-                        await command.refresh()
-                price = "22345.1"
-                quote = "IRR"
+            for invalid_price in ("0", "NaN"):
+                price = invalid_price
                 with pytest.raises(RateUnavailable):
-                    await command.refresh()
-                quote = "TMN"
-                status = 503
-                with pytest.raises(RateUnavailable):
-                    await command.refresh()
+                    await pipeline.run()
+            price = "22345.1"
+            quote = "IRR"
+            with pytest.raises(RateUnavailable):
+                await pipeline.run()
+            quote = "TMN"
+            status = 503
+            with pytest.raises(RateUnavailable):
+                await pipeline.run()
         finally:
             connection.client = original
 
