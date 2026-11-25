@@ -44,10 +44,11 @@ class OperationOut(BaseModel):
     id: TxnID
     parent_id: TxnID | Literal[""] | None = None
     status: str
-    psys_cid: str
-    sum: QuoteAmount
+    psys_cid: str | None = None
+    sum: QuoteAmount | None = None
     actual_sum: ReceivedAmount | None = None
-    params: OperationParams
+    params: OperationParams | None = None
+    child_ids: list[TxnID] = Field(default_factory=list)
 
 
 class Success[T: BaseModel](BaseModel):

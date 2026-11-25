@@ -1,5 +1,7 @@
 """Operations owned by crypto payment persistence."""
 
+from collections.abc import Sequence
+from datetime import datetime
 from typing import Protocol
 
 from ...domain.dtos.records import CryptoPaymentCreate
@@ -22,6 +24,10 @@ class ICryptoPaymentService(Protocol):
     async def set_invoice(
         self, id: int, invoice: GatewayInvoice
     ) -> CryptoPaymentModel: ...
+
+    async def take_due(
+        self, *, kind: str, now: datetime, before: datetime, limit: int
+    ) -> Sequence[CryptoPaymentModel]: ...
 
     async def settle(
         self, id: int, status: CryptoPaymentStatus, provider_payment_id: str

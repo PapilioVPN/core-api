@@ -3,12 +3,12 @@
 from collections.abc import AsyncIterator, Mapping
 from logging import getLogger
 
-from dishka import Provider, Scope, provide
+from dishka import Provider, Scope, alias, provide
 from papilio.infra.http.connection import HTTPConnection
 
 from .app.commands.records import CryptoPaymentCommand
 from .app.interfaces.commands import ICryptoPaymentCommand
-from .app.interfaces.gateway import ICryptoPaymentGateway
+from .app.interfaces.gateway import ICryptoInvoiceProbe, ICryptoPaymentGateway
 from .app.interfaces.queries import ICryptoPaymentSearchQuery
 from .app.interfaces.services import ICryptoPaymentService
 from .app.queries.search import CryptoPaymentSearchQuery
@@ -42,6 +42,8 @@ class CryptoPaymentProvider(Provider):
             yield PlisioGateway(connection)
         finally:
             logger.removeFilter(redactor)
+
+    invoice_probe = alias(PlisioGateway, provides=ICryptoInvoiceProbe)
 
     @provide(scope=Scope.APP)
     def adapters(

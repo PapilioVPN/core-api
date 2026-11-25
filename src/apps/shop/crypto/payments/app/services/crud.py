@@ -1,5 +1,8 @@
 """Store crypto payment attempts and read current records."""
 
+from collections.abc import Sequence
+from datetime import datetime
+
 from papilio.errors.exceptions import ConflictException
 from papilio.tools.checks import IDChecks
 from papilio.utils.dates import utc_now
@@ -51,6 +54,15 @@ class CryptoPaymentService(IDChecks[CryptoPaymentModel]):
                 unique_dict={"id": id},
             )
         return record
+
+    async def take_due(
+        self, *, kind: str, now: datetime, before: datetime, limit: int
+    ) -> Sequence[CryptoPaymentModel]:
+        """Mark a limited batch as checked in the caller's transaction."""
+        batch = await self.repo.take_due(
+            kind=kind, now=now, before=before, limit=limit
+        )
+        return batch
 
     async def settle(
         self, id: int, status: CryptoPaymentStatus, provider_payment_id: str

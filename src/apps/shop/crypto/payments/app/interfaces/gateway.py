@@ -2,7 +2,10 @@
 
 from typing import Protocol
 
-from src.apps.shop.crypto.gateways.domain.dtos.configs import ConfigWrite
+from src.apps.shop.crypto.gateways.domain.dtos.configs import (
+    ConfigWrite,
+    PlisioConfig,
+)
 
 from ...domain.models.records import CryptoPaymentModel
 from ...domain.results.gateway import (
@@ -24,3 +27,9 @@ class ICryptoPaymentGateway(Protocol):
     async def read(
         self, account: ConfigWrite, payment_id: str
     ) -> GatewayPayment: ...
+
+
+class ICryptoInvoiceProbe(Protocol):
+    async def read_invoice(
+        self, account: PlisioConfig, invoice_id: str
+    ) -> GatewayPayment | None: ...

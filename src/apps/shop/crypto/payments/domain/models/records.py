@@ -31,6 +31,7 @@ class CryptoPaymentModel(PersistenceEntity):
         64, nullable=True, default=None
     )
     confirmed_at: datetime | None = TimestampField(nullable=True, default=None)
+    checked_at: datetime | None = TimestampField(nullable=True, default=None)
     status: CryptoPaymentStatus = EnumField(
         CryptoPaymentStatus, length=12, default=CryptoPaymentStatus.PENDING
     )

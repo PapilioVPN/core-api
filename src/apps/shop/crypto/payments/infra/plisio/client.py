@@ -8,7 +8,10 @@ from papilio.errors.exceptions import UnAuthorizedException
 from papilio.infra.http.gateway import BaseGateway
 from pydantic import BaseModel
 
-from src.apps.shop.crypto.gateways.domain.dtos.configs import ConfigWrite
+from src.apps.shop.crypto.gateways.domain.dtos.configs import (
+    ConfigWrite,
+    PlisioConfig,
+)
 
 from ...domain.enums.records import CryptoPaymentStatus
 from ...domain.errors import GatewayUnavailable
@@ -25,6 +28,29 @@ STATES = {
     "completed": CryptoPaymentStatus.CONFIRMED,
     "underpaid": CryptoPaymentStatus.PARTIAL,
 }
+
+
+def _payment(
+    operation: OperationOut, status: CryptoPaymentStatus | None
+) -> GatewayPayment:
+    """Project the exact quote and transfer facts of an operation."""
+    if (
+        operation.params is None
+        or operation.sum is None
+        or operation.psys_cid is None
+    ):
+        raise GatewayUnavailable()
+    return GatewayPayment(
+        id=operation.id,
+        invoice_id=operation.parent_id or operation.id,
+        order_id=operation.params.order_number,
+        status=status,
+        price_amount=operation.params.source_amount,
+        price_currency=operation.params.source_currency,
+        pay_amount=operation.sum,
+        pay_currency=operation.psys_cid,
+        actually_paid=operation.actual_sum,
+    )
 
 
 class PlisioGateway(BaseGateway):
@@ -117,19 +143,43 @@ class PlisioGateway(BaseGateway):
         Raises:
             GatewayUnavailable: The operation or required fields are unusable.
         """
+        found = await self._operation(account, payment_id)
+        return _payment(found, STATES.get(found.status))
+
+    async def _operation(
+        self, account: ConfigWrite, payment_id: str
+    ) -> OperationOut:
         found = await self._get(
             account, f"operations/{payment_id}", Success[OperationOut]
         )
         if found.id != payment_id:
             raise GatewayUnavailable()
-        return GatewayPayment(
-            id=found.id,
-            invoice_id=found.parent_id or found.id,
-            order_id=found.params.order_number,
-            status=STATES.get(found.status),
-            price_amount=found.params.source_amount,
-            price_currency=found.params.source_currency,
-            pay_amount=found.sum,
-            pay_currency=found.psys_cid,
-            actually_paid=found.actual_sum,
-        )
+        return found
+
+    async def read_invoice(
+        self, account: PlisioConfig, invoice_id: str
+    ) -> GatewayPayment | None:
+        """Read the original invoice and up to three currency switches.
+
+        Args:
+            account: The original issuing account.
+            invoice_id: Saved Plisio invoice identity.
+
+        Returns:
+            An actionable observation, or None while no outcome is verified.
+        """
+        found = await self._operation(account, invoice_id)
+        status = STATES.get(found.status)
+        observation = _payment(found, status) if status is not None else None
+        if found.status == "cancelled" and found.actual_sum == 0:
+            if not found.parent_id and not found.child_ids:
+                observation = _payment(found, CryptoPaymentStatus.EXPIRED)
+        if status is not CryptoPaymentStatus.CONFIRMED:
+            for child_id in found.child_ids[:3]:
+                child = await self._operation(account, child_id)
+                child_status = STATES.get(child.status)
+                if child.parent_id == invoice_id and child_status is not None:
+                    observation = _payment(child, child_status)
+                    if child_status is CryptoPaymentStatus.CONFIRMED:
+                        break
+        return observation

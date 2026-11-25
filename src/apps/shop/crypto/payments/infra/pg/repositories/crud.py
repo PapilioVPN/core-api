@@ -1,14 +1,17 @@
 """Persist crypto payments and resolve gateway invoice identities."""
 
+from collections.abc import Sequence
 from datetime import datetime
 
 from papilio.infra.db.repositories.backends.postgresql import (
     PGPersistenceRepository,
 )
 from papilio.schemas.results import PagedType
-from sqlalchemy import and_
+from sqlalchemy import and_, func, literal, select, update
 from sqlalchemy.sql import ColumnElement
 from sqlmodel import col
+
+from src.apps.shop.crypto.gateways.infra.pg.tables import CryptoGatewayTable
 
 from ....domain.enums.records import CryptoPaymentStatus
 from ....domain.models.records import CryptoPaymentModel
@@ -120,6 +123,59 @@ class CryptoPaymentRepository(PGPersistenceRepository[CryptoPaymentModel]):
             col(table.invoice_id) == invoice_id,
         )
         return payment
+
+    async def take_due(
+        self, *, kind: str, now: datetime, before: datetime, limit: int
+    ) -> Sequence[CryptoPaymentModel]:
+        """Move one batch to the back of the polling queue.
+
+        Args:
+            kind: Provider that can be queried by invoice identity.
+            now: UTC timestamp to record before attempting the remote checks.
+            before: Latest eligible creation or previous check timestamp.
+            limit: Maximum rows to claim without loading the rest of the queue.
+
+        Returns:
+            The records reserved for this run, without a total count.
+        """
+        table = self.table
+        gateway = CryptoGatewayTable
+        due_at = func.coalesce(col(table.checked_at), col(table.created_at))
+        due = (
+            col(table.invoice_id).is_not(None),
+            col(table.status).in_(
+                (
+                    literal(
+                        CryptoPaymentStatus.PENDING.value, literal_execute=True
+                    ),
+                    literal(
+                        CryptoPaymentStatus.PARTIAL.value, literal_execute=True
+                    ),
+                )
+            ),
+            due_at <= before,
+        )
+        ids = (
+            select(col(table.id))
+            .where(
+                *due,
+                col(table.gateway_id).in_(
+                    select(col(gateway.id)).where(col(gateway.kind) == kind)
+                ),
+            )
+            .order_by(due_at, col(table.id))
+            .limit(limit)
+        )
+        stmt = (
+            update(table)
+            .where(col(table.id).in_(ids), *due)
+            .values(checked_at=now)
+            .returning(table)
+            .execution_options(populate_existing=True)
+        )
+        result = await self.uow.execute(stmt)
+        batch = result.scalars().all()
+        return batch
 
     async def record_status(
         self,

@@ -1,7 +1,10 @@
 """Issue hosted invoices and reconcile authenticated settlement notices."""
 
+from asyncio import timeout
 from collections.abc import Mapping
+from datetime import timedelta
 from decimal import ROUND_UP, Decimal, localcontext
+from logging import getLogger
 
 from papilio.errors.exceptions import (
     ConflictException,
@@ -9,6 +12,7 @@ from papilio.errors.exceptions import (
     UnAuthorizedException,
 )
 from papilio.infra.db.transaction import active_transaction, transaction
+from papilio.utils.dates import utc_now
 
 from src.apps.shop.crypto.gateways.app.interfaces.configs import (
     ICryptoGatewayConfigService,
@@ -16,14 +20,18 @@ from src.apps.shop.crypto.gateways.app.interfaces.configs import (
 from src.apps.shop.crypto.gateways.app.interfaces.services import (
     ICryptoGatewayService,
 )
+from src.apps.shop.crypto.gateways.domain.dtos.configs import PlisioConfig
+from src.apps.shop.crypto.gateways.domain.errors import ConfigUnavailable
 
 from ...domain.dtos.records import CryptoPaymentCreate, PaymentIssue
 from ...domain.enums.records import CryptoPaymentStatus
 from ...domain.errors import GatewayUnavailable
 from ...domain.models.records import CryptoPaymentModel
 from ...domain.results.gateway import GatewayPayment
-from ..interfaces.gateway import ICryptoPaymentGateway
+from ..interfaces.gateway import ICryptoInvoiceProbe, ICryptoPaymentGateway
 from ..interfaces.services import ICryptoPaymentService
+
+logger = getLogger(__name__)
 
 
 def _quote(amount: int, rate: Decimal, places: int) -> Decimal:
@@ -73,12 +81,14 @@ class CryptoPaymentCommand:
         configs: ICryptoGatewayConfigService,
         payments: ICryptoPaymentService,
         adapters: Mapping[str, ICryptoPaymentGateway],
+        invoice_probe: ICryptoInvoiceProbe,
     ) -> None:
         """Bind request-local payment owners and the shared adapters."""
         self.gateways = gateways
         self.configs = configs
         self.payments = payments
         self.adapters = adapters
+        self.invoice_probe = invoice_probe
 
     def _adapter(self, kind: str | None) -> ICryptoPaymentGateway:
         """Resolve supported infrastructure from the saved gateway type."""
@@ -177,11 +187,67 @@ class CryptoPaymentCommand:
             CryptoPaymentStatus.PARTIAL,
         ):
             observed = await adapter.read(account, notice.payment_id)
-            status = _settlement(payment, observed)
-            if status is None:
-                raise GatewayUnavailable(payment_id=payment.id)
-            async with transaction():
-                payment = await self.payments.settle(
-                    payment.id, status, observed.id
-                )
+            payment = await self._apply(payment, observed)
         return payment
+
+    async def _apply(
+        self, payment: CryptoPaymentModel, observed: GatewayPayment
+    ) -> CryptoPaymentModel:
+        """Validate and store one observation through settlement."""
+        status = _settlement(payment, observed)
+        if status is None:
+            raise GatewayUnavailable(payment_id=payment.id)
+        async with transaction():
+            saved = await self.payments.settle(payment.id, status, observed.id)
+        return saved
+
+    async def recheck(self, *, limit: int, delay: int) -> int:
+        """Check one due batch without holding SQL during provider requests.
+
+        Args:
+            limit: Maximum payments selected and attempted by this job.
+            delay: Minimum seconds since creation or the previous check.
+
+        Returns:
+            Due records taken, including recoverable provider failures.
+        """
+        if active_transaction() is not None:
+            raise RuntimeError(
+                "Crypto reconciliation requires its own SQL phases"
+            )
+        now = utc_now()
+        accounts: dict[int, PlisioConfig] = {}
+        async with transaction():
+            batch = await self.payments.take_due(
+                kind="plisio",
+                now=now,
+                before=now - timedelta(seconds=delay),
+                limit=limit,
+            )
+            if batch:
+                gateways = await self.gateways.get_by_ids(
+                    list({payment.gateway_id for payment in batch})
+                )
+                for gateway in gateways:
+                    try:
+                        account = await self.configs.connection(gateway)
+                    except ConfigUnavailable:
+                        logger.warning("Cannot recheck gateway %s", gateway.id)
+                    else:
+                        if account.kind == "plisio":
+                            accounts[gateway.id] = account
+
+        for payment in batch:
+            account = accounts.get(payment.gateway_id)
+            if account is None or payment.invoice_id is None:
+                continue
+            try:
+                async with timeout(10):
+                    observed = await self.invoice_probe.read_invoice(
+                        account, payment.invoice_id
+                    )
+                if observed is not None:
+                    await self._apply(payment, observed)
+            except (GatewayUnavailable, ConflictException, TimeoutError):
+                logger.warning("Cannot verify crypto payment %s", payment.id)
+        return len(batch)
