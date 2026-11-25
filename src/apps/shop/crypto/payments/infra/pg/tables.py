@@ -11,4 +11,9 @@ class CryptoPaymentTable(CryptoPaymentModel, BaseTable, table=True):
         UniqueConstraint(
             "gateway_id", "invoice_id", name="uq_crypto_payment_invoice"
         ),
+        UniqueConstraint(
+            "gateway_id",
+            "provider_payment_id",
+            name="uq_crypto_provider_payment",
+        ),
     )

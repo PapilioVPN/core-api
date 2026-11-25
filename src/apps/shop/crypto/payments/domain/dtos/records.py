@@ -10,9 +10,12 @@ from pydantic import Field
 from src.apps.shop.crypto.types import CurrencyCode
 
 
-class CryptoPaymentCreate(BaseDTO):
+class PaymentIssue(BaseDTO):
     gateway_id: IdType
     amount: Annotated[RialType, Field(gt=0, strict=True)]
+
+
+class CryptoPaymentCreate(PaymentIssue):
     price_amount: Annotated[Decimal, Field(gt=0, strict=True)]
     price_currency: CurrencyCode
     pay_currency: CurrencyCode | None = None

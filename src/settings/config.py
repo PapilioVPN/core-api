@@ -4,6 +4,7 @@ from papilio.core.config import AppConfig, HTTPConfig, Settings
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.apps.core.storage.files.config import FileStorageConfig
+from src.apps.shop.crypto.payments.config import CryptoPaymentsConfig
 from src.settings.cli import CLIConfig
 
 DEFAULT_HTTP = HTTPConfig(
@@ -42,3 +43,6 @@ class CoreSettings(Settings):
     nats: NatsConfig | None = None
     scheduler: SchedulerConfig = Field(default_factory=SchedulerConfig)
     cli: CLIConfig = Field(default_factory=CLIConfig)
+    crypto_payments: CryptoPaymentsConfig = Field(
+        default_factory=CryptoPaymentsConfig
+    )

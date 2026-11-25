@@ -1,5 +1,7 @@
 """Persist crypto payments and resolve gateway invoice identities."""
 
+from datetime import datetime
+
 from papilio.infra.db.repositories.backends.postgresql import (
     PGPersistenceRepository,
 )
@@ -56,3 +58,35 @@ class CryptoPaymentRepository(PGPersistenceRepository[CryptoPaymentModel]):
             col(table.invoice_id) == invoice_id,
         )
         return payment
+
+    async def record_status(
+        self,
+        id: int,
+        *,
+        states: tuple[CryptoPaymentStatus, ...],
+        status: CryptoPaymentStatus,
+        provider_payment_id: str | None,
+        confirmed_at: datetime | None,
+    ) -> CryptoPaymentModel | None:
+        """Update one payment only while it is in an expected state.
+
+        Args:
+            id: Stored attempt identity.
+            states: Previous states allowed by the payment operation.
+            status: New payment state.
+            provider_payment_id: Verified settling payment, if confirmed.
+            confirmed_at: UTC confirmation time, if confirmed.
+
+        Returns:
+            The updated record, or None when the state no longer matches.
+        """
+        table = self.table
+        rows = await self.update(
+            and_(col(table.id) == id, col(table.status).in_(states)),
+            {
+                "status": status,
+                "provider_payment_id": provider_payment_id,
+                "confirmed_at": confirmed_at,
+            },
+        )
+        return rows[0] if rows else None
