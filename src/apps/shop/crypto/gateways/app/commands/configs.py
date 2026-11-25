@@ -57,5 +57,7 @@ class GatewayConfigCommand:
             config["ipn_secret"] = encrypt(
                 data.ipn_secret.get_secret_value(), key
             )
+        else:
+            config["price_currency"] = data.price_currency
         record = await self.configs.save(id, config)
         return GatewayConfigView.from_record(record, gateway.kind)

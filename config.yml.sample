@@ -29,6 +29,7 @@ jwt:
   api_secret: replace-with-private-api-secret
   access_token_expire_minutes: 15
   refresh_token_expire_minutes: 20160
+# USD crypto pricing reads its latest rate from Redis.
 redis: null
 # Configure hosted gateway accounts through the Shop admin API.
 cli:

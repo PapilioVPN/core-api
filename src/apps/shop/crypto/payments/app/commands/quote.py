@@ -7,12 +7,18 @@ from papilio.errors.exceptions import ConflictException
 from papilio.infra.db.tools.decorators import transactional
 from papilio.utils.dates import utc_now
 
+from src.apps.shop.crypto.gateways.app.interfaces.configs import (
+    IGatewayConfigService,
+)
 from src.apps.shop.crypto.gateways.app.interfaces.services import (
     ICryptoGatewayService,
 )
+from src.apps.shop.crypto.gateways.domain.models.records import (
+    CryptoGatewayModel,
+)
+from src.apps.shop.crypto.rates.app.interfaces.cache import IRateCache
 from src.apps.shop.crypto.rates.app.interfaces.services import (
     IConversionService,
-    ICryptoRateService,
 )
 
 from ...domain.models.quote import Quote
@@ -25,12 +31,14 @@ class PaymentQuoteCommand:
         self,
         payments: ICryptoPaymentService,
         gateways: ICryptoGatewayService,
-        rates: ICryptoRateService,
+        configs: IGatewayConfigService,
+        rates: IRateCache,
         conversion: IConversionService,
     ) -> None:
         """Bind authoritative reads, pure conversion and payment writes."""
         self.payments = payments
         self.gateways = gateways
+        self.configs = configs
         self.rates = rates
         self.conversion = conversion
 
@@ -55,7 +63,7 @@ class PaymentQuoteCommand:
         payment = await self.payments.get_by_id(id)
         if payment.quote_amount is None:
             gateway = await self.gateways.get_by_id(payment.gateway_id)
-            data = await self._price(payment.amount, gateway.kind, max_age)
+            data = await self._price(payment.amount, gateway, max_age)
             saved = await self.payments.set_quote(id, data)
             if saved is None:
                 raise ConflictException(
@@ -67,24 +75,28 @@ class PaymentQuoteCommand:
         return payment
 
     async def _price(
-        self, amount: int, kind: str, max_age: timedelta
+        self, amount: int, gateway: CryptoGatewayModel, max_age: timedelta
     ) -> Quote:
         """Select the provider's pricing currency and prepare its amount."""
-        match kind:
+        match gateway.kind:
             case "plisio":
-                quote = Quote(amount=Decimal(amount), currency="IRR")
+                currency = await self.configs.plisio_price(gateway.id)
             case "nowpayments":
-                rate = await self.rates.find_by_currency("USD")
-                usd = self.conversion.to_usd(
-                    amount, rate, now=utc_now(), max_age=max_age
-                )
-                quote = Quote(
-                    amount=usd.amount, currency="USD", rate=usd.rial_rate
-                )
+                currency = "USD"
             case _:
                 raise ConflictException(
                     message="The gateway has no supported pricing currency.",
                     message_code="crypto_gateway_pricing_unsupported",
-                    unique_dict={"kind": kind},
+                    unique_dict={"kind": gateway.kind},
                 )
+        if currency == "USD":
+            rate = await self.rates.find("USD")
+            usd = self.conversion.to_usd(
+                amount, rate, now=utc_now(), max_age=max_age
+            )
+            quote = Quote(
+                amount=usd.amount, currency="USD", rate=usd.rial_rate
+            )
+        else:
+            quote = Quote(amount=Decimal(amount), currency="IRR")
         return quote

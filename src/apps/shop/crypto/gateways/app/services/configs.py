@@ -4,8 +4,9 @@ from papilio.infra.db.tools.decorators import transactional
 from papilio.tools.checks import Checks
 from pydantic import JsonValue
 
+from ...domain.dtos.configs import PriceCurrency
 from ...domain.models.configs import GatewayConfigModel
-from ...domain.results.configs import GatewayConfigView
+from ...domain.results.configs import GatewayConfigView, plisio_currency
 from ...infra.pg.repositories.configs import GatewayConfigRepository
 from ..decorators.configs import forget_cache
 from ..interfaces.cache import IGatewayConfigCache
@@ -41,9 +42,36 @@ class GatewayConfigService(Checks[GatewayConfigModel]):
             ConfigUnavailable: The stored connection metadata is invalid.
         """
         gateway = await self.gateways.get_by_id(id)
-        record = await self.repo.get(id)
+        record = await self.find(id)
         settings = self._check_for_existence("gateway_id", id, record)
         return GatewayConfigView.from_record(settings, gateway.kind)
+
+    async def find(self, id: int) -> GatewayConfigModel | None:
+        """Read stored settings by gateway ID without decrypting them.
+
+        Args:
+            id: Owning gateway account identity.
+
+        Returns:
+            Encrypted settings or None if the account has no settings.
+        """
+        record = await self.repo.get(id)
+        return record
+
+    async def plisio_price(self, id: int) -> PriceCurrency:
+        """Read authoritative pricing for a Plisio account.
+
+        Args:
+            id: Plisio gateway account identity.
+
+        Returns:
+            The saved pricing currency, or IRR until one is set.
+
+        Raises:
+            ConfigUnavailable: The stored currency is invalid.
+        """
+        record = await self.find(id)
+        return plisio_currency(record)
 
     @forget_cache.one
     @transactional

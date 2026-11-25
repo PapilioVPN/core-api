@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from decimal import ROUND_UP, Decimal, localcontext
 
 from ...domain.errors import RateUnavailable
-from ...domain.models.records import CryptoRateModel
+from ...domain.models.records import Rate
 from ...domain.results.conversion import Conversion
 
 
@@ -12,7 +12,7 @@ class ConversionService:
     def to_usd(
         self,
         amount: int,
-        rate: CryptoRateModel | None,
+        rate: Rate | None,
         *,
         now: datetime,
         max_age: timedelta,
@@ -21,7 +21,7 @@ class ConversionService:
 
         Args:
             amount: Original positive amount in rials.
-            rate: Stored USD proxy, expressed in rials per dollar.
+            rate: Cached USD proxy, expressed in rials per dollar.
             now: Aware instant against which freshness is evaluated.
             max_age: Maximum acceptable age of the observation.
 
@@ -35,7 +35,7 @@ class ConversionService:
             rate is None
             or rate.currency != "USD"
             or rate.source != "wallex_usdt"
-            or rate.fetched_at is None
+            or rate.fetched_at.utcoffset() is None
             or not now - max_age <= rate.fetched_at <= now
             or not rate.rial_rate.is_finite()
             or rate.rial_rate <= 0

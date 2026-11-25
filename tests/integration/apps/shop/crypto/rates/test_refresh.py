@@ -7,24 +7,31 @@ import pytest
 from dishka import AsyncContainer
 from fastapi import FastAPI
 from httpx import AsyncClient, MockTransport, Request, Response
-from papilio.infra.db.transaction import transaction
 from papilio.infra.db.uow import UnitOfWork
 from papilio.infra.http.connection import HTTPConnection
+from papilio.infra.redis.client import RedisClient, resolve
 from papilio.utils.dates import utc_now
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from src.apps.shop.crypto.rates.app.pipelines.refresh import (
     RateRefreshPipeline,
 )
 from src.apps.shop.crypto.rates.domain.errors import RateUnavailable
-from src.apps.shop.crypto.rates.infra.pg.repositories.crud import (
-    CryptoRateRepository,
-)
+from src.settings.config import CoreSettings
 
 pytestmark = pytest.mark.integration
 
 
-async def test_refresh_rate(app: FastAPI, client: AsyncClient) -> None:
+async def test_refresh_rate(
+    app: FastAPI, client: AsyncClient, pg: CoreSettings
+) -> None:
     container = cast(AsyncContainer, app.state.dishka_container)
+    redis = await container.get(RedisClient | None)
+    if redis is None:
+        pytest.skip("Set PAPILIOVPN_TEST_REDIS_URL to the isolated test Redis")
+    key = "shop:crypto:rates"
+    await resolve(redis.client.delete(key))
     connection = await container.get(HTTPConnection)
     original = connection.client
     price = "12345.678901234567890"
@@ -62,14 +69,15 @@ async def test_refresh_rate(app: FastAPI, client: AsyncClient) -> None:
             assert first.rial_rate == Decimal("123456.78901234567890")
             assert first.fetched_at is not None
             assert before <= first.fetched_at <= utc_now()
-            id = first.id
+            first_raw = await resolve(redis.client.hget(key, "USD"))
+            assert first_raw is not None
+            assert await resolve(redis.client.ttl(key)) == -1
 
             price = "22345.1"
             updated = await pipeline.run()
-            assert updated.id == id
-            expected_rate = updated.rial_rate
-            fetched_at = updated.fetched_at
-            assert expected_rate == Decimal("223451")
+            assert updated.rial_rate == Decimal("223451")
+            saved_raw = await resolve(redis.client.hget(key, "USD"))
+            assert saved_raw is not None and saved_raw != first_raw
 
             for invalid_price in ("0", "NaN"):
                 price = invalid_price
@@ -86,10 +94,12 @@ async def test_refresh_rate(app: FastAPI, client: AsyncClient) -> None:
         finally:
             connection.client = original
 
-    async with container() as scope:
-        repo = await scope.get(CryptoRateRepository)
-        async with transaction():
-            record = await repo.get_by_id(id)
-        assert record is not None
-        assert record.rial_rate == expected_rate
-        assert record.fetched_at == fetched_at
+    assert await resolve(redis.client.hget(key, "USD")) == saved_raw
+    assert pg.db is not None
+    engine = create_async_engine(pg.db.dsn)
+    try:
+        async with engine.connect() as db:
+            stmt = text("SELECT to_regclass('tbl_crypto_rates')")
+            assert await db.scalar(stmt) is None
+    finally:
+        await engine.dispose()

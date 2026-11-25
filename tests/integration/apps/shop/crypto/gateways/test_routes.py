@@ -185,6 +185,7 @@ async def test_gateway_config(
         "gateway_id": id,
         "kind": values["kind"],
         "api_url": values["api_url"],
+        "price_currency": "USD",
         "has_api_key": True,
         "has_ipn_secret": True,
     }
@@ -227,3 +228,36 @@ async def test_gateway_config(
     assert view.json()["data"]["api_url"] == "https://api.nowpayments.io/v1"
     assert (await client.delete(f"{BASE}/{id}", headers=headers)).is_success
     assert (await client.get(path, headers=headers)).status_code == 404
+
+
+async def test_plisio_price_currency(
+    client: AsyncClient, headers: dict[str, str]
+) -> None:
+    account = await client.post(
+        BASE, headers=headers, json={"kind": "plisio", "title": "Pricing"}
+    )
+    assert account.is_success, account.text
+    id = account.json()["data"]["id"]
+    path = f"{BASE}/{id}/config"
+    values = {
+        "kind": "plisio",
+        "api_url": "https://api.plisio.net/api/v1",
+        "api_key": "test-plisio-price-key",
+    }
+    for configured, expected in (
+        ({}, "IRR"),
+        ({"price_currency": "USD"}, "USD"),
+        ({"price_currency": "IRR"}, "IRR"),
+    ):
+        data = {**values, **configured}
+        save = await client.put(path, headers=headers, json=data)
+        assert save.is_success, save.text
+        assert save.json()["data"]["price_currency"] == expected
+        view = await client.get(path, headers=headers)
+        assert view.json()["data"]["price_currency"] == expected
+        assert values["api_key"] not in view.text
+
+    invalid = await client.put(
+        path, headers=headers, json={**values, "price_currency": "EUR"}
+    )
+    assert invalid.status_code == 422

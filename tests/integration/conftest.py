@@ -20,6 +20,14 @@ def settings(pytestconfig: pytest.Config) -> CoreSettings:
     data["crypto"]["password_salt"] = "test-only-password-pepper-not-for-use"
     data["crypto"]["encryption_key"] = "test-only-gateway-encryption-key"
     data["jwt"]["secret_key"] = "test-only-token-signing-key-not-for-use"
+    if redis := os.environ.get("PAPILIOVPN_TEST_REDIS_URL"):
+        data["redis"] = {
+            "url": redis,
+            "max_connections": 8,
+            "socket_timeout": 2,
+            "socket_connect_timeout": 2,
+            "health_check_interval": 0,
+        }
     return CoreSettings.model_validate(data)
 
 

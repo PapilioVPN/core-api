@@ -2,34 +2,32 @@
 
 from papilio.utils.dates import utc_now
 
-from ...domain.models.records import CryptoRateModel
+from ...domain.models.records import Rate
+from ..interfaces.cache import IRateCache
 from ..interfaces.feed import IWallexRate
-from ..interfaces.refresh import IRateRefreshExecution
 
 
 class RateRefreshPipeline:
-    def __init__(
-        self, feed: IWallexRate, execution: IRateRefreshExecution
-    ) -> None:
-        """Bind the public feed and the short persistence phase."""
+    def __init__(self, feed: IWallexRate, cache: IRateCache) -> None:
+        """Bind the public feed and latest-rate cache."""
         self.feed = feed
-        self.execution = execution
+        self.cache = cache
 
-    async def run(self) -> CryptoRateModel:
-        """Read the market, then save its USD pricing proxy.
+    async def run(self) -> Rate:
+        """Read the market, then update the cached USD pricing proxy.
 
         Returns:
             The saved USD pricing rate in rials per unit, with its source.
 
         Raises:
-            RateUnavailable: The market did not give a usable USDT price.
+            RateUnavailable: The market price or Redis is unavailable.
         """
         toman_rate = await self.feed.read()
-        data = CryptoRateModel(
+        data = Rate(
             currency="USD",
             rial_rate=toman_rate * 10,
             source="wallex_usdt",
             fetched_at=utc_now(),
         )
-        rate = await self.execution.complete(data)
+        rate = await self.cache.save(data)
         return rate
