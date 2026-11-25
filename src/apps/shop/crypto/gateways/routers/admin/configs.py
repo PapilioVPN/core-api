@@ -9,10 +9,8 @@ from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
 
-from ...app.interfaces.configs import (
-    IGatewayConfigQuery,
-    IGatewayConfigService,
-)
+from ...app.commands.configs import GatewayConfigCommand
+from ...app.interfaces.configs import IGatewayConfigQuery
 from ...domain.dtos.configs import ConfigWrite
 from ..schemas.configs import GatewayConfigOutput
 
@@ -35,9 +33,9 @@ async def get_config(
 
 @router.put("")
 async def put_config(
-    id: IdType, data: ConfigWrite, service: FromDishka[IGatewayConfigService]
+    id: IdType, data: ConfigWrite, command: FromDishka[GatewayConfigCommand]
 ) -> APIResponse[GatewayConfigOutput, None]:
-    view = await service.save(id, data)
+    view = await command.save(id, data)
     return APIResponse[GatewayConfigOutput, None].from_data(
         GatewayConfigOutput.from_obj(view)
     )

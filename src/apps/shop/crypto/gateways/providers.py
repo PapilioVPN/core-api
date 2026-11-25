@@ -3,6 +3,7 @@
 from dishka import Provider, Scope, provide
 from papilio.core.config import CryptoConfig, Settings
 
+from .app.commands.configs import GatewayConfigCommand
 from .app.interfaces.cache import IGatewayConfigCache
 from .app.interfaces.configs import IGatewayConfigQuery, IGatewayConfigService
 from .app.interfaces.services import ICryptoGatewayService
@@ -21,6 +22,7 @@ class GatewayProvider(Provider):
     gateways = provide(CryptoGatewayService, provides=ICryptoGatewayService)
     config_repo = provide(GatewayConfigRepository)
     configs = provide(GatewayConfigService, provides=IGatewayConfigService)
+    command = provide(GatewayConfigCommand)
     query = provide(GatewayConfigQuery, provides=IGatewayConfigQuery)
     cache = provide(
         GatewayConfigCache, scope=Scope.APP, provides=IGatewayConfigCache
