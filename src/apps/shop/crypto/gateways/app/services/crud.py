@@ -107,7 +107,7 @@ class CryptoGatewayService(IDChecks[CryptoGatewayModel]):
     @forget_cache.one
     @transactional
     async def remove(self, id: int) -> CryptoGatewayModel:
-        """Remove the account and its stored connection settings.
+        """Remove an unused account and its stored connection settings.
 
         Args:
             id: Stored account identity.
@@ -117,6 +117,7 @@ class CryptoGatewayService(IDChecks[CryptoGatewayModel]):
 
         Raises:
             NotFoundException: The account does not exist.
+            ConflictException: A payment references the account.
         """
         gateway = await self.repo.remove_by_id(id)
         return self._check_for_id_existence(id, gateway)
