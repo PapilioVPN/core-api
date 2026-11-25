@@ -7,7 +7,6 @@ from papilio.infra.db.tools.decorators import transactional
 from papilio.schemas.results import PagedType
 from papilio.tools.checks import IDChecks
 
-from src.apps.core.access.users.app.validators.profile import protect_owner
 from src.apps.core.access.users.domain.dtos.profile import UserProfileUpdate
 from src.apps.core.access.users.domain.dtos.records import (
     UserBatchRead,
@@ -171,8 +170,6 @@ class UserService(IDChecks[UserModel]):
             ConflictException: Another account has the supplied mobile.
         """
         changes = self._check_not_empty_dict(data.to_row())
-        if changes.get("is_active") is False:
-            protect_owner(await self.get_by_id(id))
         user = await self.repo.update_by_id(id, changes)
         user = self._check_for_id_existence(id, user)
         return user
@@ -191,7 +188,6 @@ class UserService(IDChecks[UserModel]):
         Raises:
             NotFoundException: The user identity is absent.
         """
-        protect_owner(await self.get_by_id(id))
         user = await self.repo.update_by_id(id, data.to_row())
         user = self._check_for_id_existence(id, user)
         return user
@@ -288,7 +284,6 @@ class UserService(IDChecks[UserModel]):
         Raises:
             NotFoundException: The user identity is absent.
         """
-        protect_owner(await self.get_by_id(id))
         user = await self.repo.remove_by_id(id)
         user = self._check_for_id_existence(id, user)
         return user

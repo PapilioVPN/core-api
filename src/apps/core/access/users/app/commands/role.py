@@ -7,6 +7,7 @@ from src.apps.core.access.audit.domain.dtos.event import AuditEvent
 from src.apps.core.access.audit.domain.enums.actions import AuditAction
 from src.apps.core.access.roles.app.interfaces.services import IRoleService
 from src.apps.core.access.users.app.interfaces.services import IUserService
+from src.apps.core.access.users.app.validators.profile import protect_owner
 from src.apps.core.access.users.domain.dtos.records import UserRoleUpdate
 from src.apps.core.access.users.domain.models.records import UserModel
 
@@ -47,6 +48,8 @@ class UserRoleCommand:
             NotFoundException: The role or user is absent.
         """
         await self.roles.get_by_id(data.role_id)
+        current = await self.users.get_by_id(id)
+        protect_owner(current)
         user = await self.users.set_role(id, data)
         await self.audit.record(
             actor_id,

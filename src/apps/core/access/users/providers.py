@@ -8,7 +8,9 @@ from src.apps.core.access.users.app.commands.password import (
     UserPasswordCommand,
 )
 from src.apps.core.access.users.app.commands.profile import UserProfileCommand
+from src.apps.core.access.users.app.commands.remove import UserRemoveCommand
 from src.apps.core.access.users.app.commands.role import UserRoleCommand
+from src.apps.core.access.users.app.commands.update import UserUpdateCommand
 from src.apps.core.access.users.app.interfaces.commands import (
     IUserCreateCommand,
     IUserPasswordCommand,
@@ -36,6 +38,8 @@ class UserProvider(Provider):
     profile_command = provide(UserProfileCommand, provides=IUserProfileCommand)
     create_command = provide(UserCreateCommand, provides=IUserCreateCommand)
     role_command = provide(UserRoleCommand, provides=IUserRoleCommand)
+    update_command = provide(UserUpdateCommand)
+    remove_command = provide(UserRemoveCommand)
     password_command = provide(
         UserPasswordCommand, provides=IUserPasswordCommand
     )

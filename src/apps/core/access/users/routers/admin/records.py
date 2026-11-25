@@ -15,6 +15,8 @@ from src.apps.core.access.auth.routers.dependencies.authorization import (
 from src.apps.core.access.auth.routers.dependencies.identity import (
     current_admin,
 )
+from src.apps.core.access.users.app.commands.remove import UserRemoveCommand
+from src.apps.core.access.users.app.commands.update import UserUpdateCommand
 from src.apps.core.access.users.app.interfaces.commands import (
     IUserCreateCommand,
     IUserPasswordCommand,
@@ -68,14 +70,14 @@ async def post_user(
 async def patch_user(
     id: IdType,
     data: Annotated[UserUpdate, Depends(user_profile_patch)],
-    service: FromDishka[IUserService],
+    command: FromDishka[UserUpdateCommand],
 ) -> APIResponse[UserOutput, None]:
-    """Update supplied profile fields through the owning service.
+    """Update supplied profile fields through the account command.
 
     Args:
         id: Internal user identity validated from the public path by Papilio.
         data: Profile patch; contact fields are temporarily rejected.
-        service: Request-scoped user service contract.
+        command: Request-scoped update command.
 
     Returns:
         The updated account HTTP output without credentials.
@@ -85,7 +87,7 @@ async def patch_user(
         NotFoundException: The user does not exist.
         ConflictException: Another user has the supplied mobile.
     """
-    user = await service.update(id, data)
+    user = await command.update(id, data)
     output = UserOutput.from_obj(user)
     return APIResponse[UserOutput, None].from_data(output)
 
@@ -140,13 +142,13 @@ async def get_user(
 @router.delete("/{id}", response_model=APIResponse[UserOutput, None])
 async def delete_user(
     id: IdType,
-    service: FromDishka[IUserService],
+    command: FromDishka[UserRemoveCommand],
 ) -> APIResponse[UserOutput, None]:
-    """Delete one account through its owning service.
+    """Delete one account through its owning command.
 
     Args:
         id: Internal user identity validated from the public path by Papilio.
-        service: Request-scoped user service contract.
+        command: Request-scoped removal command.
 
     Returns:
         The previous account HTTP output without credentials.
@@ -154,7 +156,7 @@ async def delete_user(
     Raises:
         NotFoundException: The user does not exist.
     """
-    user = await service.remove(id)
+    user = await command.remove(id)
     output = UserOutput.from_obj(user)
     return APIResponse[UserOutput, None].from_data(output)
 

@@ -93,8 +93,21 @@ async def test_core_access(app: FastAPI, client: AsyncClient) -> None:
     headers = {"Authorization": f"Bearer {tokens['access_token']}"}
     me = await client.get("/admin/account/me", headers=headers)
     assert me.json()["data"]["scopes"] == {"access": 15}
+    owner_path = f"/admin/users/{profile['id']}"
     assert (
-        await client.delete(f"/admin/users/{profile['id']}", headers=headers)
+        await client.patch(
+            owner_path, json={"is_active": False}, headers=headers
+        )
+    ).status_code == 403
+    assert (
+        await client.patch(
+            f"{owner_path}/role",
+            json={"role_id": profile["role_id"]},
+            headers=headers,
+        )
+    ).status_code == 403
+    assert (
+        await client.delete(owner_path, headers=headers)
     ).status_code == 403
 
     for path in (
