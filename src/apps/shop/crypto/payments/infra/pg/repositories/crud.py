@@ -5,7 +5,9 @@ from datetime import datetime
 from papilio.infra.db.repositories.backends.postgresql import (
     PGPersistenceRepository,
 )
+from papilio.schemas.results import PagedType
 from sqlalchemy import and_
+from sqlalchemy.sql import ColumnElement
 from sqlmodel import col
 
 from ....domain.enums.records import CryptoPaymentStatus
@@ -15,6 +17,66 @@ from ..tables import CryptoPaymentTable
 
 class CryptoPaymentRepository(PGPersistenceRepository[CryptoPaymentModel]):
     table = CryptoPaymentTable
+
+    async def search(
+        self,
+        *,
+        limit: int,
+        offset: int,
+        gateway_id: int | None,
+        status: CryptoPaymentStatus | None,
+        amount: int | None,
+        invoice_id: str | None,
+        provider_payment_id: str | None,
+        has_invoice: bool | None,
+        created_since: datetime | None,
+        created_until: datetime | None,
+    ) -> PagedType[CryptoPaymentModel]:
+        """Page stored crypto payment attempts.
+
+        Args:
+            limit: Maximum number of rows.
+            offset: Matching rows to skip.
+            gateway_id: Exact issuing account identity.
+            status: Exact internal payment state.
+            amount: Exact original amount in rials.
+            invoice_id: Exact provider invoice reference.
+            provider_payment_id: Exact confirmed provider payment reference.
+            has_invoice: Whether an invoice is attached, if specified.
+            created_since: Inclusive creation time bound.
+            created_until: Exclusive creation time bound.
+
+        Returns:
+            Matching attempts in descending identity order and their total.
+        """
+        table = self.table
+        where: list[ColumnElement[bool]] = []
+        if gateway_id is not None:
+            where.append(col(table.gateway_id) == gateway_id)
+        if status is not None:
+            where.append(col(table.status) == status)
+        if amount is not None:
+            where.append(col(table.amount) == amount)
+        if invoice_id is not None:
+            where.append(col(table.invoice_id) == invoice_id)
+        if provider_payment_id is not None:
+            where.append(col(table.provider_payment_id) == provider_payment_id)
+        if has_invoice is not None:
+            invoice = col(table.invoice_id)
+            where.append(
+                invoice.is_not(None) if has_invoice else invoice.is_(None)
+            )
+        if created_since is not None:
+            where.append(col(table.created_at) >= created_since)
+        if created_until is not None:
+            where.append(col(table.created_at) < created_until)
+        page = await self.get_page(
+            where=where,
+            order_by=[col(table.id).desc()],
+            limit=limit,
+            offset=offset,
+        )
+        return page
 
     async def set_invoice(
         self, id: int, *, invoice_id: str, invoice_url: str

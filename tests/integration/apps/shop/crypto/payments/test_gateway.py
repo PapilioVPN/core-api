@@ -53,6 +53,7 @@ async def test_issue_requires_admin(client: AsyncClient) -> None:
         "/admin/crypto-payments", json={"gateway_id": 1, "amount": 100_000}
     )
     assert response.status_code == 401
+    assert (await client.get("/admin/crypto-payments")).status_code == 401
 
 
 async def test_unknown_hook(client: AsyncClient) -> None:
@@ -236,5 +237,57 @@ async def test_issue_and_settle(app: FastAPI, client: AsyncClient) -> None:
             assert saved.json()["data"]["invoice_id"] is None
             assert saved.json()["data"]["status"] == "pending"
             assert issued_count == 2
+
+            params = {"gateway_id": gateway.id, "amount": payload["amount"]}
+            page = await client.get(
+                endpoint, headers=headers, params={**params, "per_page": 1}
+            )
+            assert page.status_code == 200, page.text
+            assert [row["id"] for row in page.json()["data"]] == [attempt]
+            assert page.json()["meta"]["total_items"] == 2
+
+            missing = await client.get(
+                endpoint,
+                headers=headers,
+                params={**params, "has_invoice": False, "status": "pending"},
+            )
+            assert [row["id"] for row in missing.json()["data"]] == [attempt]
+
+            completed = await client.get(
+                endpoint,
+                headers=headers,
+                params={
+                    **params,
+                    "invoice_id": invoice_id,
+                    "provider_payment_id": provider_id,
+                    "status": "confirmed",
+                    "created_since": confirmed["created_at"],
+                    "created_until": saved.json()["data"]["created_at"],
+                },
+            )
+            assert completed.json()["data"] == [confirmed]
+            assert checks == checked_before
+
+            invalid_range = await client.get(
+                endpoint,
+                headers=headers,
+                params={
+                    "created_since": confirmed["created_at"],
+                    "created_until": confirmed["created_at"],
+                },
+            )
+            assert invalid_range.status_code == 400
+            assert (
+                invalid_range.json()["error"]["message_code"]
+                == "invalid_payment_range"
+            )
+
+            empty = await client.get(
+                endpoint,
+                headers=headers,
+                params={**params, "status": "partial"},
+            )
+            assert empty.json()["data"] == []
+            assert empty.json()["meta"]["total_items"] == 0
         finally:
             connection.client = original
