@@ -30,15 +30,7 @@ jwt:
   access_token_expire_minutes: 15
   refresh_token_expire_minutes: 20160
 redis: null
-# Optional hosted crypto payments. Use the same account key as the Shop gateway.
-# crypto_payments:
-#   nowpayments:
-#     merchant-account:
-#       api_url: https://api.nowpayments.io/v1
-#       callback_base_url: https://api.example.org
-#       api_key: replace-with-private-api-key
-#       ipn_secret: replace-with-private-ipn-secret
-#       price_decimals: 2
+# Configure hosted gateway accounts through the Shop admin API.
 cli:
   color: true
   theme:

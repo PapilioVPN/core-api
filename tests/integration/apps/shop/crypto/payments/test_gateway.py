@@ -24,28 +24,8 @@ from src.apps.shop.crypto.gateways.app.interfaces.services import (
     ICryptoGatewayService,
 )
 from src.apps.shop.crypto.gateways.domain.dtos.records import GatewayCreate
-from src.apps.shop.crypto.payments.config import CryptoPaymentsConfig
-from src.settings.config import CoreSettings
 
 pytestmark = pytest.mark.integration
-
-
-@pytest.fixture
-def pg(pg: CoreSettings) -> CoreSettings:
-    pg.crypto_payments = CryptoPaymentsConfig.model_validate(
-        {
-            "nowpayments": {
-                "test-merchant": {
-                    "api_url": "https://provider.example.test/v1",
-                    "callback_base_url": "https://shop.example.test",
-                    "api_key": "test-key",
-                    "ipn_secret": "test-ipn-secret",
-                    "price_decimals": 2,
-                }
-            }
-        }
-    )
-    return pg
 
 
 async def test_issue_requires_admin(client: AsyncClient) -> None:
@@ -57,7 +37,14 @@ async def test_issue_requires_admin(client: AsyncClient) -> None:
 
 
 async def test_unknown_hook(client: AsyncClient) -> None:
-    response = await client.post("/hooks/crypto-payments/1", json={})
+    missing_id = 2**63 - 1
+    response = await client.post(
+        f"/hooks/crypto-payments/{missing_id}", json={}
+    )
+    assert response.status_code == 401
+    response = await client.post(
+        f"/hooks/crypto-payments/plisio/{missing_id}", json={}
+    )
     assert response.status_code == 401
 
 
@@ -103,6 +90,32 @@ async def test_issue_and_settle(app: FastAPI, client: AsyncClient) -> None:
         "Authorization": f"Bearer {login.json()['data']['access_token']}"
     }
 
+    config_path = f"/admin/crypto-gateways/{gateway.id}/config"
+    unavailable = await client.post(
+        endpoint,
+        headers=headers,
+        json={"gateway_id": gateway.id, "amount": 5_500_000},
+    )
+    assert unavailable.status_code == 503
+    assert (
+        unavailable.json()["error"]["message_code"]
+        == "crypto_gateway_config_unavailable"
+    )
+    config = {
+        "kind": "nowpayments",
+        "api_url": "https://api.nowpayments.io/v1",
+        "callback_base_url": "https://shop.example.test",
+        "api_key": "test-key",
+        "price_decimals": 2,
+        "ipn_secret": "test-ipn-secret",
+    }
+    configured = await client.put(config_path, headers=headers, json=config)
+    assert configured.is_success, configured.text
+    assert configured.json()["data"]["has_api_key"] is True
+    assert configured.json()["data"]["has_ipn_secret"] is True
+    assert config["api_key"] not in configured.text
+    assert config["ipn_secret"] not in configured.text
+
     hook = f"/hooks/crypto-payments/{gateway.id}"
     invoice_id = "6700"
     provider_id = "12345"
@@ -124,7 +137,7 @@ async def test_issue_and_settle(app: FastAPI, client: AsyncClient) -> None:
     def provider(request: Request) -> Response:
         nonlocal checks, issued_count
         assert request.headers["x-api-key"] == "test-key"
-        assert str(request.url.host) == "provider.example.test"
+        assert str(request.url.host) == "api.nowpayments.io"
         assert active_transaction() is None
         unit = UnitOfWork.current()
         assert unit is not None and not unit.session.in_transaction()

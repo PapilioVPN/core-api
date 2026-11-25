@@ -12,6 +12,18 @@ from ...app.interfaces.commands import ICryptoPaymentCommand
 router = APIRouter(prefix="/hooks/crypto-payments", route_class=DishkaRoute)
 
 
+async def _payload(request: Request) -> bytes:
+    """Read the signed bytes without buffering an unbounded body."""
+    payload = bytearray()
+    async for chunk in request.stream():
+        if len(payload) + len(chunk) > 64 * 1024:
+            raise HTTPException(
+                status_code=413, detail="Payment notification is too large."
+            )
+        payload.extend(chunk)
+    return bytes(payload)
+
+
 @router.post("/{id:int}", status_code=204)
 async def post_notification(
     id: IdType,
@@ -23,12 +35,15 @@ async def post_notification(
         raise UnAuthorizedException(
             "Invalid payment notification.", "invalid_crypto_ipn"
         )
-    payload = bytearray()
-    async for chunk in request.stream():
-        if len(payload) + len(chunk) > 64 * 1024:
-            raise HTTPException(
-                status_code=413, detail="Payment notification is too large."
-            )
-        payload.extend(chunk)
-    await command.receive(id, bytes(payload), signature)
+    body = await _payload(request)
+    await command.receive(id, body, signature)
     return Response(status_code=204)
+
+
+@router.post("/plisio/{id:int}")
+async def post_plisio(
+    id: IdType, request: Request, command: FromDishka[ICryptoPaymentCommand]
+) -> Response:
+    body = await _payload(request)
+    await command.receive(id, body)
+    return Response(status_code=200)

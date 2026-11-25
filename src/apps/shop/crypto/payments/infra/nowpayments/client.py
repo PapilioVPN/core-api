@@ -9,11 +9,11 @@ from papilio.infra.http.connection import HTTPConnection
 from papilio.infra.http.gateway import BaseGateway
 from pydantic import ValidationError
 
-from src.apps.shop.crypto.gateways.domain.models.records import (
-    CryptoGatewayModel,
+from src.apps.shop.crypto.gateways.domain.dtos.configs import (
+    ConfigWrite,
+    NowPaymentsConfig,
 )
 
-from ...config import CryptoPaymentsConfig
 from ...domain.enums.records import CryptoPaymentStatus
 from ...domain.errors import GatewayUnavailable
 from ...domain.models.records import CryptoPaymentModel
@@ -22,7 +22,6 @@ from ...domain.results.gateway import (
     GatewayNotice,
     GatewayPayment,
 )
-from .config import NowPaymentsConfig
 from .schemas import InvoiceOut, NoticeIn, PaymentOut
 from .signature import verify_signature
 
@@ -33,30 +32,17 @@ STATES = {
 
 
 class NowPaymentsGateway(BaseGateway):
-    def __init__(
-        self, connection: HTTPConnection, config: CryptoPaymentsConfig
-    ) -> None:
-        """Use the native HTTP pool and account-specific settings."""
+    def __init__(self, connection: HTTPConnection) -> None:
+        """Borrow the shared HTTP connection without per-account defaults."""
         super().__init__(connection)
-        self.config = config
-
-    def _account(self, gateway: CryptoGatewayModel) -> NowPaymentsConfig:
-        account = self.config.nowpayments.get(gateway.key)
-        if gateway.kind != "nowpayments" or account is None:
-            raise GatewayUnavailable(configured=False)
-        return account
-
-    def price_decimals(self, gateway: CryptoGatewayModel) -> int:
-        """Resolve the configured precision before reserving a payment."""
-        return self._account(gateway).price_decimals
 
     async def issue(
-        self, gateway: CryptoGatewayModel, payment: CryptoPaymentModel
+        self, account: ConfigWrite, payment: CryptoPaymentModel
     ) -> GatewayInvoice:
         """Create one hosted invoice and validate its echoed quote.
 
         Args:
-            gateway: Configured gateway account selected for this payment.
+            account: The issuing account settings.
             payment: Saved attempt with its frozen price.
 
         Returns:
@@ -65,9 +51,10 @@ class NowPaymentsGateway(BaseGateway):
         Raises:
             GatewayUnavailable: A valid invoice response could not be verified.
         """
-        account = self._account(gateway)
         callback_base = str(account.callback_base_url).rstrip("/")
-        callback = f"{callback_base}/hooks/crypto-payments/{gateway.id}"
+        callback = (
+            f"{callback_base}/hooks/crypto-payments/{payment.gateway_id}"
+        )
         order_id = str(payment.id)
         data = {
             "price_amount": format(payment.price_amount, "f"),
@@ -105,12 +92,15 @@ class NowPaymentsGateway(BaseGateway):
         return GatewayInvoice(id=invoice.id, url=str(invoice.invoice_url))
 
     def verify(
-        self, gateway: CryptoGatewayModel, body: bytes, signature: str
+        self, account: ConfigWrite, body: bytes, signature: str | None
     ) -> GatewayNotice:
         """Authenticate a notification before using any of its identifiers."""
-        account = self._account(gateway)
-        if not verify_signature(
-            body, signature, account.ipn_secret.get_secret_value()
+        if (
+            not isinstance(account, NowPaymentsConfig)
+            or signature is None
+            or not verify_signature(
+                body, signature, account.ipn_secret.get_secret_value()
+            )
         ):
             raise UnAuthorizedException(
                 "Invalid payment notification.", "invalid_crypto_ipn"
@@ -128,12 +118,12 @@ class NowPaymentsGateway(BaseGateway):
         )
 
     async def read(
-        self, gateway: CryptoGatewayModel, payment_id: str
+        self, account: ConfigWrite, payment_id: str
     ) -> GatewayPayment:
         """Read payment facts through the authenticated status endpoint.
 
         Args:
-            gateway: Account which issued the invoice.
+            account: The verified issuing account settings.
             payment_id: Numeric provider identity from an authenticated notice.
 
         Returns:
@@ -142,7 +132,6 @@ class NowPaymentsGateway(BaseGateway):
         Raises:
             GatewayUnavailable: The status response was not usable.
         """
-        account = self._account(gateway)
         endpoint = str(account.api_url).rstrip("/")
         try:
             response = await self.get(

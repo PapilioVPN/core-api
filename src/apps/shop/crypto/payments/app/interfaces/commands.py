@@ -10,5 +10,5 @@ class ICryptoPaymentCommand(Protocol):
     async def issue(self, data: PaymentIssue) -> CryptoPaymentModel: ...
 
     async def receive(
-        self, gateway_id: int, body: bytes, signature: str
+        self, gateway_id: int, body: bytes, signature: str | None = None
     ) -> CryptoPaymentModel | None: ...

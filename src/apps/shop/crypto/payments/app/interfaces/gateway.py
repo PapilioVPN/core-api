@@ -2,9 +2,7 @@
 
 from typing import Protocol
 
-from src.apps.shop.crypto.gateways.domain.models.records import (
-    CryptoGatewayModel,
-)
+from src.apps.shop.crypto.gateways.domain.dtos.configs import ConfigWrite
 
 from ...domain.models.records import CryptoPaymentModel
 from ...domain.results.gateway import (
@@ -15,16 +13,14 @@ from ...domain.results.gateway import (
 
 
 class ICryptoPaymentGateway(Protocol):
-    def price_decimals(self, gateway: CryptoGatewayModel) -> int: ...
-
     async def issue(
-        self, gateway: CryptoGatewayModel, payment: CryptoPaymentModel
+        self, account: ConfigWrite, payment: CryptoPaymentModel
     ) -> GatewayInvoice: ...
 
     def verify(
-        self, gateway: CryptoGatewayModel, body: bytes, signature: str
+        self, account: ConfigWrite, body: bytes, signature: str | None
     ) -> GatewayNotice: ...
 
     async def read(
-        self, gateway: CryptoGatewayModel, payment_id: str
+        self, account: ConfigWrite, payment_id: str
     ) -> GatewayPayment: ...

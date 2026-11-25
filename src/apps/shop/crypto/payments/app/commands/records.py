@@ -1,10 +1,18 @@
 """Issue hosted invoices and reconcile authenticated settlement notices."""
 
+from collections.abc import Mapping
 from decimal import ROUND_UP, Decimal, localcontext
 
-from papilio.errors.exceptions import ConflictException
+from papilio.errors.exceptions import (
+    ConflictException,
+    NotFoundException,
+    UnAuthorizedException,
+)
 from papilio.infra.db.transaction import active_transaction, transaction
 
+from src.apps.shop.crypto.gateways.app.interfaces.configs import (
+    ICryptoGatewayConfigService,
+)
 from src.apps.shop.crypto.gateways.app.interfaces.services import (
     ICryptoGatewayService,
 )
@@ -62,13 +70,22 @@ class CryptoPaymentCommand:
     def __init__(
         self,
         gateways: ICryptoGatewayService,
+        configs: ICryptoGatewayConfigService,
         payments: ICryptoPaymentService,
-        gateway: ICryptoPaymentGateway,
+        adapters: Mapping[str, ICryptoPaymentGateway],
     ) -> None:
-        """Bind request-local payment owners and the shared gateway adapter."""
+        """Bind request-local payment owners and the shared adapters."""
         self.gateways = gateways
+        self.configs = configs
         self.payments = payments
-        self.gateway = gateway
+        self.adapters = adapters
+
+    def _adapter(self, kind: str | None) -> ICryptoPaymentGateway:
+        """Resolve supported infrastructure from the saved gateway type."""
+        adapter = self.adapters.get(kind) if kind is not None else None
+        if adapter is None:
+            raise GatewayUnavailable(configured=False)
+        return adapter
 
     async def issue(self, data: PaymentIssue) -> CryptoPaymentModel:
         """Reserve an attempt, call the provider, then persist its invoice.
@@ -98,10 +115,12 @@ class CryptoPaymentCommand:
                     message_code="crypto_gateway_inactive",
                     unique_dict={},
                 )
+            adapter = self._adapter(gateway.kind)
+            account = await self.configs.connection(gateway)
             price = _quote(
                 data.amount,
                 gateway.rial_rate,
-                self.gateway.price_decimals(gateway),
+                account.price_decimals,
             )
             payment = await self.payments.create(
                 CryptoPaymentCreate(
@@ -113,7 +132,7 @@ class CryptoPaymentCommand:
                 )
             )
         try:
-            invoice = await self.gateway.issue(gateway, payment)
+            invoice = await adapter.issue(account, payment)
         except GatewayUnavailable:
             raise GatewayUnavailable(payment_id=payment.id) from None
         async with transaction():
@@ -121,14 +140,14 @@ class CryptoPaymentCommand:
         return saved
 
     async def receive(
-        self, gateway_id: int, body: bytes, signature: str
+        self, gateway_id: int, body: bytes, signature: str | None = None
     ) -> CryptoPaymentModel | None:
         """Reconcile a signed notice with the gateway and the stored attempt.
 
         Args:
             gateway_id: Account named in the original invoice callback URL.
             body: Unmodified, size-bounded notice bytes.
-            signature: Provider signature header.
+            signature: Signature header when the provider signs out of band.
 
         Returns:
             The current record for an actionable notice, otherwise None.
@@ -139,8 +158,15 @@ class CryptoPaymentCommand:
             )
         payment = None
         async with transaction():
-            gateway = await self.gateways.get_by_id(gateway_id)
-            notice = self.gateway.verify(gateway, body, signature)
+            try:
+                gateway = await self.gateways.get_by_id(gateway_id)
+            except NotFoundException:
+                raise UnAuthorizedException(
+                    "Invalid payment notification.", "invalid_crypto_ipn"
+                ) from None
+            adapter = self._adapter(gateway.kind)
+            account = await self.configs.connection(gateway)
+            notice = adapter.verify(account, body, signature)
             if notice.status is not None and notice.invoice_id is not None:
                 payment = await self.payments.get_by_invoice(
                     gateway_id, notice.invoice_id
@@ -150,7 +176,7 @@ class CryptoPaymentCommand:
             CryptoPaymentStatus.PENDING,
             CryptoPaymentStatus.PARTIAL,
         ):
-            observed = await self.gateway.read(gateway, notice.payment_id)
+            observed = await adapter.read(account, notice.payment_id)
             status = _settlement(payment, observed)
             if status is None:
                 raise GatewayUnavailable(payment_id=payment.id)

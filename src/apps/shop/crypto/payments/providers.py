@@ -1,8 +1,10 @@
-"""Compose crypto payment persistence, operations and the provider adapter."""
+"""Compose crypto payment operations and their hosted gateway adapters."""
+
+from collections.abc import AsyncIterator, Mapping
+from logging import getLogger
 
 from dishka import Provider, Scope, provide
-
-from src.settings.config import CoreSettings
+from papilio.infra.http.connection import HTTPConnection
 
 from .app.commands.records import CryptoPaymentCommand
 from .app.interfaces.commands import ICryptoPaymentCommand
@@ -11,9 +13,10 @@ from .app.interfaces.queries import ICryptoPaymentSearchQuery
 from .app.interfaces.services import ICryptoPaymentService
 from .app.queries.search import CryptoPaymentSearchQuery
 from .app.services.crud import CryptoPaymentService
-from .config import CryptoPaymentsConfig
 from .infra.nowpayments.client import NowPaymentsGateway
 from .infra.pg.repositories.crud import CryptoPaymentRepository
+from .infra.plisio.client import PlisioGateway
+from .infra.plisio.logging import RedactAPIKey
 
 
 class CryptoPaymentProvider(Provider):
@@ -25,11 +28,24 @@ class CryptoPaymentProvider(Provider):
     search = provide(
         CryptoPaymentSearchQuery, provides=ICryptoPaymentSearchQuery
     )
-    gateway = provide(
-        NowPaymentsGateway, provides=ICryptoPaymentGateway, scope=Scope.APP
-    )
+    nowpayments = provide(NowPaymentsGateway, scope=Scope.APP)
 
     @provide(scope=Scope.APP)
-    def config(self, settings: CoreSettings) -> CryptoPaymentsConfig:
-        """Select private integration settings."""
-        return settings.crypto_payments
+    async def plisio(
+        self, connection: HTTPConnection
+    ) -> AsyncIterator[PlisioGateway]:
+        """Redact Plisio query credentials for the adapter's lifetime."""
+        logger = getLogger("httpx")
+        redactor = RedactAPIKey()
+        logger.addFilter(redactor)
+        try:
+            yield PlisioGateway(connection)
+        finally:
+            logger.removeFilter(redactor)
+
+    @provide(scope=Scope.APP)
+    def adapters(
+        self, nowpayments: NowPaymentsGateway, plisio: PlisioGateway
+    ) -> Mapping[str, ICryptoPaymentGateway]:
+        """Bind each implemented kind to its native adapter."""
+        return {"nowpayments": nowpayments, "plisio": plisio}

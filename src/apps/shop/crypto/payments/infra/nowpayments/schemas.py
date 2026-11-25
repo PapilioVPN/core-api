@@ -5,7 +5,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .config import HTTPSURL
+from src.apps.shop.crypto.types import HTTPSURL
 
 ProviderID = Annotated[str, Field(pattern=r"^[0-9]+$", max_length=64)]
 PositiveAmount = Annotated[Decimal, Field(gt=0, allow_inf_nan=False)]
