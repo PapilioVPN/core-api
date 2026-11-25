@@ -22,10 +22,10 @@ class DepositService(IDChecks[DepositModel]):
         record = await self.repo.create(data)
         return record
 
-    async def link(self, id: int, payment_id: int) -> None:
-        """Link a confirmed payment inside the match transaction."""
+    async def link(self, id: int, payment_id: int) -> DepositModel:
+        """Return the deposit after linking its confirmed payment."""
         record = await self.repo.update_by_id(id, {"payment_id": payment_id})
-        self._check_for_id_existence(id, record)
+        return self._check_for_id_existence(id, record)
 
     async def get(self, id: int) -> DepositModel:
         """Return the bank report with the given stored identity."""

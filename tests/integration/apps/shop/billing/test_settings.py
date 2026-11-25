@@ -29,6 +29,10 @@ from src.apps.core.access.users.domain.dtos.records import UserCreate
 from src.apps.shop.billing.deposits.app.commands.match import (
     DepositMatchCommand,
 )
+from src.apps.shop.billing.deposits.domain.models.records import DepositModel
+from src.apps.shop.billing.payment_settings.app.interfaces.services import (
+    IPaymentSettingsService,
+)
 from src.apps.shop.billing.payments.infra.pg.repositories.crud import (
     PaymentRepository,
 )
@@ -136,9 +140,11 @@ async def test_payment_settings(
         "has_key": True,
     }
 
-    assert (
-        await client.delete(f"{SETTINGS}/key", headers=billing_admin)
-    ).status_code == 204
+    async with container() as scope:
+        service = await scope.get(IPaymentSettingsService)
+        revoked = await service.revoke_key()
+    assert revoked.key_hash is None
+    assert revoked.auto_confirm is True
     if redis is not None:
         assert not await resolve(redis.client.exists(CACHE_KEY))
     assert (await client.get(SETTINGS, headers=billing_admin)).json()["data"][
@@ -158,10 +164,11 @@ async def test_automatic_payment(
     hook = "/hooks/deposits"
     container = cast(AsyncContainer, app.state.dishka_container)
 
-    async def dispatch(id: int) -> None:
+    async def dispatch(id: int) -> DepositModel:
         async with container() as scope:
             command = await scope.get(DepositMatchCommand)
-            await command.match(id)
+            deposit = await command.match(id)
+        return deposit
 
     settings = {"auto_confirm": True, "digits": 3, "window_hours": 1}
     response = await client.put(SETTINGS, headers=billing_admin, json=settings)
@@ -235,8 +242,13 @@ async def test_automatic_payment(
         )
         assert initial.json()["data"]["payment"]["status"] == "pending"
 
-        await gather(*(dispatch(record["id"]) for record in records))
-        await dispatch(records[0]["id"])
+        results = await gather(*(dispatch(record["id"]) for record in records))
+        (linked,) = [
+            deposit for deposit in results if deposit.payment_id == first["id"]
+        ]
+        replayed = await dispatch(linked.id)
+        assert replayed.id == linked.id
+        assert replayed.payment_id == first["id"]
         async with container() as scope:
             repo = await scope.get(PaymentRepository)
             async with transaction():
@@ -249,7 +261,9 @@ async def test_automatic_payment(
         )
         assert expired.status_code == 201
         expired_id = expired.json()["data"]["id"]
-        await dispatch(expired_id)
+        unmatched = await dispatch(expired_id)
+        assert unmatched.id == expired_id
+        assert unmatched.payment_id is None
         checked = await client.get(
             f"/admin/deposits/{expired_id}", headers=billing_admin
         )
@@ -270,7 +284,7 @@ async def test_automatic_payment(
         )
         assert history.status_code == 200, history.text
         (matched,) = history.json()["data"]
-        assert matched["id"] in {record["id"] for record in records}
+        assert matched["id"] == linked.id
 
         await client.put(
             SETTINGS,

@@ -50,9 +50,9 @@ class PaymentSettingsService(IDChecks[PaymentSettingsModel]):
 
     @forget_cache.one
     @transactional
-    async def revoke_key(self) -> None:
-        """Invalidate the active webhook key."""
+    async def revoke_key(self) -> PaymentSettingsModel:
+        """Return the updated settings after clearing the webhook key."""
         settings = await self.repo.update_by_id(
             SETTINGS_ID, {"key_hash": None}
         )
-        self._check_for_id_existence(SETTINGS_ID, settings)
+        return self._check_for_id_existence(SETTINGS_ID, settings)
