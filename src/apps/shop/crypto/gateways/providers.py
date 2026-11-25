@@ -5,9 +5,14 @@ from papilio.core.config import CryptoConfig, Settings
 
 from .app.commands.configs import GatewayConfigCommand
 from .app.interfaces.cache import IGatewayConfigCache
-from .app.interfaces.configs import IGatewayConfigQuery, IGatewayConfigService
+from .app.interfaces.configs import (
+    IGatewayConfigQuery,
+    IGatewayConfigService,
+    IPlisioConfigQuery,
+)
 from .app.interfaces.services import ICryptoGatewayService
 from .app.queries.configs import GatewayConfigQuery
+from .app.queries.plisio import PlisioConfigQuery
 from .app.services.configs import GatewayConfigService
 from .app.services.crud import CryptoGatewayService
 from .infra.pg.repositories.configs import GatewayConfigRepository
@@ -24,6 +29,7 @@ class GatewayProvider(Provider):
     configs = provide(GatewayConfigService, provides=IGatewayConfigService)
     command = provide(GatewayConfigCommand)
     query = provide(GatewayConfigQuery, provides=IGatewayConfigQuery)
+    plisio = provide(PlisioConfigQuery, provides=IPlisioConfigQuery)
     cache = provide(
         GatewayConfigCache, scope=Scope.APP, provides=IGatewayConfigCache
     )

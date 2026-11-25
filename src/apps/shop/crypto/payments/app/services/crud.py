@@ -4,6 +4,7 @@ from papilio.tools.checks import IDChecks
 
 from ...domain.models.quote import Quote
 from ...domain.models.records import CryptoPaymentModel
+from ...domain.results.invoice import Invoice
 from ...infra.pg.repositories.crud import CryptoPaymentRepository
 
 
@@ -36,4 +37,19 @@ class CryptoPaymentService(IDChecks[CryptoPaymentModel]):
     ) -> CryptoPaymentModel | None:
         """Save an unset quote in the caller's transaction."""
         payment = await self.repo.set_quote(id, data)
+        return payment
+
+    async def set_invoice(
+        self, id: int, data: Invoice
+    ) -> CryptoPaymentModel | None:
+        """Attach a provider invoice in the caller's transaction.
+
+        Args:
+            id: Payment identity.
+            data: Provider invoice identity and hosted URL.
+
+        Returns:
+            The updated payment, or None if an invoice is already stored.
+        """
+        payment = await self.repo.set_invoice(id, data)
         return payment

@@ -1,0 +1,20 @@
+"""Report provider failures without leaking the request or credentials."""
+
+from http import HTTPStatus
+
+from papilio.errors.base import APPException
+from papilio.errors.outputs import BaseErrorOut
+
+
+class InvoiceUnavailable(APPException[BaseErrorOut]):
+    def __init__(self) -> None:
+        super().__init__(
+            "The payment gateway did not return a usable invoice.",
+            "crypto_invoice_unavailable",
+            HTTPStatus.BAD_GATEWAY,
+        )
+
+    def as_schema(self) -> BaseErrorOut:
+        return BaseErrorOut(
+            message=self.message, message_code=self.message_code
+        )

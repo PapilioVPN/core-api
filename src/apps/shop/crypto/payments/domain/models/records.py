@@ -8,6 +8,7 @@ from papilio.infra.db.schema.fields import (
     CharField,
     ForeignKeyField,
     NumericField,
+    TextField,
 )
 
 
@@ -19,3 +20,5 @@ class CryptoPaymentModel(IdentifiedEntity):
     quote_amount: Decimal | None = NumericField(nullable=True, default=None)
     quote_currency: str | None = CharField(3, nullable=True, default=None)
     quote_rate: Decimal | None = NumericField(nullable=True, default=None)
+    invoice_id: str | None = CharField(64, nullable=True, default=None)
+    invoice_url: str | None = TextField(nullable=True, default=None)
