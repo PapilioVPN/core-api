@@ -11,7 +11,7 @@ from src.shared.utils.images import validate_image
 from ...domain.dtos.uploads import ReceiptUpload
 
 
-class ReceiptUploadService:
+class ReceiptUploadCommand:
     def __init__(self, files: IFileUpload, processes: ProcessRunner) -> None:
         """Bind the existing uploader and image decoding runner."""
         self.files = files

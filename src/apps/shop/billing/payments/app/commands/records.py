@@ -1,6 +1,6 @@
 """Create a payment and its receipt in one native transaction."""
 
-from papilio.errors.exceptions import ValidationException
+from papilio.errors.exceptions import ConflictException, ValidationException
 from papilio.infra.db.tools.decorators import transactional
 
 from src.apps.shop.billing.payment_settings.app.interfaces.services import (
@@ -40,6 +40,7 @@ class PaymentCommand:
 
         Raises:
             ValidationException: A manual payment has no receipt.
+            ConflictException: No unique transfer amount is available.
         """
         settings = await self.settings.get()
         if not settings.auto_confirm and data.image_url is None:
@@ -57,7 +58,19 @@ class PaymentCommand:
 
         record = PaymentModel(receipt_id=receipt_id, amount=data.amount)
         if settings.auto_confirm:
-            payment = await self.payments.create_auto(record, settings.digits)
+            payment = None
+            for _ in range(3):
+                payment = await self.payments.create_auto(
+                    record, settings.digits
+                )
+                if payment is not None:
+                    break
+            if payment is None:
+                raise ConflictException(
+                    message="No transfer amount is available for this payment",
+                    message_code="transfer_amount_unavailable",
+                    unique_dict={"amount": record.amount},
+                )
         else:
             payment = await self.payments.create(record)
         return payment

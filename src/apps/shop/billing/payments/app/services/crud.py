@@ -2,7 +2,6 @@
 
 from datetime import datetime
 
-from papilio.errors.exceptions import ConflictException
 from papilio.infra.db.tools.decorators import transactional
 from papilio.tools.checks import IDChecks
 from papilio.utils.dates import utc_now
@@ -32,22 +31,16 @@ class PaymentService(IDChecks[PaymentModel]):
         payment = await self.repo.create(data)
         return payment
 
-    @transactional
+    async def get_by_id(self, id: int) -> PaymentModel:
+        """Read a payment by its stored identity, or report absence."""
+        payment = await self.repo.get_by_id(id)
+        return self._check_for_id_existence(id, payment)
+
     async def create_auto(
         self, data: PaymentModel, digits: int
-    ) -> PaymentModel:
-        """Reserve one previously unused transfer amount near the price."""
-        payment = None
-        for _ in range(3):
-            payment = await self.repo.create_auto(data, digits)
-            if payment is not None:
-                break
-        if payment is None:
-            raise ConflictException(
-                message="No transfer amount is available for this payment",
-                message_code="transfer_amount_unavailable",
-                unique_dict={"amount": data.amount},
-            )
+    ) -> PaymentModel | None:
+        """Attempt one reservation for a prepared automatic payment."""
+        payment = await self.repo.create_auto(data, digits)
         return payment
 
     async def confirm_auto(
@@ -59,38 +52,29 @@ class PaymentService(IDChecks[PaymentModel]):
         )
         return payment
 
-    @transactional
     async def review(
-        self, id: int, status: PaymentStatus, *, reason: str | None = None
-    ) -> PaymentModel:
-        """Apply the decision to a pending payment.
+        self,
+        id: int,
+        status: PaymentStatus,
+        *,
+        confirmed_at: datetime | None,
+        reason: str | None = None,
+    ) -> PaymentModel | None:
+        """Apply a prepared decision to a pending payment.
 
         Args:
             id: Stored payment identity.
             status: Confirmed or rejected state.
+            confirmed_at: Prepared UTC timestamp for confirmation, if any.
             reason: Optional explanation for a rejection.
 
         Returns:
-            The updated payment, with a timestamp on confirmation.
-
-        Raises:
-            NotFoundException: The payment does not exist.
-            ConflictException: The payment is no longer pending.
+            The updated payment, or None when no pending record matches.
         """
         payment = await self.repo.review(
             id,
             status,
-            confirmed_at=utc_now()
-            if status == PaymentStatus.CONFIRMED
-            else None,
+            confirmed_at=confirmed_at,
             reason=reason,
         )
-        if payment is None:
-            existing = await self.repo.get_by_id(id)
-            self._check_for_id_existence(id, existing)
-            raise ConflictException(
-                message="The payment has already been reviewed",
-                message_code="payment_already_reviewed",
-                unique_dict={"id": id},
-            )
         return payment

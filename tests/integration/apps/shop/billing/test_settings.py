@@ -142,7 +142,7 @@ async def test_payment_settings(
 
     async with container() as scope:
         service = await scope.get(IPaymentSettingsService)
-        revoked = await service.revoke_key()
+        revoked = await service.set_key_hash(None)
     assert revoked.key_hash is None
     assert revoked.auto_confirm is True
     if redis is not None:

@@ -1,8 +1,5 @@
 """Read and manage the Shop payment settings."""
 
-from hashlib import sha256
-from secrets import token_urlsafe
-
 from papilio.infra.db.tools.decorators import transactional
 from papilio.tools.checks import IDChecks
 
@@ -39,20 +36,9 @@ class PaymentSettingsService(IDChecks[PaymentSettingsModel]):
 
     @forget_cache.one
     @transactional
-    async def issue_key(self) -> str:
-        """Store a new key digest and return the secret once."""
-        key = token_urlsafe(32)
+    async def set_key_hash(self, digest: str | None) -> PaymentSettingsModel:
+        """Replace the prepared key digest, or clear it with None."""
         settings = await self.repo.update_by_id(
-            SETTINGS_ID, {"key_hash": sha256(key.encode()).hexdigest()}
-        )
-        self._check_for_id_existence(SETTINGS_ID, settings)
-        return key
-
-    @forget_cache.one
-    @transactional
-    async def revoke_key(self) -> PaymentSettingsModel:
-        """Return the updated settings after clearing the webhook key."""
-        settings = await self.repo.update_by_id(
-            SETTINGS_ID, {"key_hash": None}
+            SETTINGS_ID, {"key_hash": digest}
         )
         return self._check_for_id_existence(SETTINGS_ID, settings)

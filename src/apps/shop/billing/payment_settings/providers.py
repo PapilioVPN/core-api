@@ -2,6 +2,7 @@
 
 from dishka import Provider, Scope, provide
 
+from .app.commands.key import PaymentKeyCommand
 from .app.interfaces.cache import IPaymentSettingsCache
 from .app.interfaces.queries import IPaymentSettingsQuery
 from .app.interfaces.services import IPaymentSettingsService
@@ -19,6 +20,7 @@ class PaymentSettingsProvider(Provider):
     )
     query = provide(PaymentSettingsQuery, provides=IPaymentSettingsQuery)
     repo = provide(PaymentSettingsRepository)
+    key = provide(PaymentKeyCommand)
     settings = provide(
         PaymentSettingsService, provides=IPaymentSettingsService
     )

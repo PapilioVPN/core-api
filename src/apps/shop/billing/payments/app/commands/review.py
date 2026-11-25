@@ -2,7 +2,9 @@
 
 from datetime import datetime
 
+from papilio.errors.exceptions import ConflictException
 from papilio.infra.db.tools.decorators import transactional
+from papilio.utils.dates import utc_now
 from papilio_tasks.apps.outbox import OutboxWriter
 from papilio_tasks.apps.outbox import decorators as outbox
 
@@ -25,7 +27,9 @@ class PaymentReviewCommand:
     @outbox.publish(payment_confirmed, select=PaymentEvent.from_record)
     async def confirm(self, id: int) -> PaymentModel:
         """Confirm a pending payment and register its event."""
-        payment = await self.payments.review(id, PaymentStatus.CONFIRMED)
+        payment = await self._review(
+            id, PaymentStatus.CONFIRMED, confirmed_at=utc_now()
+        )
         return payment
 
     @transactional
@@ -48,7 +52,28 @@ class PaymentReviewCommand:
         self, id: int, *, reason: str | None = None
     ) -> PaymentModel:
         """Reject a pending payment and register its event."""
-        payment = await self.payments.review(
-            id, PaymentStatus.REJECTED, reason=reason
+        payment = await self._review(
+            id, PaymentStatus.REJECTED, confirmed_at=None, reason=reason
         )
+        return payment
+
+    async def _review(
+        self,
+        id: int,
+        status: PaymentStatus,
+        *,
+        confirmed_at: datetime | None,
+        reason: str | None = None,
+    ) -> PaymentModel:
+        """Apply the decision or distinguish absence from a replay."""
+        payment = await self.payments.review(
+            id, status, confirmed_at=confirmed_at, reason=reason
+        )
+        if payment is None:
+            await self.payments.get_by_id(id)
+            raise ConflictException(
+                message="The payment has already been reviewed",
+                message_code="payment_already_reviewed",
+                unique_dict={"id": id},
+            )
         return payment

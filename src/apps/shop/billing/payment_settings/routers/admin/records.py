@@ -8,6 +8,7 @@ from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
 
+from ...app.commands.key import PaymentKeyCommand
 from ...app.interfaces.queries import IPaymentSettingsQuery
 from ...app.interfaces.services import IPaymentSettingsService
 from ...domain.dtos.records import PaymentSettingsWrite
@@ -42,9 +43,9 @@ async def put_settings(
 
 @router.post("/key", status_code=201)
 async def post_key(
-    response: Response, service: FromDishka[IPaymentSettingsService]
+    response: Response, command: FromDishka[PaymentKeyCommand]
 ) -> APIResponse[PaymentKeyOutput, None]:
-    key = await service.issue_key()
+    key = await command.issue()
     response.headers["Cache-Control"] = "no-store"
     return APIResponse[PaymentKeyOutput, None].from_data(
         PaymentKeyOutput(key=key)
@@ -53,5 +54,5 @@ async def post_key(
 
 @router.delete("/key", status_code=204)
 async def delete_key(service: FromDishka[IPaymentSettingsService]) -> Response:
-    await service.revoke_key()
+    await service.set_key_hash(None)
     return Response(status_code=204)
