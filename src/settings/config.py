@@ -1,7 +1,7 @@
 """Papilio settings with the Core discovery root."""
 
 from papilio.core.config import AppConfig, HTTPConfig, Settings
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, PositiveFloat
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.apps.core.storage.files.config import FileStorageConfig
 from src.settings.cli import CLIConfig
@@ -32,14 +32,6 @@ class SchedulerConfig(BaseModel):
     durable: str = Field(default="papiliovpn_core_workers", min_length=1)
 
 
-class OCRConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)
-
-    url: HttpUrl
-    timeout: PositiveFloat = 20
-    min_score: float = Field(default=0.85, ge=0, le=1)
-
-
 class CoreSettings(Settings):
     app: AppConfig = AppConfig(
         modules=["src.apps.core", "src.apps.shop"],
@@ -48,6 +40,5 @@ class CoreSettings(Settings):
     storage: FileStorageConfig  # pyright: ignore[reportIncompatibleVariableOverride]
     http: HTTPConfig | None = DEFAULT_HTTP
     nats: NatsConfig | None = None
-    ocr: OCRConfig | None = None
     scheduler: SchedulerConfig = Field(default_factory=SchedulerConfig)
     cli: CLIConfig = Field(default_factory=CLIConfig)

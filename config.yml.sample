@@ -40,9 +40,6 @@ cli:
 # Enable NATS for the optional Scheduler and Events processes.
 # nats:
 #   servers: [nats://127.0.0.1:4222]
-# Enable receipt extraction in the Events worker.
-# ocr:
-#   url: http://paddleocr:8080/ocr
 storage:
   path: var/media
   temp_dir: var/tmp

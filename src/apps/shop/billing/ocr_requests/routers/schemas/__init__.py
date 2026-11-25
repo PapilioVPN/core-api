@@ -1,1 +1,0 @@
-"""OCR request response schemas."""

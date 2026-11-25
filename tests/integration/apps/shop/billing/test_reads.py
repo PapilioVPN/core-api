@@ -8,7 +8,6 @@ from dishka import AsyncContainer
 from fastapi import FastAPI
 from httpx import AsyncClient
 from papilio.infra.db.transaction import transaction
-from sqlmodel import col
 
 from src.apps.core.access.auth.domain.enums.permissions import AdminPermission
 from src.apps.core.access.roles.app.interfaces.services import (
@@ -23,22 +22,10 @@ from src.apps.core.access.users.app.interfaces.commands import (
     IUserCreateCommand,
 )
 from src.apps.core.access.users.domain.dtos.records import UserCreate
-from src.apps.shop.billing.ocr_requests.app.interfaces.services import (
-    IOCRRequestService,
-)
-from src.apps.shop.billing.ocr_requests.domain.models.records import (
-    OCRRequestModel,
-)
-from src.apps.shop.billing.ocr_requests.infra.pg.repositories.crud import (
-    OCRRequestRepository,
-)
 from src.apps.shop.billing.payments.domain.enums.records import PaymentStatus
 from src.apps.shop.billing.payments.domain.models.records import PaymentModel
 from src.apps.shop.billing.payments.infra.pg.repositories.crud import (
     PaymentRepository,
-)
-from src.apps.shop.billing.receipts.domain.enums.extraction import (
-    ExtractionStatus,
 )
 from src.apps.shop.billing.receipts.domain.models.records import ReceiptModel
 from src.apps.shop.billing.receipts.infra.pg.repositories.crud import (
@@ -50,9 +37,7 @@ pytestmark = pytest.mark.integration
 
 async def test_payment_reads(app: FastAPI, client: AsyncClient) -> None:
     path = "/admin/payments"
-    history = "/admin/receipts/1/ocr-requests"
     assert (await client.get(path)).status_code == 401
-    assert (await client.get(history)).status_code == 401
 
     password = "isolated-billing-reader-password"
     container = cast(AsyncContainer, app.state.dishka_container)
@@ -80,7 +65,6 @@ async def test_payment_reads(app: FastAPI, client: AsyncClient) -> None:
         "Authorization": f"Bearer {login.json()['data']['access_token']}"
     }
     assert (await client.get(path, headers=headers)).status_code == 403
-    assert (await client.get(history, headers=headers)).status_code == 403
 
     start = datetime(2026, 10, 8, tzinfo=UTC)
     end = datetime(2026, 10, 9, tzinfo=UTC)
@@ -90,7 +74,6 @@ async def test_payment_reads(app: FastAPI, client: AsyncClient) -> None:
         grants = await scope.get(IRoleScopeService)
         receipts = await scope.get(ReceiptRepository)
         payments = await scope.get(PaymentRepository)
-        requests = await scope.get(IOCRRequestService)
         async with transaction():
             existing = await scopes.find_by_key("shop")
             shop = existing or await scopes.create(
@@ -127,84 +110,8 @@ async def test_payment_reads(app: FastAPI, client: AsyncClient) -> None:
                     confirmed_at=end,
                 )
             )
-            failed = await requests.create(
-                OCRRequestModel(
-                    receipt_id=first.id,
-                    event_id="billing-read-ocr-failed",
-                    status=ExtractionStatus.FAILED,
-                    error_code="ocr_api_unavailable",
-                )
-            )
-            extracted = await requests.create(
-                OCRRequestModel(
-                    receipt_id=first.id,
-                    event_id="billing-read-ocr-extracted",
-                    status=ExtractionStatus.EXTRACTED,
-                )
-            )
-            other = await requests.create(
-                OCRRequestModel(
-                    receipt_id=second.id,
-                    event_id="billing-read-other-receipt",
-                    status=ExtractionStatus.FAILED,
-                )
-            )
 
     try:
-        assert (
-            failed is not None and extracted is not None and other is not None
-        )
-        history = f"/admin/receipts/{first.id}/ocr-requests"
-        result = await client.get(
-            history, params={"per_page": 1}, headers=headers
-        )
-        assert result.status_code == 200, result.text
-        attempts = result.json()
-        assert [row["id"] for row in attempts["data"]] == [extracted.id]
-        assert attempts["data"][0]["error_code"] is None
-        assert attempts["meta"] == {
-            "total_items": 2,
-            "total_pages": 2,
-            "has_prev": False,
-            "has_next": True,
-        }
-        result = await client.get(
-            history, params={"per_page": 1, "page": 2}, headers=headers
-        )
-        assert [row["id"] for row in result.json()["data"]] == [failed.id]
-        result = await client.get(
-            history,
-            params={"status": "failed", "receipt_id": second.id},
-            headers=headers,
-        )
-        assert result.status_code == 200, result.text
-        (row,) = result.json()["data"]
-        assert (
-            datetime.fromisoformat(row.pop("created_at")) == failed.created_at
-        )
-        assert row == {
-            "id": failed.id,
-            "receipt_id": first.id,
-            "status": "failed",
-            "error_code": "ocr_api_unavailable",
-        }
-        result = await client.get(
-            history, params={"status": "unreadable"}, headers=headers
-        )
-        assert result.status_code == 200 and result.json()["data"] == []
-        result = await client.get(
-            history, params={"page": 10**20}, headers=headers
-        )
-        assert result.status_code == 200 and result.json()["data"] == []
-        result = await client.get(
-            history, params={"status": "pending"}, headers=headers
-        )
-        assert result.status_code == 422
-        result = await client.get(
-            f"/admin/receipts/{2**63 - 1}/ocr-requests", headers=headers
-        )
-        assert result.status_code == 404
-
         blocked = await client.patch(
             f"{path}/{pending.id}/review",
             json={"status": "confirmed"},
@@ -282,13 +189,9 @@ async def test_payment_reads(app: FastAPI, client: AsyncClient) -> None:
         async with container() as scope:
             payments = await scope.get(PaymentRepository)
             receipts = await scope.get(ReceiptRepository)
-            ocr_repo = await scope.get(OCRRequestRepository)
             scopes = await scope.get(IScopeService)
             grants = await scope.get(IRoleScopeService)
             async with transaction():
-                await ocr_repo.remove(
-                    col(ocr_repo.table.receipt_id).in_([first.id, second.id])
-                )
                 await payments.remove_by_id(pending.id)
                 await payments.remove_by_id(confirmed.id)
                 await receipts.remove_by_id(first.id)

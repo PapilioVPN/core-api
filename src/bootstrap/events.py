@@ -37,13 +37,6 @@ def create_events(settings: CoreSettings) -> Application:
     discover = Bootstrapper(
         settings.app.modules, tables_path=settings.app.tables_path
     )
-    subscribers = settings.app.modules
-    if settings.ocr is None:
-        subscribers = [
-            module
-            for module in discover.submodules
-            if module != "src.apps.shop.billing.ocr_requests"
-        ]
     app = create_app(
         registrar=registrar(settings),
         providers=[
@@ -52,6 +45,6 @@ def create_events(settings: CoreSettings) -> Application:
             *discover.boot_providers(),
         ],
         publishers=settings.app.modules,
-        subscribers=subscribers,
+        subscribers=settings.app.modules,
     )
     return app
