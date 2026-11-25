@@ -18,6 +18,7 @@ def settings(pytestconfig: pytest.Config) -> CoreSettings:
     sample: Path = pytestconfig.rootpath / "config.yml.sample"
     data = yaml.safe_load(sample.read_text(encoding="utf-8"))
     data["crypto"]["password_salt"] = "test-only-password-pepper-not-for-use"
+    data["crypto"]["encryption_key"] = "test-only-gateway-encryption-key"
     data["jwt"]["secret_key"] = "test-only-token-signing-key-not-for-use"
     return CoreSettings.model_validate(data)
 

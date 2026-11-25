@@ -2,7 +2,11 @@
 
 from typing import Annotated
 
-from pydantic import Field
+from pydantic import AnyUrl, Field, UrlConstraints
+
+HTTPSURL = Annotated[
+    AnyUrl, UrlConstraints(allowed_schemes=["https"], host_required=True)
+]
 
 CurrencyCode = Annotated[
     str, Field(max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:-]*$")

@@ -4,7 +4,13 @@ from decimal import Decimal
 from typing import Annotated
 
 from papilio.schemas.inputs import BaseDTO
-from papilio.types.aliases import MStrType, PageType, PerPageType, SlugType
+from papilio.types.aliases import (
+    MediaUrlType,
+    MStrType,
+    PageType,
+    PerPageType,
+    SlugType,
+)
 from pydantic import Field
 from pydantic_core import MISSING
 
@@ -16,6 +22,7 @@ RialRate = Annotated[Decimal, Field(gt=0, max_digits=24, decimal_places=8)]
 class GatewayCreate(BaseDTO):
     key: SlugType
     title: MStrType
+    icon_url: MediaUrlType | None = None
     kind: SlugType
     price_currency: CurrencyCode
     pay_currency: CurrencyCode | None = None
@@ -25,6 +32,7 @@ class GatewayCreate(BaseDTO):
 
 class GatewayUpdate(BaseDTO):
     title: MStrType | MISSING = MISSING
+    icon_url: MediaUrlType | None | MISSING = MISSING
     price_currency: CurrencyCode | MISSING = MISSING
     pay_currency: CurrencyCode | None | MISSING = MISSING
     rial_rate: RialRate | MISSING = MISSING

@@ -11,14 +11,19 @@ from papilio.tools.checks import IDChecks
 from ...domain.dtos.records import GatewayCreate, GatewayList, GatewayUpdate
 from ...domain.models.records import CryptoGatewayModel
 from ...infra.pg.repositories.crud import CryptoGatewayRepository
+from ..decorators.configs import forget_cache
+from ..interfaces.cache import IGatewayConfigCache
 
 
 class CryptoGatewayService(IDChecks[CryptoGatewayModel]):
     entity = "CryptoGateway"
 
-    def __init__(self, repo: CryptoGatewayRepository) -> None:
+    def __init__(
+        self, repo: CryptoGatewayRepository, cache: IGatewayConfigCache
+    ) -> None:
         """Bind gateway persistence to the current request."""
         self.repo = repo
+        self.cache = cache
 
     @handle_conflicts
     @transactional
@@ -114,6 +119,7 @@ class CryptoGatewayService(IDChecks[CryptoGatewayModel]):
         gateway = await self.repo.update_by_id(id, changes)
         return self._check_for_id_existence(id, gateway)
 
+    @forget_cache.one
     @transactional
     async def remove(self, id: int) -> CryptoGatewayModel:
         """Remove a gateway with no payment history.

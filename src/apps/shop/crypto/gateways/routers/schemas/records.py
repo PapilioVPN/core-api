@@ -10,6 +10,7 @@ class GatewayOutput(BaseOutput):
     id: int
     key: str
     title: str
+    icon_url: str | None
     kind: str | None
     price_currency: str | None
     pay_currency: str | None
