@@ -14,8 +14,8 @@ from src.apps.shop.crypto.gateways.app.interfaces.services import (
     ICryptoGatewayService,
 )
 from src.apps.shop.crypto.gateways.domain.dtos.records import GatewayCreate
-from src.apps.shop.crypto.payments.app.interfaces.services import (
-    ICryptoPaymentService,
+from src.apps.shop.crypto.payments.app.commands.create import (
+    PaymentCreateCommand,
 )
 from src.apps.shop.crypto.payments.domain.dtos.records import PaymentCreate
 from src.apps.shop.crypto.payments.infra.pg.repositories.crud import (
@@ -36,18 +36,18 @@ async def test_create_payment(app: FastAPI, client: AsyncClient) -> None:
             GatewayCreate(kind="plisio", title="Inactive test")
         )
         active_id, inactive_id = active.id, inactive.id
-        service = await scope.get(ICryptoPaymentService)
+        command = await scope.get(PaymentCreateCommand)
 
         with pytest.raises(NotFoundException):
-            await service.create(PaymentCreate(gateway_id=2**63 - 1, amount=1))
+            await command.create(PaymentCreate(gateway_id=2**63 - 1, amount=1))
         with pytest.raises(ConflictException) as failure:
-            await service.create(
+            await command.create(
                 PaymentCreate(gateway_id=inactive_id, amount=1)
             )
         assert failure.value.message_code == "crypto_gateway_inactive"
 
         amount = 9_000_000_000
-        record = await service.create(
+        record = await command.create(
             PaymentCreate(gateway_id=active_id, amount=amount)
         )
         payment_id = record.id
