@@ -1,6 +1,6 @@
 """Issue hosted invoices and reconcile authenticated settlement notices."""
 
-from asyncio import timeout
+from asyncio import Semaphore, Task, TaskGroup, timeout
 from collections.abc import Mapping
 from datetime import timedelta
 from decimal import ROUND_UP, Decimal, localcontext
@@ -32,6 +32,7 @@ from ..interfaces.gateway import ICryptoInvoiceProbe, ICryptoPaymentGateway
 from ..interfaces.services import ICryptoPaymentService
 
 logger = getLogger(__name__)
+RECHECK_PARALLEL = 4
 
 
 def _quote(amount: int, rate: Decimal, places: int) -> Decimal:
@@ -201,6 +202,35 @@ class CryptoPaymentCommand:
             saved = await self.payments.settle(payment.id, status, observed.id)
         return saved
 
+    async def _probe(
+        self,
+        account: PlisioConfig,
+        invoice_id: str,
+        payment_id: int,
+        slots: Semaphore,
+    ) -> GatewayPayment | None:
+        """Read one invoice without a SQL transaction.
+
+        Args:
+            account: Materialized issuing account credentials.
+            invoice_id: Saved Plisio invoice identity.
+            payment_id: Internal identity for sanitized diagnostics.
+            slots: Shared capacity limit for this batch.
+
+        Returns:
+            Provider facts, or None for a recoverable failure or no outcome.
+        """
+        observed = None
+        async with slots:
+            try:
+                async with timeout(10):
+                    observed = await self.invoice_probe.read_invoice(
+                        account, invoice_id
+                    )
+            except (GatewayUnavailable, TimeoutError):
+                logger.warning("Cannot verify crypto payment %s", payment_id)
+        return observed
+
     async def recheck(self, *, limit: int, delay: int) -> int:
         """Check one due batch without holding SQL during provider requests.
 
@@ -237,17 +267,28 @@ class CryptoPaymentCommand:
                         if account.kind == "plisio":
                             accounts[gateway.id] = account
 
-        for payment in batch:
-            account = accounts.get(payment.gateway_id)
-            if account is None or payment.invoice_id is None:
-                continue
-            try:
-                async with timeout(10):
-                    observed = await self.invoice_probe.read_invoice(
-                        account, payment.invoice_id
+        slots = Semaphore(RECHECK_PARALLEL)
+        checks: list[
+            tuple[CryptoPaymentModel, Task[GatewayPayment | None]]
+        ] = []
+        async with TaskGroup() as group:
+            for payment in batch:
+                account = accounts.get(payment.gateway_id)
+                if account is not None and payment.invoice_id is not None:
+                    check = group.create_task(
+                        self._probe(
+                            account, payment.invoice_id, payment.id, slots
+                        )
                     )
-                if observed is not None:
+                    checks.append((payment, check))
+
+        for payment, check in checks:
+            observed = check.result()
+            if observed is not None:
+                try:
                     await self._apply(payment, observed)
-            except (GatewayUnavailable, ConflictException, TimeoutError):
-                logger.warning("Cannot verify crypto payment %s", payment.id)
+                except (GatewayUnavailable, ConflictException):
+                    logger.warning(
+                        "Cannot verify crypto payment %s", payment.id
+                    )
         return len(batch)

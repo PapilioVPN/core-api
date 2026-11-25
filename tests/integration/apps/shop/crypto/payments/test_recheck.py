@@ -1,5 +1,6 @@
 """Exercise bounded crypto reconciliation through the native application."""
 
+from asyncio import sleep
 from datetime import timedelta
 from decimal import Decimal
 from secrets import token_hex
@@ -96,6 +97,10 @@ async def test_recheck_limits_and_rotates(
                 ("transient", account.id, True, "pending", 601),
                 ("paid", account.id, True, "partial", 600),
                 ("cancelled", account.id, True, "pending", 599),
+                *(
+                    (f"waiting-{n}", account.id, True, "pending", 598 - n)
+                    for n in range(5)
+                ),
                 ("new", account.id, True, "pending", 0),
                 ("no-invoice", account.id, False, "pending", 700),
                 ("confirmed", account.id, True, "confirmed", 700),
@@ -114,16 +119,36 @@ async def test_recheck_limits_and_rotates(
                 )
 
     calls: list[str] = []
+    inflight = peak = 0
 
-    def provider(request: Request) -> Response:
+    async def provider(request: Request) -> Response:
+        nonlocal inflight, peak
         assert active_transaction() is None
         assert request.url.host == "api.plisio.net"
         assert request.url.params["api_key"] == "test-api-key"
         invoice = request.url.path.rsplit("/", 1)[1]
         name = invoice.removeprefix(f"{key}-")
         calls.append(name)
+        inflight += 1
+        peak = max(peak, inflight)
+        try:
+            await sleep(0.01)
+        finally:
+            inflight -= 1
         if name == "transient":
             response = Response(503)
+        elif name.startswith("waiting-"):
+            response = Response(
+                200,
+                json={
+                    "status": "success",
+                    "data": {
+                        "type": "invoice",
+                        "id": invoice,
+                        "status": "new",
+                    },
+                },
+            )
         elif name == "paid":
             response = Response(
                 200,
@@ -173,8 +198,13 @@ async def test_recheck_limits_and_rotates(
                 command = await scope.get(ICryptoPaymentCommand)
                 assert await command.recheck(limit=2, delay=300) == 2
                 assert sorted(calls) == ["paid", "paid-child", "transient"]
-                assert await command.recheck(limit=2, delay=300) == 1
-                assert calls[3:] == ["cancelled"]
+                assert peak == 2
+                assert await command.recheck(limit=6, delay=300) == 6
+                assert sorted(calls[3:]) == [
+                    "cancelled",
+                    *(f"waiting-{n}" for n in range(5)),
+                ]
+                assert peak == 4
                 assert await command.recheck(limit=2, delay=300) == 0
         finally:
             connection.client = original
