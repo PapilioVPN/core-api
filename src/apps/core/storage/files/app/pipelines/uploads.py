@@ -3,7 +3,6 @@
 from collections.abc import Awaitable, Callable
 
 from anyio.abc import ByteReceiveStream
-from papilio.infra.db.transaction import active_transaction
 
 from src.apps.core.storage.configs.domain.enums.backends import StorageBackend
 from src.apps.core.storage.files.app.helpers.urls import build_file_url
@@ -69,14 +68,10 @@ class FileUploadPipeline:
             Committed logical file and stable URL. Matching content is
             reused across destinations without another copy or configuration.
         Raises:
-            RuntimeError: Caller has an active SQL transaction; source remains
-                unread, so no SQL transaction spans staging or publication.
             Exception: Stream, limit, storage, configuration, collision and SQL
                 failures propagate. Staging is cleaned; published bytes survive
                 later SQL failure. The borrowed source is never closed here.
         """
-        if active_transaction() is not None:
-            raise RuntimeError("Upload requires its own SQL transaction")
         async with self.stager.stage(source, max_bytes=max_bytes) as staged:
             if validator is not None:
                 await validator(staged)

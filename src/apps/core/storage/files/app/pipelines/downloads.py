@@ -4,8 +4,6 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from papilio.infra.db.transaction import active_transaction
-
 from src.apps.core.storage.files.app.interfaces.downloads import (
     IFileDownloadExecution,
 )
@@ -48,12 +46,9 @@ class FileDownloadPipeline:
             buffered, rehashed or rewritten. Native context exit closes the
             stream on normal completion, consumer failure and cancellation.
         Raises:
-            RuntimeError: An ambient application transaction is active.
             Exception: Metadata/configuration and local/S3 errors propagate;
                 no records, current settings or physical bytes are modified.
         """
-        if active_transaction() is not None:
-            raise RuntimeError("Download cannot run inside a SQL transaction")
         prepared = await self.execution.prepare(id)
         metadata = prepared.metadata
         if prepared.s3_config is None:

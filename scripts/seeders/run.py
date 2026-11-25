@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from papilio.core.config import DatabaseConfig, get_settings
 from papilio.infra.db.connection import DBConnection
+from papilio.infra.db.tools.decorators import transactional
 from papilio.infra.db.uow import PGUnitOfWork
 
 from scripts.seeders.registry import Seed, registered_seeds, select_seeds
@@ -17,23 +18,23 @@ class SeedResult:
     inserted: int
 
 
+@transactional
 async def execute_seeds(
     unit: PGUnitOfWork, seeds: tuple[Seed, ...]
 ) -> list[SeedResult]:
     """Execute the prepared plan sequentially inside one native transaction.
 
     Args:
-        unit: Open PostgreSQL unit; an existing transaction is joined.
+        unit: Open PostgreSQL unit bound to the current execution.
         seeds: Ordered plan, prepared and validated before async execution.
 
     Returns:
         Per-module insert counts. Any failure rolls back the entire plan.
     """
     results: list[SeedResult] = []
-    async with unit.transaction():
-        for seed in seeds:
-            inserted = await seed.execute(unit)
-            results.append(SeedResult(seed.key, inserted))
+    for seed in seeds:
+        inserted = await seed.execute(unit)
+        results.append(SeedResult(seed.key, inserted))
     return results
 
 
