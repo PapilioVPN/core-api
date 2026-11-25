@@ -1,0 +1,1 @@
+"""Gateway PostgreSQL repositories."""

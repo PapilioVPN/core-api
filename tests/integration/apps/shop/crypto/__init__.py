@@ -1,0 +1,1 @@
+"""Shop crypto integration checks."""

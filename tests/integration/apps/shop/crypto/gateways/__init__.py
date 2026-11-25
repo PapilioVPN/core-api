@@ -1,0 +1,1 @@
+"""Gateway account integration checks."""
