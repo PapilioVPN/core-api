@@ -10,13 +10,11 @@ from .app.interfaces.configs import (
     IGatewayConfigService,
     IPlisioConfigQuery,
 )
-from .app.interfaces.queries import IGatewayMethodsQuery
 from .app.interfaces.services import ICryptoGatewayService
 from .app.queries.configs import GatewayConfigQuery
 from .app.queries.plisio import PlisioConfigQuery
 from .app.services.configs import GatewayConfigService
 from .app.services.crud import CryptoGatewayService
-from .infra.pg.readers.methods import GatewayMethodsReader
 from .infra.pg.repositories.configs import GatewayConfigRepository
 from .infra.pg.repositories.crud import CryptoGatewayRepository
 from .infra.redis.repositories.configs import GatewayConfigCache
@@ -27,7 +25,6 @@ class GatewayProvider(Provider):
 
     repo = provide(CryptoGatewayRepository)
     gateways = provide(CryptoGatewayService, provides=ICryptoGatewayService)
-    methods = provide(GatewayMethodsReader, provides=IGatewayMethodsQuery)
     config_repo = provide(GatewayConfigRepository)
     configs = provide(GatewayConfigService, provides=IGatewayConfigService)
     command = provide(GatewayConfigCommand)
