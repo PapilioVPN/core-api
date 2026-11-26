@@ -10,7 +10,7 @@ from ...domain.models.records import CardPrefixModel
 from ..interfaces.records import ICardPrefixService
 
 
-class CardPrefixCommand:
+class CardPrefixCreateCommand:
     def __init__(
         self, prefixes: ICardPrefixService, banks: IBankQuery
     ) -> None:
@@ -43,6 +43,23 @@ class CardPrefixCommand:
         await self.banks.get_by_id(data.bank_id)
         record = await self.prefixes.create(data)
         return record
+
+
+class CardPrefixUpdateCommand:
+    def __init__(
+        self, prefixes: ICardPrefixService, banks: IBankQuery
+    ) -> None:
+        """Bind prefix writes and bank reads in the current request.
+
+        Args:
+            prefixes: Owning prefix record service.
+            banks: Authoritative bank reference service.
+
+        Returns:
+            None.
+        """
+        self.prefixes = prefixes
+        self.banks = banks
 
     @transactional
     async def update(self, id: int, data: CardPrefixUpdate) -> CardPrefixModel:

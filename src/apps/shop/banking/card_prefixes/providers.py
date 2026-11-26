@@ -2,8 +2,15 @@
 
 from dishka import Provider, Scope, provide
 
-from .app.commands.records import CardPrefixCommand
-from .app.interfaces.records import ICardPrefixCommand, ICardPrefixService
+from .app.commands.records import (
+    CardPrefixCreateCommand,
+    CardPrefixUpdateCommand,
+)
+from .app.interfaces.records import (
+    ICardPrefixCreateCommand,
+    ICardPrefixService,
+    ICardPrefixUpdateCommand,
+)
 from .app.services.crud import CardPrefixService
 from .infra.pg.repositories.crud import CardPrefixRepository
 
@@ -13,4 +20,9 @@ class CardPrefixProvider(Provider):
 
     repo = provide(CardPrefixRepository)
     service = provide(CardPrefixService, provides=ICardPrefixService)
-    command = provide(CardPrefixCommand, provides=ICardPrefixCommand)
+    create_command = provide(
+        CardPrefixCreateCommand, provides=ICardPrefixCreateCommand
+    )
+    update_command = provide(
+        CardPrefixUpdateCommand, provides=ICardPrefixUpdateCommand
+    )

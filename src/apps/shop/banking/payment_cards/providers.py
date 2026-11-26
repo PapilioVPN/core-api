@@ -2,11 +2,12 @@
 
 from dishka import Provider, Scope, provide
 
-from .app.commands.records import CardCommand
-from .app.interfaces.commands import ICardCommand
+from .app.commands.records import CardCreateCommand, CardUpdateCommand
+from .app.interfaces.commands import ICardCreateCommand, ICardUpdateCommand
 from .app.interfaces.queries import ICardPickQuery
-from .app.interfaces.services import IPaymentCardService
+from .app.interfaces.services import ICardIssuerService, IPaymentCardService
 from .app.services.crud import PaymentCardService
+from .app.services.issuer import CardIssuerService
 from .infra.pg.readers.pick import CardPickReader
 from .infra.pg.repositories.crud import PaymentCardRepository
 
@@ -16,5 +17,7 @@ class CardProvider(Provider):
 
     repo = provide(PaymentCardRepository)
     service = provide(PaymentCardService, provides=IPaymentCardService)
-    command = provide(CardCommand, provides=ICardCommand)
+    issuer = provide(CardIssuerService, provides=ICardIssuerService)
+    create_command = provide(CardCreateCommand, provides=ICardCreateCommand)
+    update_command = provide(CardUpdateCommand, provides=ICardUpdateCommand)
     pick = provide(CardPickReader, provides=ICardPickQuery)

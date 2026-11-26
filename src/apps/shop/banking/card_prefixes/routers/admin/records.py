@@ -12,7 +12,11 @@ from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
 
-from ...app.interfaces.records import ICardPrefixCommand, ICardPrefixService
+from ...app.interfaces.records import (
+    ICardPrefixCreateCommand,
+    ICardPrefixService,
+    ICardPrefixUpdateCommand,
+)
 from ...domain.dtos.records import (
     CardPrefixCreate,
     CardPrefixList,
@@ -33,7 +37,7 @@ router = APIRouter(
 )
 async def post_card_prefix(
     data: CardPrefixCreate,
-    command: FromDishka[ICardPrefixCommand],
+    command: FromDishka[ICardPrefixCreateCommand],
 ) -> APIResponse[CardPrefixOutput, None]:
     """Create a unique card prefix under an existing bank.
 
@@ -163,7 +167,7 @@ async def get_card_prefix(
 async def patch_card_prefix(
     id: IdType,
     data: CardPrefixUpdate,
-    command: FromDishka[ICardPrefixCommand],
+    command: FromDishka[ICardPrefixUpdateCommand],
 ) -> APIResponse[CardPrefixOutput, None]:
     """Update supplied prefix fields after checking any new bank.
 

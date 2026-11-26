@@ -15,9 +15,11 @@ from src.apps.shop.banking.card_prefixes.domain.models.records import (
 )
 
 
-class ICardPrefixCommand(Protocol):
+class ICardPrefixCreateCommand(Protocol):
     async def create(self, data: CardPrefixCreate) -> CardPrefixModel: ...
 
+
+class ICardPrefixUpdateCommand(Protocol):
     async def update(
         self, id: int, data: CardPrefixUpdate
     ) -> CardPrefixModel: ...

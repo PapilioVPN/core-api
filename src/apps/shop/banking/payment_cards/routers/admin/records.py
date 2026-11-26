@@ -12,7 +12,7 @@ from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
 
-from ...app.interfaces.commands import ICardCommand
+from ...app.interfaces.commands import ICardCreateCommand, ICardUpdateCommand
 from ...app.interfaces.services import IPaymentCardService
 from ...domain.dtos.records import CardCreate, CardList, CardUpdate
 from ..schemas.records import CardOutput
@@ -26,7 +26,7 @@ router = APIRouter(
 
 @router.post("", status_code=201)
 async def post_card(
-    data: CardCreate, command: FromDishka[ICardCommand]
+    data: CardCreate, command: FromDishka[ICardCreateCommand]
 ) -> APIResponse[CardOutput, None]:
     card = await command.create(data)
     return APIResponse[CardOutput, None].from_data(CardOutput.from_obj(card))
@@ -64,7 +64,7 @@ async def get_card(
 
 @router.patch("/{id:int}")
 async def patch_card(
-    id: IdType, data: CardUpdate, command: FromDishka[ICardCommand]
+    id: IdType, data: CardUpdate, command: FromDishka[ICardUpdateCommand]
 ) -> APIResponse[CardOutput, None]:
     card = await command.update(id, data)
     return APIResponse[CardOutput, None].from_data(CardOutput.from_obj(card))

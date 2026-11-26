@@ -1,29 +1,28 @@
 """Resolve the issuer of a receiving card before storing its number."""
 
-from papilio.errors.exceptions import ValidationException
 from papilio.infra.db.tools.decorators import transactional
 from pydantic_core import MISSING
 
-from src.apps.shop.banking.banks.app.interfaces.queries import IBankQuery
-
 from ...domain.dtos.records import CardCreate, CardUpdate
 from ...domain.models.records import PaymentCardModel
-from ..interfaces.services import IPaymentCardService
+from ..interfaces.services import ICardIssuerService, IPaymentCardService
 
 
-class CardCommand:
-    def __init__(self, cards: IPaymentCardService, banks: IBankQuery) -> None:
+class CardCreateCommand:
+    def __init__(
+        self, cards: IPaymentCardService, issuer: ICardIssuerService
+    ) -> None:
         """Bind card configuration to its request.
 
         Args:
             cards: Owning card record service.
-            banks: Authoritative offline bank lookup.
+            issuer: Authoritative active bank lookup.
 
         Returns:
             None.
         """
         self.cards = cards
-        self.banks = banks
+        self.issuer = issuer
 
     @transactional
     async def create(self, data: CardCreate) -> PaymentCardModel:
@@ -39,7 +38,7 @@ class CardCommand:
             ValidationException: No active issuer and prefix match the number.
             ConflictException: This card number is already registered.
         """
-        bank_id = await self._bank_id(data.card_number)
+        bank_id = await self.issuer.resolve(data.card_number)
         card = await self.cards.create(
             PaymentCardModel(
                 bank_id=bank_id,
@@ -51,6 +50,23 @@ class CardCommand:
             )
         )
         return card
+
+
+class CardUpdateCommand:
+    def __init__(
+        self, cards: IPaymentCardService, issuer: ICardIssuerService
+    ) -> None:
+        """Bind card configuration to its request.
+
+        Args:
+            cards: Owning card record service.
+            issuer: Authoritative active bank lookup.
+
+        Returns:
+            None.
+        """
+        self.cards = cards
+        self.issuer = issuer
 
     @transactional
     async def update(self, id: int, data: CardUpdate) -> PaymentCardModel:
@@ -65,32 +81,7 @@ class CardCommand:
         """
         changes = data.to_row()
         if data.card_number is not MISSING:
-            bank_id = await self._bank_id(data.card_number)
+            bank_id = await self.issuer.resolve(data.card_number)
             changes = {**changes, "bank_id": bank_id}
         card = await self.cards.update(id, PaymentCardModel.patch(**changes))
         return card
-
-    async def _bank_id(self, number: str) -> int:
-        """Resolve the active issuer of a card.
-
-        Args:
-            number: Locally validated 16-digit card number.
-
-        Returns:
-            The matching active bank identity.
-
-        Raises:
-            ValidationException: The bank or prefix is absent or inactive.
-        """
-        match = await self.banks.find_by_prefix(number[:8])
-        if (
-            match is None
-            or not match.is_prefix_active
-            or not match.bank.is_active
-        ):
-            raise ValidationException(
-                message="No active bank matches this card number.",
-                message_code="unknown_card_issuer",
-                loc=["body", "card_number"],
-            )
-        return match.bank.id
