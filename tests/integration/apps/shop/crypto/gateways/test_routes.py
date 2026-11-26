@@ -178,7 +178,11 @@ async def test_gateway_config(
             "api_key": values["api_key"],
         },
     )
-    assert mismatch.status_code == 409
+    assert mismatch.status_code == 400
+    error = mismatch.json()["error"]
+    assert error["message_code"] == "crypto_gateway_kind_mismatch"
+    assert error["loc"] == ["kind"]
+    assert values["api_key"] not in mismatch.text
     saved = await client.put(path, headers=headers, json=values)
     assert saved.is_success, saved.text
     expected = {

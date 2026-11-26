@@ -6,7 +6,11 @@ import pytest
 from dishka import AsyncContainer
 from fastapi import FastAPI
 from httpx import AsyncClient
-from papilio.errors.exceptions import ConflictException, NotFoundException
+from papilio.errors.exceptions import (
+    ConflictException,
+    NotFoundException,
+    ValidationException,
+)
 from papilio.infra.db.transaction import transaction
 from pydantic import ValidationError
 
@@ -40,11 +44,12 @@ async def test_create_payment(app: FastAPI, client: AsyncClient) -> None:
 
         with pytest.raises(NotFoundException):
             await command.create(PaymentCreate(gateway_id=2**63 - 1, amount=1))
-        with pytest.raises(ConflictException) as failure:
+        with pytest.raises(ValidationException) as failure:
             await command.create(
                 PaymentCreate(gateway_id=inactive_id, amount=1)
             )
         assert failure.value.message_code == "crypto_gateway_inactive"
+        assert failure.value.loc == ["gateway_id"]
 
         amount = 9_000_000_000
         record = await command.create(

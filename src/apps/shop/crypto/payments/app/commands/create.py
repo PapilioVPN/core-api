@@ -1,6 +1,6 @@
 """Register a local payment with an active gateway."""
 
-from papilio.errors.exceptions import ConflictException
+from papilio.errors.exceptions import ValidationException
 from papilio.infra.db.tools.decorators import transactional
 
 from src.apps.shop.crypto.gateways.app.interfaces.services import (
@@ -32,14 +32,15 @@ class PaymentCreateCommand:
 
         Raises:
             NotFoundException: The gateway does not exist.
-            ConflictException: The gateway does not accept new payments.
+            ValidationException: The gateway does not accept new payments.
         """
         gateway = await self.gateways.get_by_id(data.gateway_id)
         if not gateway.is_active:
-            raise ConflictException(
+            raise ValidationException(
                 message="This gateway does not accept new payments.",
                 message_code="crypto_gateway_inactive",
-                unique_dict={"gateway_id": gateway.id},
+                loc=["gateway_id"],
+                input=data.gateway_id,
             )
         payment = await self.payments.create(
             CryptoPaymentModel(gateway_id=gateway.id, amount=data.amount)

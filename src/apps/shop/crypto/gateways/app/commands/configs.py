@@ -1,7 +1,7 @@
 """Prepare gateway connection settings before writing them."""
 
 from papilio.core.config import CryptoConfig
-from papilio.errors.exceptions import ConflictException
+from papilio.errors.exceptions import ValidationException
 from papilio.security.crypto import encrypt
 from pydantic import JsonValue
 
@@ -36,15 +36,16 @@ class GatewayConfigCommand:
 
         Raises:
             NotFoundException: The account does not exist.
-            ConflictException: The input targets a different provider.
+            ValidationException: The input targets a different provider.
             ConfigUnavailable: A private deployment key is not configured.
         """
         gateway = await self.gateways.get_by_id(id)
         if gateway.kind != data.kind:
-            raise ConflictException(
+            raise ValidationException(
                 message="Configuration does not match the gateway provider.",
                 message_code="crypto_gateway_kind_mismatch",
-                unique_dict={"gateway_id": id},
+                loc=["kind"],
+                input=data.kind,
             )
         key = self.crypto.encryption_key
         if not key.strip() or key == "replace-with-private-encryption-key":
