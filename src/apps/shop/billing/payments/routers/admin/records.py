@@ -9,7 +9,11 @@ from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
 
-from ...app.interfaces.commands import IPaymentCommand, IPaymentReviewCommand
+from ...app.interfaces.commands import (
+    IPaymentConfirmCommand,
+    IPaymentCreateCommand,
+    IPaymentRejectCommand,
+)
 from ...app.interfaces.queries import IPaymentQuery
 from ...domain.dtos.records import PaymentCreate
 from ...domain.dtos.review import PaymentReview
@@ -29,7 +33,7 @@ router = APIRouter(
 
 @router.post("", status_code=201)
 async def post_payment(
-    data: PaymentCreate, command: FromDishka[IPaymentCommand]
+    data: PaymentCreate, command: FromDishka[IPaymentCreateCommand]
 ) -> APIResponse[PaymentOutput, None]:
     payment = await command.create(data)
     output = PaymentOutput.from_obj(payment)
@@ -49,11 +53,12 @@ async def get_payment(
 async def patch_payment_review(
     id: IdType,
     data: PaymentReview,
-    command: FromDishka[IPaymentReviewCommand],
+    confirm: FromDishka[IPaymentConfirmCommand],
+    reject: FromDishka[IPaymentRejectCommand],
 ) -> APIResponse[PaymentReviewOutput, None]:
     if data.status == PaymentStatus.CONFIRMED:
-        payment = await command.confirm(id)
+        payment = await confirm.confirm(id)
     else:
-        payment = await command.reject(id, reason=data.reason)
+        payment = await reject.reject(id, reason=data.reason)
     output = PaymentReviewOutput.from_obj(payment)
     return APIResponse[PaymentReviewOutput, None].from_data(output)

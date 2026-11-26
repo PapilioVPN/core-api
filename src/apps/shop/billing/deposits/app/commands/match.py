@@ -9,7 +9,7 @@ from src.apps.shop.billing.payment_settings.app.interfaces.services import (
     IPaymentSettingsService,
 )
 from src.apps.shop.billing.payments.app.interfaces.commands import (
-    IPaymentReviewCommand,
+    IPaymentAutoConfirmCommand,
 )
 
 from ...domain.models.records import DepositModel
@@ -21,7 +21,7 @@ class DepositMatchCommand:
         self,
         deposits: IDepositService,
         settings: IPaymentSettingsService,
-        payments: IPaymentReviewCommand,
+        payments: IPaymentAutoConfirmCommand,
     ) -> None:
         """Bind the record and review owners to the worker request."""
         self.deposits = deposits

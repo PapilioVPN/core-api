@@ -2,7 +2,6 @@
 
 from datetime import datetime
 
-from papilio.errors.exceptions import ConflictException
 from papilio.infra.db.tools.decorators import transactional
 from papilio.utils.dates import utc_now
 from papilio_tasks.apps.outbox import OutboxWriter
@@ -15,11 +14,11 @@ from ...infra.broker.publishers import payment_confirmed, payment_rejected
 from ..interfaces.services import IPaymentService
 
 
-class PaymentReviewCommand:
+class PaymentConfirmCommand:
     def __init__(
         self, payments: IPaymentService, outbox: OutboxWriter
     ) -> None:
-        """Bind payment writes and the native writer to the request."""
+        """Bind payment records and the native outbox to this request."""
         self.payments = payments
         self.outbox = outbox
 
@@ -27,10 +26,19 @@ class PaymentReviewCommand:
     @outbox.publish(payment_confirmed, select=PaymentEvent.from_record)
     async def confirm(self, id: int) -> PaymentModel:
         """Confirm a pending payment and register its event."""
-        payment = await self._review(
+        payment = await self.payments.review(
             id, PaymentStatus.CONFIRMED, confirmed_at=utc_now()
         )
         return payment
+
+
+class PaymentAutoConfirmCommand:
+    def __init__(
+        self, payments: IPaymentService, outbox: OutboxWriter
+    ) -> None:
+        """Bind payment writes and the native writer to the request."""
+        self.payments = payments
+        self.outbox = outbox
 
     @transactional
     async def confirm_auto(
@@ -46,34 +54,22 @@ class PaymentReviewCommand:
             )
         return payment
 
+
+class PaymentRejectCommand:
+    def __init__(
+        self, payments: IPaymentService, outbox: OutboxWriter
+    ) -> None:
+        """Bind payment records and the native outbox to this request."""
+        self.payments = payments
+        self.outbox = outbox
+
     @transactional
     @outbox.publish(payment_rejected, select=PaymentEvent.from_record)
     async def reject(
         self, id: int, *, reason: str | None = None
     ) -> PaymentModel:
         """Reject a pending payment and register its event."""
-        payment = await self._review(
+        payment = await self.payments.review(
             id, PaymentStatus.REJECTED, confirmed_at=None, reason=reason
         )
-        return payment
-
-    async def _review(
-        self,
-        id: int,
-        status: PaymentStatus,
-        *,
-        confirmed_at: datetime | None,
-        reason: str | None = None,
-    ) -> PaymentModel:
-        """Apply the decision or distinguish absence from a replay."""
-        payment = await self.payments.review(
-            id, status, confirmed_at=confirmed_at, reason=reason
-        )
-        if payment is None:
-            await self.payments.get_by_id(id)
-            raise ConflictException(
-                message="The payment has already been reviewed",
-                message_code="payment_already_reviewed",
-                unique_dict={"id": id},
-            )
         return payment

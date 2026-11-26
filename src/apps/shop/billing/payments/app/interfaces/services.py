@@ -3,6 +3,8 @@
 from datetime import datetime
 from typing import Protocol
 
+from src.apps.shop.billing.receipts.domain.models.records import ReceiptModel
+
 from ...domain.enums.records import PaymentStatus
 from ...domain.models.records import PaymentModel
 
@@ -31,4 +33,16 @@ class IPaymentService(Protocol):
         *,
         confirmed_at: datetime | None,
         reason: str | None = None,
-    ) -> PaymentModel | None: ...
+    ) -> PaymentModel: ...
+
+
+class IPaymentRegistrationService(Protocol):
+    async def create_receipt(self, image_url: str) -> ReceiptModel: ...
+
+    async def create_manual(
+        self, amount: int, image_url: str
+    ) -> PaymentModel: ...
+
+    async def reserve_auto(
+        self, amount: int, digits: int, *, receipt_id: int | None = None
+    ) -> PaymentModel: ...

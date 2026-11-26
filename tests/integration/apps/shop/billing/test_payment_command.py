@@ -12,7 +12,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 
 from src.apps.shop.billing.payments.app.interfaces.commands import (
-    IPaymentCommand,
+    IPaymentCreateCommand,
 )
 from src.apps.shop.billing.payments.domain.dtos.records import PaymentCreate
 from src.apps.shop.billing.payments.domain.enums.records import PaymentStatus
@@ -35,7 +35,7 @@ async def test_create_payment(app: FastAPI) -> None:
     async with app.router.lifespan_context(app):
         container = cast(AsyncContainer, app.state.dishka_container)
         async with container() as scope:
-            command = await scope.get(IPaymentCommand)
+            command = await scope.get(IPaymentCreateCommand)
             payment = await command.create(data)
         receipt_id = payment.receipt_id
         assert receipt_id is not None
@@ -102,7 +102,7 @@ async def test_payment_failure_rolls_back_receipt(
 
         async with container() as scope:
             payments = await scope.get(PaymentRepository)
-            command = await scope.get(IPaymentCommand)
+            command = await scope.get(IPaymentCreateCommand)
             create = payments.create
 
             async def create_twice(data: PaymentModel) -> PaymentModel:

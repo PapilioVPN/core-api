@@ -2,6 +2,7 @@
 
 from datetime import datetime
 
+from papilio.errors.exceptions import ConflictException
 from papilio.infra.db.tools.decorators import transactional
 from papilio.tools.checks import IDChecks
 from papilio.utils.dates import utc_now
@@ -66,7 +67,7 @@ class PaymentService(IDChecks[PaymentModel]):
         *,
         confirmed_at: datetime | None,
         reason: str | None = None,
-    ) -> PaymentModel | None:
+    ) -> PaymentModel:
         """Apply a prepared decision to a pending payment.
 
         Args:
@@ -76,7 +77,11 @@ class PaymentService(IDChecks[PaymentModel]):
             reason: Optional explanation for a rejection.
 
         Returns:
-            The updated payment, or None when no pending record matches.
+            The updated payment.
+
+        Raises:
+            NotFoundException: No payment has this identity.
+            ConflictException: The payment has already been reviewed.
         """
         payment = await self.repo.review(
             id,
@@ -84,4 +89,11 @@ class PaymentService(IDChecks[PaymentModel]):
             confirmed_at=confirmed_at,
             reason=reason,
         )
+        if payment is None:
+            await self.get_by_id(id)
+            raise ConflictException(
+                message="The payment has already been reviewed",
+                message_code="payment_already_reviewed",
+                unique_dict={"id": id},
+            )
         return payment
