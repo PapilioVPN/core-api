@@ -36,6 +36,13 @@ class PaymentService(IDChecks[PaymentModel]):
         payment = await self.repo.get_by_id(id)
         return self._check_for_id_existence(id, payment)
 
+    async def attach_receipt(
+        self, id: int, receipt_id: int
+    ) -> PaymentModel | None:
+        """Attach evidence inside the owning receipt transaction."""
+        payment = await self.repo.attach_receipt(id, receipt_id)
+        return payment
+
     async def create_auto(
         self, data: PaymentModel, digits: int
     ) -> PaymentModel | None:

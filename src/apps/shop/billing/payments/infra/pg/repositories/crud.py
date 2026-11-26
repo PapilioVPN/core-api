@@ -31,6 +31,21 @@ from ..tables import PaymentTable
 class PaymentRepository(PGPersistenceRepository[PaymentModel]):
     table = PaymentTable
 
+    async def attach_receipt(
+        self, id: int, receipt_id: int
+    ) -> PaymentModel | None:
+        """Attach the first receipt only while the payment is pending."""
+        table = self.table
+        rows = await self.update(
+            and_(
+                col(table.id) == id,
+                col(table.status) == PaymentStatus.PENDING,
+                col(table.receipt_id).is_(None),
+            ),
+            {"receipt_id": receipt_id},
+        )
+        return rows[0] if rows else None
+
     async def create_auto(
         self, data: PaymentModel, digits: int
     ) -> PaymentModel | None:

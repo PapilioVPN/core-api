@@ -10,6 +10,14 @@ from ...domain.models.records import PaymentModel
 class IPaymentCommand(Protocol):
     async def create(self, data: PaymentCreate) -> PaymentModel: ...
 
+    async def create_manual(
+        self, amount: int, image_url: str
+    ) -> PaymentModel: ...
+
+    async def attach_receipt(
+        self, id: int, image_url: str
+    ) -> PaymentModel: ...
+
     async def reserve_auto(
         self, amount: int, digits: int, *, receipt_id: int | None = None
     ) -> PaymentModel: ...

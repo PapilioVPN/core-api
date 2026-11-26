@@ -12,6 +12,10 @@ class IPaymentService(Protocol):
 
     async def get_by_id(self, id: int) -> PaymentModel: ...
 
+    async def attach_receipt(
+        self, id: int, receipt_id: int
+    ) -> PaymentModel | None: ...
+
     async def create_auto(
         self, data: PaymentModel, digits: int
     ) -> PaymentModel | None: ...
