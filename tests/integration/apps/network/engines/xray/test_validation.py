@@ -136,7 +136,7 @@ async def node_process(
                 await process.communicate()
 
 
-async def test_xray_validates_candidate_without_applying_it(
+async def test_native_xray_validation_and_status(
     node_process: tuple[int, int, trustme.CA, Path],
     pg: CoreSettings,
     app: FastAPI,
@@ -171,6 +171,7 @@ async def test_xray_validates_candidate_without_applying_it(
         }
     )
     url = f"/admin/nodes/{row.id}/xray/instances/edge/config-validations"
+    panel_status = url.removesuffix("/config-validations")
     host_reply = await client.get(
         f"/admin/nodes/{row.id}/host-stats", headers=headers
     )
@@ -188,6 +189,16 @@ async def test_xray_validates_candidate_without_applying_it(
         before = await node_http.get(status_url)
         assert before.status_code == 200, before.text
         assert before.json()["state"] == "stopped"
+        observed = await client.get(panel_status, headers=headers)
+        assert observed.status_code == 200, observed.text
+        data = observed.json()["data"]
+        assert data["status"] == "observed"
+        assert data["instance"]["state"] == "stopped"
+        assert data["instance"]["applied_config_sha256"] is None
+        missing = await client.get(
+            panel_status.removesuffix("/edge") + "/missing", headers=headers
+        )
+        assert missing.json()["data"]["status"] == "instance_not_found"
 
         candidate = '{ "outbounds": [{"protocol":"freedom","tag":"new"}] }\n'
         reply = await client.post(
@@ -200,6 +211,24 @@ async def test_xray_validates_candidate_without_applying_it(
             "config_sha256": sha256(candidate.encode()).hexdigest(),
             "status": "valid",
             "issue": None,
+        }
+
+        stored = await client.post(
+            "/admin/xray/revisions",
+            headers=headers,
+            json={"config_json": candidate},
+        )
+        assert stored.status_code == 201, stored.text
+        revision = stored.json()["data"]
+        revision_url = url.replace(
+            "/config-validations",
+            f"/config-revisions/{revision['id']}/validations",
+        )
+        saved_reply = await client.post(revision_url, headers=headers)
+        assert saved_reply.status_code == 200, saved_reply.text
+        assert saved_reply.json()["data"] == {
+            "revision_id": revision["id"],
+            "validation": reply.json()["data"],
         }
 
         for proposal, expected in (
@@ -231,3 +260,16 @@ async def test_xray_validates_candidate_without_applying_it(
         after = await node_http.get(status_url)
         assert after.json() == before.json()
         assert configured.read_bytes() == configured_bytes
+
+        # Change lifecycle only in the isolated test, not through Core.
+        launched = await node_http.put(f"{status_url}/execution", timeout=10)
+        assert launched.status_code == 200, launched.text
+        observed = await client.get(panel_status, headers=headers)
+        assert observed.status_code == 200, observed.text
+        engine = observed.json()["data"]["instance"]
+        assert engine["state"] == "ready"
+        assert engine["xray_version"] and engine["node_version"]
+        assert (
+            engine["applied_config_sha256"]
+            == sha256(configured_bytes).hexdigest()
+        )

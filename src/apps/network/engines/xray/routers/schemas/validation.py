@@ -17,3 +17,8 @@ class XrayConfigValidationOutput(BaseOutput):
     config_sha256: str
     status: XrayValidationStatus
     issue: XrayValidationIssueOutput | None
+
+
+class XrayRevisionValidationOutput(BaseOutput):
+    revision_id: int
+    validation: XrayConfigValidationOutput

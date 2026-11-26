@@ -10,16 +10,21 @@ from ...domain.results.validation import (
     XrayConfigValidation,
     XrayValidationOutcome,
 )
+from ..interfaces.revisions import IXrayRevisionService
 from ..interfaces.validation import IXrayConfigGateway
 
 
 class XrayConfigValidationService:
     def __init__(
-        self, nodes: INodeService, gateway: IXrayConfigGateway
+        self,
+        nodes: INodeService,
+        gateway: IXrayConfigGateway,
+        revisions: IXrayRevisionService,
     ) -> None:
         """Bind the registry and the Xray-native validation gateway."""
         self.nodes = nodes
         self.gateway = gateway
+        self.revisions = revisions
 
     async def validate(
         self,
@@ -40,8 +45,39 @@ class XrayConfigValidationService:
         Raises:
             NotFoundException: The node ID is absent from the registry.
         """
-        node = await self.nodes.get_by_id(node_id)
         source = candidate.config_json
+        result = await self._validate(
+            node_id, instance_id, source, sha256(source).hexdigest()
+        )
+        return result
+
+    async def validate_revision(
+        self, node_id: int, instance_id: str, revision_id: int
+    ) -> XrayConfigValidation:
+        """Dry-run the exact stored revision, without a caller-supplied body.
+
+        Args:
+            node_id: Stable registered node identity.
+            instance_id: Native Xray instance ID on that node.
+            revision_id: Stable immutable revision identity.
+
+        Returns:
+            The outcome for the stored digest on the selected instance.
+
+        Raises:
+            NotFoundException: The node or revision is absent.
+            XrayRevisionSourceUnavailable: The source cannot be recovered.
+        """
+        revision = await self.revisions.get_source(revision_id)
+        result = await self._validate(
+            node_id, instance_id, revision.config_json, revision.config_sha256
+        )
+        return result
+
+    async def _validate(
+        self, node_id: int, instance_id: str, source: bytes, digest: str
+    ) -> XrayConfigValidation:
+        node = await self.nodes.get_by_id(node_id)
         if node.is_enabled:
             outcome = await self.gateway.validate(
                 node_id=node_id,
@@ -55,7 +91,7 @@ class XrayConfigValidationService:
         return XrayConfigValidation(
             node_id,
             instance_id,
-            sha256(source).hexdigest(),
+            digest,
             outcome.status,
             outcome.issue,
         )

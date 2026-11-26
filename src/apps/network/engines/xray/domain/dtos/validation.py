@@ -1,14 +1,8 @@
 """Inputs for a dry run of proposed Xray JSON on a registered node."""
 
-from typing import Annotated
-
 from papilio.schemas.inputs import BaseDTO
-from pydantic import Field, StringConstraints, field_validator
+from pydantic import Field, field_validator
 from pydantic_core import PydanticCustomError
-
-type XrayInstanceID = Annotated[
-    str, StringConstraints(pattern=r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$")
-]
 
 # Node's runconfig.MaxSourceBytes in the pinned v1 contract.
 _MAX_SOURCE_BYTES = 1 << 20

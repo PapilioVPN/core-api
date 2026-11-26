@@ -47,8 +47,6 @@ redis: null
 #       port: 8081
 #       api_key: replace-with-private-node-key
 #       # ca_pem: |  # Optional private CA PEM. Otherwise use default trust.
-# xray:
-#   validation_timeout_seconds: 5
 # Configure hosted gateway accounts through the Shop admin API.
 cli:
   color: true

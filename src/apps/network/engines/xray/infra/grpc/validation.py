@@ -5,12 +5,14 @@ from grpc.aio import AioRpcError
 
 from src.apps.network.nodes.infra.grpc.channels import NodeChannels
 
-from ...config import XrayConfig
 from ...domain.enums.validation import XrayValidationStatus
 from ...domain.results.validation import XrayValidationOutcome
 from .codec import decode_validation
 from .v1.configs_pb2 import ValidateXrayConfigRequest, XrayConfigValidation
 from .v1.configs_pb2_grpc import XrayConfigsServiceStub
+
+# Leave one second for transport beyond Node's four-second validation budget.
+_VALIDATION_DEADLINE_SECONDS = 5
 
 _RPC_OUTCOMES = {
     StatusCode.NOT_FOUND: XrayValidationStatus.INSTANCE_NOT_FOUND,
@@ -25,10 +27,9 @@ _RPC_OUTCOMES = {
 
 
 class XrayConfigGateway:
-    def __init__(self, channels: NodeChannels, config: XrayConfig) -> None:
-        """Borrow Node channels and keep the validation-specific deadline."""
+    def __init__(self, channels: NodeChannels) -> None:
+        """Borrow the shared Node management channels."""
         self.channels = channels
-        self.config = config
 
     async def validate(
         self,
@@ -64,7 +65,7 @@ class XrayConfigGateway:
                     ValidateXrayConfigRequest(
                         id=instance_id, config_json=source
                     ),
-                    timeout=self.config.validation_timeout_seconds,
+                    timeout=_VALIDATION_DEADLINE_SECONDS,
                 )
             except AioRpcError as error:
                 status = _RPC_OUTCOMES.get(

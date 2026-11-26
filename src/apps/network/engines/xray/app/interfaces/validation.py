@@ -28,3 +28,7 @@ class IXrayConfigValidation(Protocol):
         instance_id: str,
         candidate: XrayConfigCandidate,
     ) -> XrayConfigValidation: ...
+
+    async def validate_revision(
+        self, node_id: int, instance_id: str, revision_id: int
+    ) -> XrayConfigValidation: ...
