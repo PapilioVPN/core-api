@@ -71,7 +71,7 @@ select = ["E", "F", "I", "W"]
 include = ["src", "tests"]
 ignore = [
     "src/apps/network/nodes/infra/grpc/v1/host_pb2_grpc.py",
-    "src/apps/network/engines/xray/infra/grpc/v1/configs_pb2_grpc.py",
+    "src/apps/network/engines/xray/infra/grpc/v1/*_pb2_grpc.py",
 ]
 pythonVersion = "3.13"
 typeCheckingMode = "standard"

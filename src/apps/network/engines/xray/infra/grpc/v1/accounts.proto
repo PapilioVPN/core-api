@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+package papiliovpn.node.xray.accounts.v1;
+option go_package = "github.com/PapilioVPN/node/internal/engines/xray/accounts/bridge/grpc/proto/v1;accountsv1";
+
+import "google/protobuf/empty.proto";
+
+service XrayAccountsService {
+  // Reconciles one account by email. Absent credentials request removal.
+  rpc SyncUser(SyncUserRequest) returns (SyncResult);
+  // Reconciles multiple named users of one scope after a clean client half-close.
+  rpc SyncUserStream(stream SyncUserRequest) returns (SyncResult);
+  // Replaces the complete named membership of the selected inbound.
+  rpc SyncUsers(SyncUsersRequest) returns (SyncResult);
+  // Applies explicit deltas after the final chunk and a clean client half-close.
+  rpc SyncUsersChunked(stream UsersChunk) returns (SyncResult);
+  // Adds one live VLESS account with default Xray level and empty flow.
+  rpc AddVLESSAccount(AddVLESSAccountRequest) returns (google.protobuf.Empty);
+  // Removes one live VLESS account by its native case-insensitive email.
+  rpc RemoveVLESSAccount(RemoveVLESSAccountRequest) returns (google.protobuf.Empty);
+  // Counts named users of the selected live VLESS inbound.
+  rpc CountVLESSAccounts(CountVLESSAccountsRequest) returns (CountVLESSAccountsResponse);
+}
+
+message AddVLESSAccountRequest {
+  string id = 1;
+  string inbound_tag = 2;
+  string email = 3;
+  string uuid = 4;
+}
+
+message RemoveVLESSAccountRequest {
+  string id = 1;
+  string inbound_tag = 2;
+  string email = 3;
+}
+
+message CountVLESSAccountsRequest {
+  string id = 1;
+  string inbound_tag = 2;
+}
+
+message CountVLESSAccountsResponse {
+  int64 count = 1;
+}
+
+message SyncUserRequest {
+  string id = 1;
+  string inbound_tag = 2;
+  string email = 3;
+  optional string uuid = 4;
+  optional string flow = 5;
+  Credential credential = 6;
+  // Use inbound_tags with assignments, or inbound_tag with one credential.
+  repeated string inbound_tags = 7;
+  repeated Assignment assignments = 8;
+}
+
+message SyncResult {
+  // confirmed, partial, unknown or not_applied
+  string outcome = 1;
+  uint32 added = 2;
+  uint32 removed = 3;
+  // A fixed failure code. Empty on confirmation.
+  string failure = 4;
+}
+
+message VLESSAccount {
+  string email = 1;
+  optional string uuid = 2;
+  optional string flow = 3;
+  Credential credential = 4;
+  repeated Assignment assignments = 5;
+}
+
+message VLESSAccounts {
+  repeated VLESSAccount accounts = 1;
+}
+
+message SyncUsersRequest {
+  string id = 1;
+  string inbound_tag = 2;
+  // Required. An explicitly empty snapshot clears named membership.
+  VLESSAccounts snapshot = 3;
+  // With no inbound_tag, replaces named membership of each selected inbound.
+  repeated string inbound_tags = 4;
+}
+
+message UsersChunk {
+  // Repeat the same scope in every chunk.
+  string id = 1;
+  string inbound_tag = 2;
+  // Consecutive indices starting at zero.
+  uint32 index = 3;
+  bool last = 4;
+  // An absent credential and uuid remove only that named account.
+  repeated VLESSAccount accounts = 5;
+  // For multiple inbounds, repeat this same ordered selection in each chunk.
+  repeated string inbound_tags = 6;
+}
+
+message Credential {
+  // vless, vmess, trojan, shadowsocks, shadowsocks2022, hysteria, masque, wireguard
+  string protocol = 1;
+  string uuid = 2;
+  // VLESS only. Explicit empty clears flow. Omission preserves a matching account.
+  optional string flow = 3;
+  string password = 4;
+  string method = 5;
+  // The SS2022 per-user key in standard base64, sized for the inbound cipher.
+  string key = 6;
+  string auth = 7;
+  WireGuardPeer peer = 8;
+}
+
+message WireGuardPeer {
+  string public_key = 1;
+  string pre_shared_key = 2;
+  repeated string allowed_ips = 3;
+  uint32 keep_alive = 4;
+}
+
+// Each assignment supplies a credential to one tag in the request scope.
+// Other selected tags omit this named account.
+message Assignment {
+  string inbound_tag = 1;
+  Credential credential = 2;
+}
