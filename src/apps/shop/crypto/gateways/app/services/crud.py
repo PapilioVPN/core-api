@@ -7,6 +7,7 @@ from papilio.schemas.results import PagedType
 from papilio.tools.checks import IDChecks
 
 from ...domain.dtos.records import GatewayCreate, GatewayList, GatewayUpdate
+from ...domain.dtos.validators.limits import invalid_limits
 from ...domain.models.records import CryptoGatewayModel
 from ...infra.pg.repositories.crud import CryptoGatewayRepository
 from ..decorators.configs import forget_cache
@@ -98,11 +99,14 @@ class CryptoGatewayService(IDChecks[CryptoGatewayModel]):
 
         Raises:
             NotFoundException: The account does not exist.
-            ValidationException: No recognized changes were supplied.
+            ValidationException: The patch is empty or its limits conflict.
         """
         changes = self._check_not_empty_dict(data.to_row())
         gateway = await self.repo.update_by_id(id, changes)
-        return self._check_for_id_existence(id, gateway)
+        if gateway is None:
+            await self.get_by_id(id)
+            raise invalid_limits()
+        return gateway
 
     @forget_cache.one
     @transactional

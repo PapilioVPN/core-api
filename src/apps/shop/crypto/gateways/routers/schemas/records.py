@@ -9,3 +9,5 @@ class GatewayOutput(BaseOutput):
     title: str
     icon_url: str | None
     is_active: bool
+    min_amount: int | None
+    max_amount: int | None

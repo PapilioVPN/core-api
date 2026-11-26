@@ -1,5 +1,6 @@
 """Verify gateway account management through the panel."""
 
+from asyncio import gather
 from json import loads
 from os import environ
 from secrets import randbelow
@@ -87,6 +88,8 @@ async def test_gateway_crud(
         "title": f"{title}%",
         "is_active": False,
         "icon_url": None,
+        "min_amount": None,
+        "max_amount": None,
     }
     other = await client.post(
         BASE,
@@ -139,6 +142,52 @@ async def test_gateway_crud(
     assert (
         await client.delete(f"{BASE}/{other_id}", headers=headers)
     ).is_success
+
+
+async def test_gateway_limits(
+    client: AsyncClient, headers: dict[str, str]
+) -> None:
+    payload = {"kind": "plisio", "title": "Gateway with limits"}
+    invalid = await client.post(
+        BASE,
+        headers=headers,
+        json=payload | {"min_amount": 500, "max_amount": 400},
+    )
+    assert invalid.status_code == 400, invalid.text
+    assert invalid.json()["error"]["loc"] == ["min_amount", "max_amount"]
+    created = await client.post(
+        BASE,
+        headers=headers,
+        json=payload | {"min_amount": 100, "max_amount": 500},
+    )
+    assert created.status_code == 201, created.text
+    data = created.json()["data"]
+    path = f"{BASE}/{data['id']}"
+    assert (data["min_amount"], data["max_amount"]) == (100, 500)
+    invalid = await client.patch(
+        path, headers=headers, json={"max_amount": 99}
+    )
+    assert invalid.status_code == 400, invalid.text
+    assert (
+        await client.patch(path, headers=headers, json={"min_amount": "100"})
+    ).status_code == 422
+    cleared = await client.patch(
+        path, headers=headers, json={"min_amount": None}
+    )
+    assert cleared.status_code == 200, cleared.text
+    state = (await client.get(path, headers=headers)).json()["data"]
+    assert (state["min_amount"], state["max_amount"]) == (None, 500)
+    updates = await gather(
+        client.patch(path, headers=headers, json={"min_amount": 400}),
+        client.patch(path, headers=headers, json={"max_amount": 200}),
+    )
+    assert sorted(response.status_code for response in updates) == [200, 400]
+    state = (await client.get(path, headers=headers)).json()["data"]
+    assert (state["min_amount"], state["max_amount"]) in (
+        (None, 200),
+        (400, 500),
+    )
+    assert (await client.delete(path, headers=headers)).status_code == 200
 
 
 async def test_gateway_config(
