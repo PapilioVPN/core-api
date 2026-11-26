@@ -4,6 +4,7 @@ from papilio.core.config import AppConfig, HTTPConfig, Settings
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.apps.core.storage.files.config import FileStorageConfig
+from src.apps.network.nodes.config import NodeHostConfig
 from src.settings.cli import CLIConfig
 
 DEFAULT_HTTP = HTTPConfig(
@@ -35,11 +36,12 @@ class SchedulerConfig(BaseModel):
 
 class CoreSettings(Settings):
     app: AppConfig = AppConfig(
-        modules=["src.apps.core", "src.apps.shop"],
+        modules=["src.apps.core", "src.apps.shop", "src.apps.network"],
         tables_path="infra.pg.tables",
     )
     storage: FileStorageConfig  # pyright: ignore[reportIncompatibleVariableOverride]
     http: HTTPConfig | None = DEFAULT_HTTP
     nats: NatsConfig | None = None
     scheduler: SchedulerConfig = Field(default_factory=SchedulerConfig)
+    node_host: NodeHostConfig = Field(default_factory=NodeHostConfig)
     cli: CLIConfig = Field(default_factory=CLIConfig)

@@ -14,6 +14,9 @@ from papilio_tasks.infra.taskiq.sources.contracts.base import SourceContract
 from taskiq import AsyncBroker, TaskiqScheduler
 from taskiq.schedule_sources import LabelScheduleSource
 
+from src.apps.network.nodes.infra.broker.config import (
+    BrokerConfig as NodeBrokerConfig,
+)
 from src.apps.shop.crypto.rates.infra.broker.config import BrokerConfig
 from src.bootstrap.providers.infra import infra_providers
 from src.settings.config import CoreSettings
@@ -55,5 +58,14 @@ def create_scheduler(
         and broker.find_task(BrokerConfig.refresh_task)
     ):
         sources.append(MemorySource([BrokerConfig.refresh_schedule(interval)]))
+    probe_interval = settings.node_host.checks.interval_seconds
+    if (
+        probe_interval is not None
+        and settings.node_host.targets
+        and broker.find_task(NodeBrokerConfig.probe_task)
+    ):
+        sources.append(
+            MemorySource([NodeBrokerConfig.probe_schedule(probe_interval)])
+        )
     beat = create_beat(broker, sources=sources)
     return broker, beat
