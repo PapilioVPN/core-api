@@ -1,19 +1,19 @@
-"""Register and read wallet top-up requests in the administrator panel."""
+"""Issue and read wallet top-up invoices in the administrator panel."""
 
-from typing import Annotated
+from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from papilio.api.responses.envelope import APIResponse
-from papilio.api.responses.meta import PagerMeta
 from papilio.types.aliases import IdType
 
 from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
 
+from ...app.interfaces.commands import IWalletDepositCommand
 from ...app.interfaces.services import IWalletDepositService
-from ...domain.dtos.records import DepositCreate, DepositSearch
+from ...domain.dtos.records import DepositCreate
 from ..schemas.records import DepositOutput
 
 router = APIRouter(
@@ -27,31 +27,17 @@ router = APIRouter(
 async def post_deposit(
     customer_id: IdType,
     data: DepositCreate,
-    service: FromDishka[IWalletDepositService],
+    command: FromDishka[IWalletDepositCommand],
 ) -> APIResponse[DepositOutput, None]:
-    row = await service.create(customer_id, data)
-    output = DepositOutput.from_obj(row)
+    invoice = await command.issue(customer_id, data)
+    output = DepositOutput.from_obj(invoice)
     return APIResponse[DepositOutput, None].from_data(output)
 
 
-@router.get("")
-async def get_deposits(
-    customer_id: IdType,
-    data: Annotated[DepositSearch, Query()],
-    service: FromDishka[IWalletDepositService],
-) -> APIResponse[DepositOutput, PagerMeta]:
-    page = await service.search(customer_id, data)
-    return APIResponse[DepositOutput, PagerMeta](
-        success=True,
-        data=DepositOutput.from_objs(page.items),
-        meta=PagerMeta.from_total(data.page, data.per_page, page.total_items),
-    )
-
-
-@router.get("/{id:int}")
+@router.get("/{id:uuid}")
 async def get_deposit(
-    customer_id: IdType, id: IdType, service: FromDishka[IWalletDepositService]
+    customer_id: IdType, id: UUID, service: FromDishka[IWalletDepositService]
 ) -> APIResponse[DepositOutput, None]:
-    row = await service.get_by_id(customer_id, id)
-    output = DepositOutput.from_obj(row)
+    invoice = await service.get_by_id(customer_id, id)
+    output = DepositOutput.from_obj(invoice)
     return APIResponse[DepositOutput, None].from_data(output)

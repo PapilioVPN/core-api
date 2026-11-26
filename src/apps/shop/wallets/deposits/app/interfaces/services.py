@@ -1,22 +1,16 @@
-"""Registration and reads for wallet top-up requests."""
+"""Operations on expiring wallet top-up invoices."""
 
 from typing import Protocol
+from uuid import UUID
 
-from papilio.schemas.results import PagedType
-
-from ...domain.dtos.records import DepositCreate, DepositSearch
-from ...domain.models.records import WalletDepositModel
+from ...domain.models.records import DepositInvoice
 
 
 class IWalletDepositService(Protocol):
     async def create(
-        self, customer_id: int, data: DepositCreate
-    ) -> WalletDepositModel: ...
+        self, customer_id: int, amount: int
+    ) -> DepositInvoice: ...
 
     async def get_by_id(
-        self, customer_id: int, id: int
-    ) -> WalletDepositModel: ...
-
-    async def search(
-        self, customer_id: int, data: DepositSearch
-    ) -> PagedType[WalletDepositModel]: ...
+        self, customer_id: int, id: UUID
+    ) -> DepositInvoice: ...
