@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package papiliovpn.node.v1;
+
+option go_package = "github.com/PapilioVPN/node/internal/host/bridge/grpc/proto/v1;hostv1";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+service HostService {
+  // Returns whole seconds since boot in Node's Linux time namespace, including suspension.
+  rpc GetUptime(google.protobuf.Empty) returns (google.protobuf.UInt64Value);
+
+  // Returns a memory snapshot from the Linux procfs visible to Node.
+  rpc GetMemory(google.protobuf.Empty) returns (MemorySnapshot);
+
+  // Returns the latest valid interval from the aggregate Linux CPU counters.
+  // The operation returns UNAVAILABLE while no valid interval is available.
+  rpc GetCPU(google.protobuf.Empty) returns (CPUSnapshot);
+
+  // Returns capacity for the filesystem backing Node's configured storage path.
+  rpc GetStorage(google.protobuf.Empty) returns (StorageSnapshot);
+
+  // Returns all available host observations. Unavailable sections are absent.
+  rpc GetSystemStats(google.protobuf.Empty) returns (SystemSnapshot);
+}
+
+message MemorySnapshot {
+  uint64 total_bytes = 1;
+  // Estimated RAM available without swapping, when reported by Linux.
+  optional uint64 available_bytes = 2;
+  uint64 swap_total_bytes = 3;
+  uint64 swap_free_bytes = 4;
+  // Total minus estimated available RAM, when available is reported.
+  optional uint64 used_bytes = 5;
+}
+
+message CPUSnapshot {
+  // Percentage of CPU time spent executing work, in the range [0, 100].
+  double busy_percent = 1;
+  // Percentage of CPU time taken by the hypervisor, when reported by Linux.
+  optional double steal_percent = 2;
+  uint64 window_milliseconds = 3;
+  google.protobuf.Timestamp observed_at = 4;
+}
+
+message StorageSnapshot {
+  string path = 1;
+  uint64 total_bytes = 2;
+  uint64 used_bytes = 3;
+  // Free space available to unprivileged users, excluding reserved blocks.
+  uint64 available_bytes = 4;
+  bool read_only = 5;
+}
+
+message SystemSnapshot {
+  optional uint64 uptime_seconds = 1;
+  CPUSnapshot cpu = 2;
+  MemorySnapshot memory = 3;
+  StorageSnapshot storage = 4;
+  uint32 logical_cpu_count = 5;
+  NetworkSnapshot network = 6;
+}
+
+message NetworkSnapshot {
+  uint64 rx_bytes_per_second = 1;
+  uint64 tx_bytes_per_second = 2;
+  uint64 window_milliseconds = 3;
+  google.protobuf.Timestamp observed_at = 4;
+}
