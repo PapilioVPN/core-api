@@ -3,7 +3,7 @@
 from typing import Annotated, Literal
 
 from papilio.schemas.inputs import BaseDTO
-from pydantic import ConfigDict, Field, SecretStr
+from pydantic import AnyUrl, ConfigDict, Field, SecretStr, UrlConstraints
 
 type PriceCurrency = Literal["IRR", "USD"]
 
@@ -25,6 +25,13 @@ class NowPaymentsConfig(GatewayConfig):
     ipn_secret: Annotated[
         SecretStr, Field(min_length=1, max_length=4096, repr=False)
     ]
+    callback_url: (
+        Annotated[
+            AnyUrl,
+            UrlConstraints(allowed_schemes=["https"], host_required=True),
+        ]
+        | None
+    ) = None
 
 
 class PlisioConfig(GatewayConfig):

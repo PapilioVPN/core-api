@@ -8,10 +8,12 @@ from .app.interfaces.cache import IGatewayConfigCache
 from .app.interfaces.configs import (
     IGatewayConfigQuery,
     IGatewayConfigService,
+    INowPaymentsConfigQuery,
     IPlisioConfigQuery,
 )
 from .app.interfaces.services import ICryptoGatewayService
 from .app.queries.configs import GatewayConfigQuery
+from .app.queries.nowpayments import NowPaymentsConfigQuery
 from .app.queries.plisio import PlisioConfigQuery
 from .app.services.configs import GatewayConfigService
 from .app.services.crud import CryptoGatewayService
@@ -30,6 +32,9 @@ class GatewayProvider(Provider):
     command = provide(GatewayConfigCommand)
     query = provide(GatewayConfigQuery, provides=IGatewayConfigQuery)
     plisio = provide(PlisioConfigQuery, provides=IPlisioConfigQuery)
+    nowpayments = provide(
+        NowPaymentsConfigQuery, provides=INowPaymentsConfigQuery
+    )
     cache = provide(
         GatewayConfigCache, scope=Scope.APP, provides=IGatewayConfigCache
     )

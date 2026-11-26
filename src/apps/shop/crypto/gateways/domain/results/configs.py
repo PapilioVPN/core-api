@@ -24,6 +24,7 @@ class GatewayConfigView:
     price_currency: PriceCurrency
     has_api_key: bool
     has_ipn_secret: bool
+    callback_url: str | None = None
 
     @classmethod
     def from_record(cls, record: GatewayConfigModel, kind: str) -> Self:
@@ -31,6 +32,7 @@ class GatewayConfigView:
         api_url = record.config.get("api_url")
         if not isinstance(api_url, str):
             raise ConfigUnavailable()
+        callback_url = record.config.get("callback_url")
         return cls(
             gateway_id=record.gateway_id,
             kind=kind,
@@ -40,4 +42,7 @@ class GatewayConfigView:
             else "USD",
             has_api_key=bool(record.config.get("api_key")),
             has_ipn_secret=bool(record.config.get("ipn_secret")),
+            callback_url=callback_url
+            if isinstance(callback_url, str)
+            else None,
         )

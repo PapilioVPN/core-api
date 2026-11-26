@@ -37,7 +37,7 @@ class GatewayConfigCache:
                 await resolve(
                     self.redis.client.set(
                         f"{self.prefix}:{view.gateway_id}",
-                        _snapshot.dump_json(view),
+                        _snapshot.dump_json(view, exclude_none=True),
                         ex=ttl,
                     )
                 )

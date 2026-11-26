@@ -2,9 +2,12 @@
 
 from typing import Protocol
 
-from pydantic import JsonValue
-
-from ...domain.dtos.configs import PlisioConfig, PriceCurrency
+from ...domain.dtos.configs import (
+    ConfigWrite,
+    NowPaymentsConfig,
+    PlisioConfig,
+    PriceCurrency,
+)
 from ...domain.models.configs import GatewayConfigModel
 from ...domain.results.configs import GatewayConfigView
 
@@ -16,9 +19,7 @@ class IGatewayConfigService(Protocol):
 
     async def plisio_price(self, id: int) -> PriceCurrency: ...
 
-    async def save(
-        self, id: int, config: dict[str, JsonValue]
-    ) -> GatewayConfigModel: ...
+    async def save(self, id: int, data: ConfigWrite) -> GatewayConfigModel: ...
 
 
 class IGatewayConfigQuery(Protocol):
@@ -27,3 +28,9 @@ class IGatewayConfigQuery(Protocol):
 
 class IPlisioConfigQuery(Protocol):
     async def get(self, id: int) -> PlisioConfig: ...
+
+
+class INowPaymentsConfigQuery(Protocol):
+    async def find(self, id: int) -> NowPaymentsConfig | None: ...
+
+    async def get(self, id: int) -> NowPaymentsConfig: ...

@@ -1,12 +1,13 @@
 """Manage the connection settings of one gateway account."""
 
+from papilio.core.config import CryptoConfig
 from papilio.infra.db.tools.decorators import transactional
 from papilio.tools.checks import Checks
-from pydantic import JsonValue
 
-from ...domain.dtos.configs import PriceCurrency
+from ...domain.dtos.configs import ConfigWrite, PriceCurrency
 from ...domain.models.configs import GatewayConfigModel
 from ...domain.results.configs import GatewayConfigView, plisio_currency
+from ...infra.crypto.codec import encode
 from ...infra.pg.repositories.configs import GatewayConfigRepository
 from ..decorators.configs import forget_cache
 from ..interfaces.cache import IGatewayConfigCache
@@ -21,11 +22,13 @@ class GatewayConfigService(Checks[GatewayConfigModel]):
         repo: GatewayConfigRepository,
         gateways: ICryptoGatewayService,
         cache: IGatewayConfigCache,
+        crypto: CryptoConfig,
     ) -> None:
         """Bind account reads, settings storage and cache eviction."""
         self.repo = repo
         self.gateways = gateways
         self.cache = cache
+        self.crypto = crypto
 
     @transactional
     async def get(self, id: int) -> GatewayConfigView:
@@ -75,18 +78,20 @@ class GatewayConfigService(Checks[GatewayConfigModel]):
 
     @forget_cache.one
     @transactional
-    async def save(
-        self, id: int, config: dict[str, JsonValue]
-    ) -> GatewayConfigModel:
+    async def save(self, id: int, data: ConfigWrite) -> GatewayConfigModel:
         """Persist prepared settings and invalidate the cached panel view.
 
         Args:
             id: Owning gateway account identity.
-            config: Settings containing encrypted credential values.
+            data: Validated settings, with credentials to encrypt.
 
         Returns:
             The stored settings.
+
+        Raises:
+            ConfigUnavailable: A deployment key is not configured.
         """
+        config = encode(data, self.crypto.encryption_key)
         record = await self.repo.save(
             GatewayConfigModel(gateway_id=id, config=config)
         )

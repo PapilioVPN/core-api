@@ -1,12 +1,7 @@
 """Prepare gateway connection settings before writing them."""
 
-from papilio.core.config import CryptoConfig
-from papilio.errors.exceptions import ValidationException
-from papilio.security.crypto import encrypt
-from pydantic import JsonValue
-
 from ...domain.dtos.configs import ConfigWrite
-from ...domain.errors import ConfigUnavailable
+from ...domain.errors import GatewayKindMismatch
 from ...domain.results.configs import GatewayConfigView
 from ..interfaces.configs import IGatewayConfigService
 from ..interfaces.services import ICryptoGatewayService
@@ -17,12 +12,10 @@ class GatewayConfigCommand:
         self,
         gateways: ICryptoGatewayService,
         configs: IGatewayConfigService,
-        crypto: CryptoConfig,
     ) -> None:
-        """Bind gateway lookup, settings writes and the deployment key."""
+        """Bind gateway lookup and the settings writer."""
         self.gateways = gateways
         self.configs = configs
-        self.crypto = crypto
 
     async def save(self, id: int, data: ConfigWrite) -> GatewayConfigView:
         """Replace one account's connection settings.
@@ -41,24 +34,6 @@ class GatewayConfigCommand:
         """
         gateway = await self.gateways.get_by_id(id)
         if gateway.kind != data.kind:
-            raise ValidationException(
-                message="Configuration does not match the gateway provider.",
-                message_code="crypto_gateway_kind_mismatch",
-                loc=["kind"],
-                input=data.kind,
-            )
-        key = self.crypto.encryption_key
-        if not key.strip() or key == "replace-with-private-encryption-key":
-            raise ConfigUnavailable()
-        config: dict[str, JsonValue] = {
-            "api_url": data.api_url,
-            "api_key": encrypt(data.api_key.get_secret_value(), key),
-        }
-        if data.kind == "nowpayments":
-            config["ipn_secret"] = encrypt(
-                data.ipn_secret.get_secret_value(), key
-            )
-        else:
-            config["price_currency"] = data.price_currency
-        record = await self.configs.save(id, config)
+            raise GatewayKindMismatch(data.kind)
+        record = await self.configs.save(id, data)
         return GatewayConfigView.from_record(record, gateway.kind)
