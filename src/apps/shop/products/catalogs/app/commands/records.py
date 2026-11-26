@@ -5,89 +5,30 @@ from pydantic_core import MISSING
 
 from src.apps.shop.products.catalogs.app.interfaces.services import (
     ICatalogService,
+    ICatalogTermsService,
 )
 from src.apps.shop.products.catalogs.domain.dtos.records import (
     CatalogCreate,
     CatalogPatch,
     CatalogUpdate,
-    DurationRef,
-    VolumeRef,
 )
 from src.apps.shop.products.catalogs.domain.models.records import CatalogModel
-from src.apps.shop.products.durations.app.interfaces.services import (
-    IDurationService,
-)
 from src.apps.shop.products.services.app.interfaces.services import (
     IShopService,
 )
-from src.apps.shop.products.volumes.app.interfaces.services import (
-    IVolumeService,
-)
 
 
-class CatalogCommand:
+class CatalogCreateCommand:
     def __init__(
         self,
         catalogs: ICatalogService,
         services: IShopService,
-        volumes: IVolumeService,
-        durations: IDurationService,
+        terms: ICatalogTermsService,
     ) -> None:
-        """Bind the record service and the owners of its sale definitions.
-
-        Args:
-            catalogs: Catalog record operations on the request UoW.
-            services: Authoritative service definitions.
-            volumes: Reusable fixed volumes on that same UoW.
-            durations: Reusable durations on that same UoW.
-
-        Returns:
-            None.
-        """
+        """Bind catalog records, services and sale terms to the request."""
         self.catalogs = catalogs
         self.services = services
-        self.volumes = volumes
-        self.durations = durations
-
-    async def _volume_id(self, data: VolumeRef) -> int | None:
-        """Resolve the catalog's optional volume.
-
-        Args:
-            data: A stored ID, fixed byte count input or None for unlimited.
-
-        Returns:
-            The stored ID or None for unlimited volume.
-        """
-        match data:
-            case None:
-                id = None
-            case int():
-                volume = await self.volumes.get_by_id(data)
-                id = volume.id
-            case _:
-                volume = await self.volumes.create(data)
-                id = volume.id
-        return id
-
-    async def _duration_id(self, data: DurationRef) -> int | None:
-        """Resolve the catalog's optional duration.
-
-        Args:
-            data: A stored ID, fixed duration input or None for no expiry.
-
-        Returns:
-            The stored ID or None for no expiry.
-        """
-        match data:
-            case None:
-                id = None
-            case int():
-                duration = await self.durations.get_by_id(data)
-                id = duration.id
-            case _:
-                duration = await self.durations.create(data)
-                id = duration.id
-        return id
+        self.terms = terms
 
     @transactional
     async def create(self, data: CatalogCreate) -> CatalogModel:
@@ -103,8 +44,8 @@ class CatalogCommand:
             NotFoundException: A selected service or term is absent.
         """
         await self.services.get_by_id(data.service_id)
-        volume_id = await self._volume_id(data.volume)
-        duration_id = await self._duration_id(data.duration)
+        volume_id = await self.terms.volume_id(data.volume)
+        duration_id = await self.terms.duration_id(data.duration)
         catalog = await self.catalogs.create(
             CatalogModel(
                 service_id=data.service_id,
@@ -117,6 +58,15 @@ class CatalogCommand:
             )
         )
         return catalog
+
+
+class CatalogUpdateCommand:
+    def __init__(
+        self, catalogs: ICatalogService, terms: ICatalogTermsService
+    ) -> None:
+        """Bind catalog records and sale terms to the request."""
+        self.catalogs = catalogs
+        self.terms = terms
 
     @transactional
     async def update(self, id: int, data: CatalogUpdate) -> CatalogModel:
@@ -135,10 +85,10 @@ class CatalogCommand:
         """
         volume_id = MISSING
         if data.volume is not MISSING:
-            volume_id = await self._volume_id(data.volume)
+            volume_id = await self.terms.volume_id(data.volume)
         duration_id = MISSING
         if data.duration is not MISSING:
-            duration_id = await self._duration_id(data.duration)
+            duration_id = await self.terms.duration_id(data.duration)
         patch = CatalogPatch.model_construct(
             title=data.title,
             price=data.price,

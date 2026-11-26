@@ -2,10 +2,14 @@
 
 from dishka import Provider, Scope, provide
 
-from src.apps.shop.products.catalogs.app.commands.records import CatalogCommand
+from src.apps.shop.products.catalogs.app.commands.records import (
+    CatalogCreateCommand,
+    CatalogUpdateCommand,
+)
 from src.apps.shop.products.catalogs.app.interfaces.cache import ICatalogCache
 from src.apps.shop.products.catalogs.app.interfaces.commands import (
-    ICatalogCommand,
+    ICatalogCreateCommand,
+    ICatalogUpdateCommand,
 )
 from src.apps.shop.products.catalogs.app.interfaces.public import (
     IPublicCatalogQuery,
@@ -18,6 +22,7 @@ from src.apps.shop.products.catalogs.app.interfaces.queries import (
 )
 from src.apps.shop.products.catalogs.app.interfaces.services import (
     ICatalogService,
+    ICatalogTermsService,
 )
 from src.apps.shop.products.catalogs.app.queries.form import CatalogFormQuery
 from src.apps.shop.products.catalogs.app.queries.public import (
@@ -50,6 +55,8 @@ from src.apps.shop.products.catalogs.infra.redis.repositories.details import (
     CatalogCache,
 )
 
+from .app.services.terms import CatalogTermsService
+
 
 class CatalogProvider(Provider):
     scope = Scope.REQUEST
@@ -59,7 +66,13 @@ class CatalogProvider(Provider):
     search_reader = provide(CatalogSearchReader)
     cache = provide(CatalogCache, scope=Scope.APP, provides=ICatalogCache)
     catalogs = provide(CatalogService, provides=ICatalogService)
-    command = provide(CatalogCommand, provides=ICatalogCommand)
+    terms = provide(CatalogTermsService, provides=ICatalogTermsService)
+    create_command = provide(
+        CatalogCreateCommand, provides=ICatalogCreateCommand
+    )
+    update_command = provide(
+        CatalogUpdateCommand, provides=ICatalogUpdateCommand
+    )
     query = provide(CatalogQuery, provides=ICatalogQuery)
     search = provide(CatalogSearchQuery, provides=ICatalogSearchQuery)
     form = provide(CatalogFormQuery, provides=ICatalogFormQuery)

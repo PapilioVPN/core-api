@@ -12,7 +12,8 @@ from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
 from src.apps.shop.products.catalogs.app.interfaces.commands import (
-    ICatalogCommand,
+    ICatalogCreateCommand,
+    ICatalogUpdateCommand,
 )
 from src.apps.shop.products.catalogs.app.interfaces.queries import (
     ICatalogFormQuery,
@@ -53,7 +54,7 @@ router = APIRouter(
 
 @router.post("", status_code=201)
 async def post_catalog(
-    data: CatalogCreate, command: FromDishka[ICatalogCommand]
+    data: CatalogCreate, command: FromDishka[ICatalogCreateCommand]
 ) -> APIResponse[CatalogOutput, None]:
     catalog = await command.create(data)
     output = CatalogOutput.from_obj(catalog)
@@ -96,7 +97,7 @@ async def get_catalog(
 
 @router.patch("/{id:int}")
 async def patch_catalog(
-    id: IdType, data: CatalogUpdate, command: FromDishka[ICatalogCommand]
+    id: IdType, data: CatalogUpdate, command: FromDishka[ICatalogUpdateCommand]
 ) -> APIResponse[CatalogOutput, None]:
     catalog = await command.update(id, data)
     output = CatalogOutput.from_obj(catalog)

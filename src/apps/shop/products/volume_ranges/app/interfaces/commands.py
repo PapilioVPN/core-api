@@ -8,11 +8,13 @@ from src.apps.shop.products.volume_ranges.domain.models.records import (
 )
 
 
-class IRangeCommand(Protocol):
+class IRangeCreateCommand(Protocol):
     async def create(
         self, service_id: int, data: RangeWrite
     ) -> VolumeRangeModel: ...
 
+
+class IRangeReplaceCommand(Protocol):
     async def replace(
         self, service_id: int, id: int, data: RangeWrite
     ) -> VolumeRangeModel: ...

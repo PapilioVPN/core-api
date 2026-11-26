@@ -3,10 +3,12 @@
 from dishka import Provider, Scope, provide
 
 from src.apps.shop.products.volume_ranges.app.commands.records import (
-    RangeCommand,
+    RangeCreateCommand,
+    RangeReplaceCommand,
 )
 from src.apps.shop.products.volume_ranges.app.interfaces.commands import (
-    IRangeCommand,
+    IRangeCreateCommand,
+    IRangeReplaceCommand,
 )
 from src.apps.shop.products.volume_ranges.app.interfaces.queries import (
     IPublicRangeQuery,
@@ -38,7 +40,10 @@ class RangeProvider(Provider):
 
     repo = provide(VolumeRangeRepository)
     service = provide(VolumeRangeService, provides=IVolumeRangeService)
-    command = provide(RangeCommand, provides=IRangeCommand)
+    create_command = provide(RangeCreateCommand, provides=IRangeCreateCommand)
+    replace_command = provide(
+        RangeReplaceCommand, provides=IRangeReplaceCommand
+    )
     public_reader = provide(PublicRangeReader)
     public = provide(PublicRangeQuery, provides=IPublicRangeQuery)
     quote_reader = provide(QuoteReader)

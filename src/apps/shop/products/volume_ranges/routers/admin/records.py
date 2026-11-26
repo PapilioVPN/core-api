@@ -12,7 +12,8 @@ from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
 from src.apps.shop.products.volume_ranges.app.interfaces.commands import (
-    IRangeCommand,
+    IRangeCreateCommand,
+    IRangeReplaceCommand,
 )
 from src.apps.shop.products.volume_ranges.app.interfaces.services import (
     IVolumeRangeService,
@@ -34,7 +35,9 @@ router = APIRouter(
 
 @router.post("", status_code=201)
 async def post_range(
-    service_id: IdType, data: RangeWrite, command: FromDishka[IRangeCommand]
+    service_id: IdType,
+    data: RangeWrite,
+    command: FromDishka[IRangeCreateCommand],
 ) -> APIResponse[AdminRangeOutput, None]:
     row = await command.create(service_id, data)
     return APIResponse[AdminRangeOutput, None].from_data(
@@ -71,7 +74,7 @@ async def put_range(
     service_id: IdType,
     id: IdType,
     data: RangeWrite,
-    command: FromDishka[IRangeCommand],
+    command: FromDishka[IRangeReplaceCommand],
 ) -> APIResponse[AdminRangeOutput, None]:
     row = await command.replace(service_id, id, data)
     return APIResponse[AdminRangeOutput, None].from_data(

@@ -9,7 +9,9 @@ from src.apps.shop.products.catalogs.domain.dtos.records import (
 from src.apps.shop.products.catalogs.domain.models.records import CatalogModel
 
 
-class ICatalogCommand(Protocol):
+class ICatalogCreateCommand(Protocol):
     async def create(self, data: CatalogCreate) -> CatalogModel: ...
 
+
+class ICatalogUpdateCommand(Protocol):
     async def update(self, id: int, data: CatalogUpdate) -> CatalogModel: ...

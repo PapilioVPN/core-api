@@ -17,7 +17,7 @@ from src.apps.shop.products.volume_ranges.domain.models.records import (
 )
 
 
-class RangeCommand:
+class RangeCreateCommand:
     def __init__(
         self, services: IShopService, ranges: IVolumeRangeService
     ) -> None:
@@ -58,6 +58,12 @@ class RangeCommand:
             )
         )
         return row
+
+
+class RangeReplaceCommand:
+    def __init__(self, ranges: IVolumeRangeService) -> None:
+        """Bind the range writer."""
+        self.ranges = ranges
 
     async def replace(
         self, service_id: int, id: int, data: RangeWrite
