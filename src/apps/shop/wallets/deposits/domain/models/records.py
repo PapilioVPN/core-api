@@ -2,7 +2,27 @@
 
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
+
+from src.apps.shop.banking.payment_cards.domain.enums.records import (
+    PaymentMode,
+)
+
+
+@dataclass(frozen=True, slots=True)
+class CardPayment:
+    final_amount: int
+    mode: PaymentMode
+    card_number: str
+    holder_name: str
+    bank_id: int
+    bank_title: str
+    bank_icon_url: str | None
+    confirmation_code: str | None = None
+    payment_id: int | None = None
+    method: Literal["card_to_card"] = "card_to_card"
+    currency: Literal["IRR"] = "IRR"
 
 
 @dataclass(frozen=True, slots=True)
@@ -12,3 +32,4 @@ class DepositInvoice:
     amount: int
     created_at: datetime
     expires_at: datetime
+    payment: CardPayment

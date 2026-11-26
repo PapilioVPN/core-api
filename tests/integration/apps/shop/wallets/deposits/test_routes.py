@@ -1,6 +1,7 @@
 """Issue and read expiring top-up invoices through the panel."""
 
 from datetime import datetime, timedelta
+from json import loads
 from os import environ
 from typing import cast
 from uuid import UUID
@@ -9,6 +10,7 @@ import pytest
 from dishka import AsyncContainer
 from fastapi import FastAPI
 from httpx import AsyncClient
+from papilio.infra.db.transaction import transaction
 from papilio.infra.redis.client import RedisClient, resolve
 from papilio.types.constants import INT64_MAX
 
@@ -18,9 +20,21 @@ from src.apps.core.access.users.app.interfaces.commands import (
     IUserCreateCommand,
 )
 from src.apps.core.access.users.domain.dtos.records import UserCreate
+from src.apps.shop.banking.banks.domain.models.records import BankModel
+from src.apps.shop.banking.banks.infra.pg.repositories.records import (
+    BankRepository,
+)
+from src.apps.shop.billing.payments.infra.pg.repositories.crud import (
+    PaymentRepository,
+)
 from src.apps.shop.wallets.balance.app.interfaces.services import (
     IWalletBalanceService,
 )
+from src.apps.shop.wallets.deposits.domain.errors import (
+    DepositInvoiceUnavailable,
+)
+from src.apps.shop.wallets.deposits.domain.models.records import DepositInvoice
+from src.apps.shop.wallets.deposits.infra.redis.cache import WalletDepositCache
 from src.apps.shop.wallets.deposits.routers.schemas import records
 
 pytestmark = pytest.mark.integration
@@ -64,6 +78,36 @@ async def _customer(client: AsyncClient, headers: dict[str, str]) -> int:
     return response.json()["data"]["id"]
 
 
+async def _card(
+    app: FastAPI, client: AsyncClient, headers: dict[str, str], number: str
+) -> int:
+    container = cast(AsyncContainer, app.state.dishka_container)
+    async with container() as scope:
+        banks = await scope.get(BankRepository)
+        async with transaction():
+            bank = await banks.create(
+                BankModel(code=number[:6], title="Top-up Test Bank")
+            )
+        bank_id = bank.id
+    prefix = await client.post(
+        "/admin/card-prefixes",
+        headers=headers,
+        json={"bank_id": bank_id, "prefix": number[:6]},
+    )
+    assert prefix.status_code == 201, prefix.text
+    card = await client.post(
+        "/admin/payment-cards",
+        headers=headers,
+        json={
+            "card_number": number,
+            "holder_name": "Wallet Owner",
+            "allow_auto": True,
+        },
+    )
+    assert card.status_code == 201, card.text
+    return card.json()["data"]["id"]
+
+
 @pytest.mark.skipif(
     not environ.get("PAPILIOVPN_TEST_REDIS_URL"),
     reason="Set PAPILIOVPN_TEST_REDIS_URL to the isolated test Redis",
@@ -76,35 +120,61 @@ async def test_issue_and_read_invoice(
     other_id = await _customer(client, admin)
     path = f"/admin/wallets/{customer_id}/deposits"
     other_path = f"/admin/wallets/{other_id}/deposits"
+    settings = "/admin/payment-settings"
+    policy = (await client.get(settings, headers=admin)).json()["data"]
+    manual = await client.put(
+        settings, headers=admin, json={**policy, "auto_confirm": False}
+    )
+    assert manual.status_code == 200, manual.text
+    method = {"method": "card_to_card"}
+    assert (
+        await client.post(path, headers=admin, json={"amount": 500})
+    ).status_code == 422
+    unavailable = await client.post(
+        path, headers=admin, json={**method, "amount": 500}
+    )
+    assert unavailable.status_code == 400, unavailable.text
+    assert unavailable.json()["error"]["loc"] == ["method"]
+    card_number = "9918980000000005"
+    card_id = await _card(app, client, admin, card_number)
 
     for amount in (0, -1, "100", True, INT64_MAX + 1):
         invalid = await client.post(
-            path, headers=admin, json={"amount": amount}
+            path, headers=admin, json={**method, "amount": amount}
         )
         assert invalid.status_code == 422, invalid.text
     missing = await client.post(
         f"/admin/wallets/{INT64_MAX}/deposits",
         headers=admin,
-        json={"amount": 1},
+        json={**method, "amount": 1},
     )
     assert missing.status_code == 404, missing.text
 
     created = await client.post(
         path,
         headers=admin,
-        json={"amount": INT64_MAX, "customer_id": other_id},
+        json={**method, "amount": INT64_MAX, "customer_id": other_id},
     )
     assert created.status_code == 201, created.text
     first = created.json()["data"]
     assert first["customer_id"] == customer_id
     assert first["amount"] == INT64_MAX
+    assert first["payment"]["final_amount"] == INT64_MAX
+    assert first["payment"]["method"] == "card_to_card"
+    assert first["payment"]["mode"] == "manual"
+    assert first["payment"]["currency"] == "IRR"
+    assert first["payment"]["card_number"] == card_number
+    assert first["payment"]["holder_name"] == "Wallet Owner"
+    assert first["payment"]["bank_title"] == "Top-up Test Bank"
     assert UUID(first["id"]).version == 4
     expires = datetime.fromisoformat(first["expires_at"])
     started = datetime.fromisoformat(first["created_at"])
     assert (expires - started).total_seconds() == 3600
     assert 0 < first.pop("expires_in") <= 3600
 
-    created = await client.post(path, headers=admin, json={"amount": 500})
+    created = await client.post(
+        path, headers=admin, json={**method, "amount": 500}
+    )
     assert created.status_code == 201, created.text
     second = created.json()["data"]
     with monkeypatch.context() as clock:
@@ -122,7 +192,7 @@ async def test_issue_and_read_invoice(
 
     container = cast(AsyncContainer, app.state.dishka_container)
     redis = await container.get(RedisClient)
-    key = f"shop:wallets:deposits:{customer_id}"
+    key = f"shop:wallets:deposits:v2:{customer_id}"
     assert await resolve(redis.client.hexpiretime(key, first["id"])) == [
         int(expires.timestamp())
     ]
@@ -139,6 +209,95 @@ async def test_issue_and_read_invoice(
     async with container() as scope:
         balances = await scope.get(IWalletBalanceService)
         assert await balances.find(customer_id) is None
+    assert (
+        await client.delete(f"/admin/payment-cards/{card_id}", headers=admin)
+    ).status_code == 200
+    assert (
+        await client.put(settings, headers=admin, json=policy)
+    ).status_code == 200
+
+
+@pytest.mark.skipif(
+    not environ.get("PAPILIOVPN_TEST_REDIS_URL"),
+    reason="Set PAPILIOVPN_TEST_REDIS_URL to the isolated test Redis",
+)
+async def test_automatic_invoice_reserves_amount(
+    app: FastAPI, client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    admin = await _headers(app, client, super_admin=True, suffix=4)
+    customer_id = await _customer(client, admin)
+    path = f"/admin/wallets/{customer_id}/deposits"
+    settings = "/admin/payment-settings"
+    policy = (await client.get(settings, headers=admin)).json()["data"]
+    auto = await client.put(
+        settings,
+        headers=admin,
+        json={**policy, "auto_confirm": True, "digits": 4},
+    )
+    assert auto.status_code == 200, auto.text
+    number = "9918990000000004"
+    card_id = await _card(app, client, admin, number)
+    cards = await client.get(
+        "/admin/payment-cards",
+        headers=admin,
+        params={"is_active": True, "allow_auto": True},
+    )
+    numbers = {row["card_number"] for row in cards.json()["data"]}
+    amount = 187_653_115
+    body = {"method": "card_to_card", "amount": amount}
+
+    async def fail_save(
+        cache: WalletDepositCache, invoice: DepositInvoice
+    ) -> DepositInvoice:
+        raise DepositInvoiceUnavailable()
+
+    with monkeypatch.context() as cache:
+        cache.setattr(WalletDepositCache, "save", fail_save)
+        failure = await client.post(path, headers=admin, json=body)
+    assert failure.status_code == 503, failure.text
+    payments = await client.get(
+        "/admin/payments", headers=admin, params={"amount": amount}
+    )
+    assert payments.json()["data"] == []
+
+    created = await client.post(path, headers=admin, json=body)
+    assert created.status_code == 201, created.text
+    data = created.json()["data"]
+    payment = data["payment"]
+    assert data["amount"] == amount
+    assert payment["mode"] == "auto"
+    assert payment["card_number"] in numbers
+    assert payment["final_amount"] != amount
+    assert payment["confirmation_code"] == str(payment["final_amount"])[-4:]
+    assert "payment_id" not in payment
+    payments = await client.get(
+        "/admin/payments", headers=admin, params={"amount": amount}
+    )
+    (reserved,) = payments.json()["data"]
+    assert reserved["transfer_amount"] == payment["final_amount"]
+    assert reserved["receipt_id"] is None
+    assert reserved["status"] == "pending"
+    container = cast(AsyncContainer, app.state.dishka_container)
+    redis = await container.get(RedisClient)
+    raw = await resolve(
+        redis.client.hget(
+            f"shop:wallets:deposits:v2:{customer_id}", data["id"]
+        )
+    )
+    assert raw is not None
+    assert loads(raw)["payment"]["payment_id"] == reserved["id"]
+    async with container() as scope:
+        balance = await scope.get(IWalletBalanceService)
+        assert await balance.find(customer_id) is None
+        repo = await scope.get(PaymentRepository)
+        async with transaction():
+            await repo.remove_by_id(reserved["id"])
+    assert (
+        await client.delete(f"/admin/payment-cards/{card_id}", headers=admin)
+    ).status_code == 200
+    assert (
+        await client.put(settings, headers=admin, json=policy)
+    ).status_code == 200
 
 
 async def test_deposits_require_shop_access(

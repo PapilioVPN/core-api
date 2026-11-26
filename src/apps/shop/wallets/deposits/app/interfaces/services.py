@@ -3,12 +3,12 @@
 from typing import Protocol
 from uuid import UUID
 
-from ...domain.models.records import DepositInvoice
+from ...domain.models.records import CardPayment, DepositInvoice
 
 
 class IWalletDepositService(Protocol):
     async def create(
-        self, customer_id: int, amount: int
+        self, customer_id: int, amount: int, payment: CardPayment
     ) -> DepositInvoice: ...
 
     async def get_by_id(

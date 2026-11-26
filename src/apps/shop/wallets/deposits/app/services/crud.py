@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 from papilio.tools.checks import Checks
 from papilio.utils.dates import utc_now
 
-from ...domain.models.records import DepositInvoice
+from ...domain.models.records import CardPayment, DepositInvoice
 from ...infra.redis.cache import WalletDepositCache
 
 INVOICE_TTL = timedelta(hours=1)
@@ -19,12 +19,15 @@ class WalletDepositService(Checks[DepositInvoice]):
         """Bind the cache that owns the invoice lifetime."""
         self.cache = cache
 
-    async def create(self, customer_id: int, amount: int) -> DepositInvoice:
-        """Store an initial top-up invoice for one hour.
+    async def create(
+        self, customer_id: int, amount: int, payment: CardPayment
+    ) -> DepositInvoice:
+        """Store a prepared top-up invoice for one hour.
 
         Args:
             customer_id: Verified customer identity.
-            amount: Positive initial amount in whole rials.
+            amount: Original top-up amount in whole rials.
+            payment: Card destination and exact transfer amount in rials.
 
         Returns:
             The cached invoice with its UUID and expiration.
@@ -40,6 +43,7 @@ class WalletDepositService(Checks[DepositInvoice]):
                 amount=amount,
                 created_at=now,
                 expires_at=now + INVOICE_TTL,
+                payment=payment,
             )
         )
         return invoice

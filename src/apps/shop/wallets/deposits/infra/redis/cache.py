@@ -13,7 +13,7 @@ _invoice = TypeAdapter(DepositInvoice)
 
 
 class WalletDepositCache:
-    key = "shop:wallets:deposits"
+    key = "shop:wallets:deposits:v2"
 
     def __init__(self, redis: RedisClient | None) -> None:
         """Borrow the application's Redis client."""
