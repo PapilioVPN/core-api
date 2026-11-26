@@ -16,7 +16,11 @@ from src.apps.core.access.auth.routers.dependencies.identity import (
     current_admin,
 )
 from src.apps.core.access.roles.app.interfaces.commands import (
-    IRoleScopeCommand,
+    IRoleScopeBatchCreateCommand,
+    IRoleScopeBatchUpdateCommand,
+    IRoleScopeCreateCommand,
+    IRoleScopeRemoveCommand,
+    IRoleScopeUpdateCommand,
 )
 from src.apps.core.access.roles.app.interfaces.services import (
     IRoleScopeService,
@@ -48,7 +52,7 @@ async def post_role_scope(
     role_id: IdType,
     data: RoleScopeCreate,
     actor: Actor,
-    command: FromDishka[IRoleScopeCommand],
+    command: FromDishka[IRoleScopeCreateCommand],
 ) -> APIResponse[RoleScopeOutput, None]:
     """Assign one scope to an existing role.
 
@@ -98,7 +102,7 @@ async def patch_role_scope(
     role_id: IdType,
     data: RoleScopeUpdate,
     actor: Actor,
-    command: FromDishka[IRoleScopeCommand],
+    command: FromDishka[IRoleScopeUpdateCommand],
 ) -> APIResponse[RoleScopeOutput, None]:
     """Replace an assigned scope's mask within one role.
 
@@ -121,7 +125,7 @@ async def delete_role_scope(
     role_id: IdType,
     scope_id: Annotated[IdType, Body(embed=True)],
     actor: Actor,
-    command: FromDishka[IRoleScopeCommand],
+    command: FromDishka[IRoleScopeRemoveCommand],
 ) -> APIResponse[RoleScopeOutput, None]:
     """Remove an assignment identified by its parent path and body scope.
 
@@ -144,7 +148,7 @@ async def post_role_scopes_batch(
     role_id: IdType,
     data: RoleScopeBatchCreate,
     actor: Actor,
-    command: FromDishka[IRoleScopeCommand],
+    command: FromDishka[IRoleScopeBatchCreateCommand],
 ) -> APIResponse[RoleScopeOutput, None]:
     """Assign valid scopes in bulk and report rejected input items.
 
@@ -170,7 +174,7 @@ async def patch_role_scopes_batch(
     role_id: IdType,
     data: RoleScopeBatchUpdate,
     actor: Actor,
-    command: FromDishka[IRoleScopeCommand],
+    command: FromDishka[IRoleScopeBatchUpdateCommand],
 ) -> APIResponse[RoleScopeOutput, None]:
     """Replace valid assigned masks in bulk and report rejected items.
 

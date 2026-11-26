@@ -2,7 +2,6 @@
 
 from uuid import UUID
 
-from papilio.errors.exceptions import NotFoundException
 from papilio.infra.db.tools.decorators import transactional
 
 from src.apps.core.access.audit.app.interfaces.records import IAuditWriter
@@ -12,7 +11,7 @@ from src.apps.core.access.auth.app.interfaces.services import ISessionService
 from src.apps.core.access.auth.domain.results.identity import AdminIdentity
 
 
-class SessionCommand:
+class SessionRevokeCommand:
     def __init__(self, sessions: ISessionService, audit: IAuditWriter) -> None:
         """Bind storage and audit operations in the same request.
 
@@ -44,27 +43,12 @@ class SessionCommand:
             )
         return revoked
 
-    async def revoke_one(self, identity: AdminIdentity, id: UUID) -> None:
-        """Close an owned session selected through the account API.
 
-        Args:
-            identity: Authenticated owner account and current session.
-            id: Target session UUID.
-
-        Returns:
-            None after closing the session.
-
-        Raises:
-            NotFoundException: No active owned session matches the UUID.
-        """
-        if not await self.revoke(identity.user_id, id):
-            raise NotFoundException(
-                message="Session not found",
-                message_code="session_not_found",
-                entity="Session",
-                identifier="id",
-                identifier_value=id,
-            )
+class SessionRevokeOthersCommand:
+    def __init__(self, sessions: ISessionService, audit: IAuditWriter) -> None:
+        """Bind session records and audit on the same request."""
+        self.sessions = sessions
+        self.audit = audit
 
     @transactional
     async def revoke_others(self, identity: AdminIdentity) -> int:

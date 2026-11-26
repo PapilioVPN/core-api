@@ -7,10 +7,14 @@ from src.apps.core.access.auth.app.commands.password import (
     PasswordLoginCommand,
 )
 from src.apps.core.access.auth.app.commands.refresh import TokenRefreshCommand
-from src.apps.core.access.auth.app.commands.sessions import SessionCommand
+from src.apps.core.access.auth.app.commands.sessions import (
+    SessionRevokeCommand,
+    SessionRevokeOthersCommand,
+)
 from src.apps.core.access.auth.app.interfaces.commands import (
     IPasswordLoginCommand,
-    ISessionCommand,
+    ISessionRevokeCommand,
+    ISessionRevokeOthersCommand,
     ITokenLogoutCommand,
     ITokenRefreshCommand,
 )
@@ -36,6 +40,9 @@ class AuthProvider(Provider):
     )
     session_repo = provide(SessionRepository)
     sessions = provide(SessionService, provides=ISessionService)
-    session_command = provide(SessionCommand, provides=ISessionCommand)
+    revoke = provide(SessionRevokeCommand, provides=ISessionRevokeCommand)
+    revoke_others = provide(
+        SessionRevokeOthersCommand, provides=ISessionRevokeOthersCommand
+    )
     refresh = provide(TokenRefreshCommand, provides=ITokenRefreshCommand)
     logout = provide(TokenLogoutCommand, provides=ITokenLogoutCommand)

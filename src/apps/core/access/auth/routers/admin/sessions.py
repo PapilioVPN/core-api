@@ -7,8 +7,12 @@ from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Depends, Query
 from papilio.api.responses.envelope import APIResponse
 from papilio.api.responses.meta import PagerMeta
+from papilio.errors.exceptions import NotFoundException
 
-from src.apps.core.access.auth.app.interfaces.commands import ISessionCommand
+from src.apps.core.access.auth.app.interfaces.commands import (
+    ISessionRevokeCommand,
+    ISessionRevokeOthersCommand,
+)
 from src.apps.core.access.auth.app.interfaces.services import ISessionService
 from src.apps.core.access.auth.domain.dtos.sessions import SessionList
 from src.apps.core.access.auth.domain.results.identity import AdminIdentity
@@ -48,7 +52,7 @@ async def get_sessions(
 @router.delete("", response_model=APIResponse[RevokedOutput, None])
 async def delete_sessions(
     identity: CurrentAdmin,
-    command: FromDishka[ISessionCommand],
+    command: FromDishka[ISessionRevokeOthersCommand],
 ) -> APIResponse[RevokedOutput, None]:
     """Close all other active sessions and return their count."""
     count = await command.revoke_others(identity)
@@ -61,8 +65,15 @@ async def delete_sessions(
 async def delete_session(
     id: UUID,
     identity: CurrentAdmin,
-    command: FromDishka[ISessionCommand],
+    command: FromDishka[ISessionRevokeCommand],
 ) -> APIResponse[None, None]:
     """Close one owned session, including the current session."""
-    await command.revoke_one(identity, id)
+    if not await command.revoke(identity.user_id, id):
+        raise NotFoundException(
+            message="Session not found",
+            message_code="session_not_found",
+            entity="Session",
+            identifier="id",
+            identifier_value=id,
+        )
     return APIResponse[None, None](success=True)

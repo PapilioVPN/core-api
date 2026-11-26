@@ -4,11 +4,19 @@ from dishka import Provider, Scope, provide
 
 from src.apps.core.access.roles.app.commands.remove import RoleRemoveCommand
 from src.apps.core.access.roles.app.commands.role_scopes import (
-    RoleScopeCommand,
+    RoleScopeBatchCreateCommand,
+    RoleScopeBatchUpdateCommand,
+    RoleScopeCreateCommand,
+    RoleScopeRemoveCommand,
+    RoleScopeUpdateCommand,
 )
 from src.apps.core.access.roles.app.interfaces.commands import (
     IRoleRemoveCommand,
-    IRoleScopeCommand,
+    IRoleScopeBatchCreateCommand,
+    IRoleScopeBatchUpdateCommand,
+    IRoleScopeCreateCommand,
+    IRoleScopeRemoveCommand,
+    IRoleScopeUpdateCommand,
 )
 from src.apps.core.access.roles.app.interfaces.queries import IRoleQuery
 from src.apps.core.access.roles.app.interfaces.services import (
@@ -38,5 +46,19 @@ class RoleProvider(Provider):
     role_service = provide(RoleService, provides=IRoleService)
     assignment_service = provide(RoleScopeService, provides=IRoleScopeService)
     query = provide(RoleQuery, provides=IRoleQuery)
-    command = provide(RoleScopeCommand, provides=IRoleScopeCommand)
+    create_command = provide(
+        RoleScopeCreateCommand, provides=IRoleScopeCreateCommand
+    )
+    update_command = provide(
+        RoleScopeUpdateCommand, provides=IRoleScopeUpdateCommand
+    )
+    remove_scope = provide(
+        RoleScopeRemoveCommand, provides=IRoleScopeRemoveCommand
+    )
+    create_batch_command = provide(
+        RoleScopeBatchCreateCommand, provides=IRoleScopeBatchCreateCommand
+    )
+    update_batch_command = provide(
+        RoleScopeBatchUpdateCommand, provides=IRoleScopeBatchUpdateCommand
+    )
     remove_command = provide(RoleRemoveCommand, provides=IRoleRemoveCommand)

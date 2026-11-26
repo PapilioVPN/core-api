@@ -37,7 +37,7 @@ def _event(action: AuditAction, row: RoleScopeModel) -> AuditEvent:
     )
 
 
-class RoleScopeCommand(RoleScopeChecks):
+class RoleScopeCreateCommand:
     def __init__(
         self,
         roles: IRoleService,
@@ -45,17 +45,7 @@ class RoleScopeCommand(RoleScopeChecks):
         assignments: IRoleScopeService,
         audit: IAuditWriter,
     ) -> None:
-        """Bind service contracts sharing the native request transaction.
-
-        Args:
-            roles: Owner of authoritative role existence checks.
-            scopes: Owner of authoritative scope existence reads.
-            assignments: Owner of assignment reads and native bulk writes.
-            audit: Audit writer on the same transaction.
-
-        Returns:
-            None.
-        """
+        """Bind assignment writes, owner reads and audit."""
         self.roles = roles
         self.scopes = scopes
         self.assignments = assignments
@@ -87,6 +77,21 @@ class RoleScopeCommand(RoleScopeChecks):
         )
         return row
 
+
+class RoleScopeUpdateCommand:
+    def __init__(
+        self,
+        roles: IRoleService,
+        scopes: IScopeService,
+        assignments: IRoleScopeService,
+        audit: IAuditWriter,
+    ) -> None:
+        """Bind assignment writes, owner reads and audit."""
+        self.roles = roles
+        self.scopes = scopes
+        self.assignments = assignments
+        self.audit = audit
+
     @transactional
     async def update(
         self, role_id: int, data: RoleScopeUpdate, *, actor_id: int
@@ -112,6 +117,21 @@ class RoleScopeCommand(RoleScopeChecks):
         )
         return row
 
+
+class RoleScopeRemoveCommand:
+    def __init__(
+        self,
+        roles: IRoleService,
+        scopes: IScopeService,
+        assignments: IRoleScopeService,
+        audit: IAuditWriter,
+    ) -> None:
+        """Bind assignment writes, owner reads and audit."""
+        self.roles = roles
+        self.scopes = scopes
+        self.assignments = assignments
+        self.audit = audit
+
     @transactional
     async def remove(
         self, role_id: int, scope_id: int, *, actor_id: int
@@ -136,6 +156,21 @@ class RoleScopeCommand(RoleScopeChecks):
             actor_id, _event(AuditAction.ROLE_SCOPE_REMOVE, row)
         )
         return row
+
+
+class RoleScopeBatchCreateCommand(RoleScopeChecks):
+    def __init__(
+        self,
+        roles: IRoleService,
+        scopes: IScopeService,
+        assignments: IRoleScopeService,
+        audit: IAuditWriter,
+    ) -> None:
+        """Bind assignment writes, owner reads and audit."""
+        self.roles = roles
+        self.scopes = scopes
+        self.assignments = assignments
+        self.audit = audit
 
     @transactional
     async def create_batch(
@@ -179,6 +214,19 @@ class RoleScopeCommand(RoleScopeChecks):
             ],
         )
         return result
+
+
+class RoleScopeBatchUpdateCommand(RoleScopeChecks):
+    def __init__(
+        self,
+        roles: IRoleService,
+        assignments: IRoleScopeService,
+        audit: IAuditWriter,
+    ) -> None:
+        """Bind assignment writes, owner reads and audit."""
+        self.roles = roles
+        self.assignments = assignments
+        self.audit = audit
 
     @transactional
     async def update_batch(
