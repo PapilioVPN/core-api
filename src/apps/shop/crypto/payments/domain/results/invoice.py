@@ -21,3 +21,4 @@ class PlisioIssue:
     amount: Decimal
     currency: PriceCurrency
     config: PlisioConfig = field(repr=False)
+    expire_minutes: int | None = None

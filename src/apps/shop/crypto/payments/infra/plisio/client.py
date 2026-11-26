@@ -29,18 +29,21 @@ class PlisioGateway(BaseGateway):
             InvoiceUnavailable: The request failed or the reply was unusable.
         """
         order = str(data.payment_id)
+        params = {
+            "api_key": data.config.api_key.get_secret_value(),
+            "order_number": order,
+            "order_name": order,
+            "source_currency": data.currency,
+            "source_amount": format(data.amount, "f"),
+            "return_existing": "true",
+        }
+        if data.expire_minutes is not None:
+            params["expire_min"] = str(data.expire_minutes)
         try:
             response = await self.client.get(
                 f"{data.config.api_url}/invoices/new",
                 headers=self.headers_of(),
-                params={
-                    "api_key": data.config.api_key.get_secret_value(),
-                    "order_number": order,
-                    "order_name": order,
-                    "source_currency": data.currency,
-                    "source_amount": format(data.amount, "f"),
-                    "return_existing": "true",
-                },
+                params=params,
                 follow_redirects=False,
             )
             response.raise_for_status()

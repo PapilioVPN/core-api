@@ -1,5 +1,7 @@
 """Issue a hosted invoice after releasing database resources."""
 
+from dataclasses import replace
+
 from ...domain.results.invoice import Invoice, PlisioIssue
 from ..interfaces.gateways import IPlisioGateway
 from ..interfaces.issue import IPaymentIssueExecution
@@ -13,11 +15,14 @@ class PaymentIssuePipeline:
         self.execution = execution
         self.plisio = plisio
 
-    async def issue(self, id: int) -> Invoice:
+    async def issue(
+        self, id: int, *, expire_minutes: int | None = None
+    ) -> Invoice:
         """Return the saved invoice or issue one at the frozen price.
 
         Args:
             id: A previously committed and quoted payment.
+            expire_minutes: Hosted payment window in minutes, if supplied.
 
         Returns:
             The provider invoice identity and hosted URL.
@@ -28,7 +33,8 @@ class PaymentIssuePipeline:
         """
         prepared = await self.execution.prepare(id)
         if isinstance(prepared, PlisioIssue):
-            data = await self.plisio.issue(prepared)
+            request = replace(prepared, expire_minutes=expire_minutes)
+            data = await self.plisio.issue(request)
             invoice = await self.execution.complete(id, data)
         else:
             invoice = prepared

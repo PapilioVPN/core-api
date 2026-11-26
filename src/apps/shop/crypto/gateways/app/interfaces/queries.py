@@ -8,6 +8,8 @@ from ...domain.results.methods import GatewayOption
 
 
 class IGatewayMethodsQuery(Protocol):
+    async def find(self, id: int, amount: int) -> GatewayOption | None: ...
+
     async def list(
         self, amount: int, *, limit: int, offset: int
     ) -> PagedType[GatewayOption]: ...
