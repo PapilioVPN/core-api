@@ -4,12 +4,15 @@ from dishka import Provider, Scope, provide
 
 from src.settings.config import CoreSettings
 
+from .app.interfaces.status import IXrayStatusGateway, IXrayStatusQuery
 from .app.interfaces.validation import (
     IXrayConfigGateway,
     IXrayConfigValidation,
 )
+from .app.queries.status import XrayStatusQuery
 from .app.services.validation import XrayConfigValidationService
 from .config import XrayConfig
+from .infra.grpc.status import XrayStatusGateway
 from .infra.grpc.validation import XrayConfigGateway
 
 
@@ -22,6 +25,11 @@ class XrayProvider(Provider):
     validation = provide(
         XrayConfigValidationService, provides=IXrayConfigValidation
     )
+
+    status_gateway = provide(
+        XrayStatusGateway, provides=IXrayStatusGateway, scope=Scope.APP
+    )
+    status = provide(XrayStatusQuery, provides=IXrayStatusQuery)
 
     @provide(scope=Scope.APP)
     def config(self, settings: CoreSettings) -> XrayConfig:
