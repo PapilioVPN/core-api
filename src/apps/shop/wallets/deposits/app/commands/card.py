@@ -20,13 +20,13 @@ from src.apps.shop.customers.profiles.app.interfaces.services import (
     ICustomerService,
 )
 
-from ...domain.dtos.records import DepositCreate
+from ...domain.dtos.records import CardDeposit
 from ...domain.errors import DepositInvoiceUnavailable
 from ...domain.models.records import CardPayment, DepositInvoice
 from ..interfaces.services import IWalletDepositService
 
 
-class WalletDepositCommand:
+class CardInvoiceCommand:
     def __init__(
         self,
         customers: ICustomerService,
@@ -46,7 +46,7 @@ class WalletDepositCommand:
 
     @transactional
     async def issue(
-        self, customer_id: int, data: DepositCreate
+        self, customer_id: int, data: CardDeposit
     ) -> DepositInvoice:
         """Issue the card invoice and retain any automatic reservation.
 

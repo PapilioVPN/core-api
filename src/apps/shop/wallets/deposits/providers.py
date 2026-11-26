@@ -2,8 +2,9 @@
 
 from dishka import Provider, Scope, provide
 
-from .app.commands.issue import WalletDepositCommand
-from .app.interfaces.commands import IWalletDepositCommand
+from .app.commands.card import CardInvoiceCommand
+from .app.commands.plisio import PlisioInvoiceCommand
+from .app.interfaces.commands import ICardInvoiceCommand, IPlisioInvoiceCommand
 from .app.interfaces.queries import IDepositMethodsQuery
 from .app.interfaces.services import IWalletDepositService
 from .app.queries.methods import DepositMethodsQuery
@@ -16,5 +17,6 @@ class WalletDepositProvider(Provider):
 
     cache = provide(WalletDepositCache, scope=Scope.APP)
     service = provide(WalletDepositService, provides=IWalletDepositService)
-    command = provide(WalletDepositCommand, provides=IWalletDepositCommand)
+    card = provide(CardInvoiceCommand, provides=ICardInvoiceCommand)
+    plisio = provide(PlisioInvoiceCommand, provides=IPlisioInvoiceCommand)
     methods = provide(DepositMethodsQuery, provides=IDepositMethodsQuery)

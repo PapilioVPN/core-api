@@ -11,7 +11,10 @@ from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
 
-from ...app.interfaces.commands import IWalletDepositCommand
+from ...app.interfaces.commands import (
+    ICardInvoiceCommand,
+    IPlisioInvoiceCommand,
+)
 from ...app.interfaces.services import IWalletDepositService
 from ...domain.dtos.records import DepositCreate
 from ..schemas.records import DepositOutput
@@ -27,9 +30,13 @@ router = APIRouter(
 async def post_deposit(
     customer_id: IdType,
     data: DepositCreate,
-    command: FromDishka[IWalletDepositCommand],
+    card: FromDishka[ICardInvoiceCommand],
+    plisio: FromDishka[IPlisioInvoiceCommand],
 ) -> APIResponse[DepositOutput, None]:
-    invoice = await command.issue(customer_id, data)
+    if data.method == "card_to_card":
+        invoice = await card.issue(customer_id, data)
+    else:
+        invoice = await plisio.issue(customer_id, data)
     output = DepositOutput.from_obj(invoice)
     return APIResponse[DepositOutput, None].from_data(output)
 

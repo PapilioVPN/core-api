@@ -1,15 +1,14 @@
 """Own expiring wallet top-up invoices."""
 
-from datetime import timedelta
+from datetime import datetime
 from uuid import UUID, uuid4
 
 from papilio.tools.checks import Checks
 from papilio.utils.dates import utc_now
 
-from ...domain.models.records import CardPayment, DepositInvoice
+from ...domain.models.records import DepositInvoice, DepositPayment
 from ...infra.redis.cache import WalletDepositCache
-
-INVOICE_TTL = timedelta(hours=1)
+from ..policy import INVOICE_TTL
 
 
 class WalletDepositService(Checks[DepositInvoice]):
@@ -20,14 +19,20 @@ class WalletDepositService(Checks[DepositInvoice]):
         self.cache = cache
 
     async def create(
-        self, customer_id: int, amount: int, payment: CardPayment
+        self,
+        customer_id: int,
+        amount: int,
+        payment: DepositPayment,
+        *,
+        created_at: datetime | None = None,
     ) -> DepositInvoice:
         """Store a prepared top-up invoice for one hour.
 
         Args:
             customer_id: Verified customer identity.
             amount: Original top-up amount in whole rials.
-            payment: Card destination and exact transfer amount in rials.
+            payment: Frozen payment instructions and price.
+            created_at: Start of the payment window, or the current UTC time.
 
         Returns:
             The cached invoice with its UUID and expiration.
@@ -35,14 +40,14 @@ class WalletDepositService(Checks[DepositInvoice]):
         Raises:
             DepositInvoiceUnavailable: The invoice could not be stored.
         """
-        now = utc_now().replace(microsecond=0)
+        issued_at = (created_at or utc_now()).replace(microsecond=0)
         invoice = await self.cache.save(
             DepositInvoice(
                 id=uuid4(),
                 customer_id=customer_id,
                 amount=amount,
-                created_at=now,
-                expires_at=now + INVOICE_TTL,
+                created_at=issued_at,
+                expires_at=issued_at + INVOICE_TTL,
                 payment=payment,
             )
         )

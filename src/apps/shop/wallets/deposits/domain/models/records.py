@@ -2,12 +2,14 @@
 
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
 from src.apps.shop.banking.payment_cards.domain.enums.records import (
     PaymentMode,
 )
+from src.apps.shop.crypto.gateways.domain.dtos.configs import PriceCurrency
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,10 +28,25 @@ class CardPayment:
 
 
 @dataclass(frozen=True, slots=True)
+class PlisioPayment:
+    gateway_id: int
+    gateway_title: str
+    gateway_icon_url: str | None
+    currency: PriceCurrency
+    final_amount: Decimal
+    invoice_url: str
+    payment_id: int
+    method: Literal["plisio"] = "plisio"
+
+
+type DepositPayment = CardPayment | PlisioPayment
+
+
+@dataclass(frozen=True, slots=True)
 class DepositInvoice:
     id: UUID
     customer_id: int
     amount: int
     created_at: datetime
     expires_at: datetime
-    payment: CardPayment
+    payment: DepositPayment

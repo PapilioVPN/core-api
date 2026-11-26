@@ -1,6 +1,7 @@
 """Issue and read expiring top-up invoices through the panel."""
 
 from datetime import datetime, timedelta
+from decimal import Decimal
 from json import loads
 from os import environ
 from typing import cast
@@ -9,10 +10,13 @@ from uuid import UUID
 import pytest
 from dishka import AsyncContainer
 from fastapi import FastAPI
-from httpx import AsyncClient
-from papilio.infra.db.transaction import transaction
+from httpx import AsyncClient, MockTransport, Request, Response
+from papilio.infra.db.transaction import active_transaction, transaction
+from papilio.infra.db.uow import UnitOfWork
+from papilio.infra.http.connection import HTTPConnection
 from papilio.infra.redis.client import RedisClient, resolve
 from papilio.types.constants import INT64_MAX
+from papilio.utils.dates import utc_now
 
 from src.apps.core.access.roles.app.interfaces.services import IRoleService
 from src.apps.core.access.roles.domain.dtos.records import RoleCreate
@@ -27,13 +31,24 @@ from src.apps.shop.banking.banks.infra.pg.repositories.records import (
 from src.apps.shop.billing.payments.infra.pg.repositories.crud import (
     PaymentRepository,
 )
+from src.apps.shop.crypto.payments.app.interfaces.services import (
+    ICryptoPaymentService,
+)
+from src.apps.shop.crypto.payments.infra.pg.repositories.crud import (
+    CryptoPaymentRepository,
+)
+from src.apps.shop.crypto.rates.app.interfaces.cache import IRateCache
+from src.apps.shop.crypto.rates.domain.models.records import Rate
 from src.apps.shop.wallets.balance.app.interfaces.services import (
     IWalletBalanceService,
 )
 from src.apps.shop.wallets.deposits.domain.errors import (
     DepositInvoiceUnavailable,
 )
-from src.apps.shop.wallets.deposits.domain.models.records import DepositInvoice
+from src.apps.shop.wallets.deposits.domain.models.records import (
+    DepositInvoice,
+    PlisioPayment,
+)
 from src.apps.shop.wallets.deposits.infra.redis.cache import WalletDepositCache
 from src.apps.shop.wallets.deposits.routers.schemas import records
 
@@ -76,6 +91,143 @@ async def _customer(client: AsyncClient, headers: dict[str, str]) -> int:
     )
     assert response.status_code == 201, response.text
     return response.json()["data"]["id"]
+
+
+@pytest.mark.skipif(
+    not environ.get("PAPILIOVPN_TEST_REDIS_URL"),
+    reason="Set PAPILIOVPN_TEST_REDIS_URL to the isolated test Redis",
+)
+async def test_issue_plisio_deposit(
+    app: FastAPI, client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    admin = await _headers(app, client, super_admin=True, suffix=5)
+    customer_id = await _customer(client, admin)
+    path = f"/admin/wallets/{customer_id}/deposits"
+    amount = 1_220_000
+    gateway = await client.post(
+        "/admin/crypto-gateways",
+        headers=admin,
+        json={
+            "kind": "plisio",
+            "title": "Top-up Plisio",
+            "icon_url": "/media/plisio.png",
+            "min_amount": amount,
+            "max_amount": amount * 2,
+            "is_active": True,
+        },
+    )
+    assert gateway.status_code == 201, gateway.text
+    gateway_id = gateway.json()["data"]["id"]
+    gateway_path = f"/admin/crypto-gateways/{gateway_id}"
+    data = {"method": "plisio", "amount": amount, "gateway_id": gateway_id}
+    unconfigured = await client.post(path, headers=admin, json=data)
+    assert unconfigured.status_code == 400, unconfigured.text
+    assert unconfigured.json()["error"]["loc"] == ["gateway_id"]
+    config = await client.put(
+        f"{gateway_path}/config",
+        headers=admin,
+        json={
+            "kind": "plisio",
+            "api_url": "https://api.plisio.net/api/v1",
+            "api_key": "test-wallet-plisio-secret",
+            "price_currency": "USD",
+        },
+    )
+    assert config.status_code == 200, config.text
+
+    container = cast(AsyncContainer, app.state.dishka_container)
+    rates = await container.get(IRateCache)
+    await rates.save(Rate("USD", Decimal("600000"), "wallex_usdt", utc_now()))
+    connection = await container.get(HTTPConnection)
+    order_ids: list[int] = []
+    invoice_url = "https://plisio.net/invoice/deposit-123"
+
+    def plisio(request: Request) -> Response:
+        assert active_transaction() is None
+        unit = UnitOfWork.current()
+        assert unit is None or not unit.in_transaction
+        assert request.url.path == "/api/v1/invoices/new"
+        params = request.url.params
+        assert params["source_amount"] == "2.04"
+        assert params["source_currency"] == "USD"
+        assert params["expire_min"] == "60"
+        order_ids.append(int(params["order_number"]))
+        if len(order_ids) == 1:
+            response = Response(503)
+        else:
+            response = Response(
+                200,
+                json={
+                    "status": "success",
+                    "data": {
+                        "txn_id": "deposit-123",
+                        "invoice_url": invoice_url,
+                    },
+                },
+            )
+        return response
+
+    async with AsyncClient(transport=MockTransport(plisio)) as upstream:
+        with monkeypatch.context() as patch:
+            patch.setattr(connection, "client", upstream)
+            for value in (amount - 1, amount * 2 + 1):
+                rejected = await client.post(
+                    path, headers=admin, json={**data, "amount": value}
+                )
+                assert rejected.status_code == 400, rejected.text
+            assert order_ids == []
+            failed = await client.post(path, headers=admin, json=data)
+            assert failed.status_code == 502, failed.text
+            redis = await container.get(RedisClient)
+            key = f"shop:wallets:deposits:v2:{customer_id}"
+            assert await resolve(redis.client.hlen(key)) == 0
+            issued = await client.post(path, headers=admin, json=data)
+
+    assert issued.status_code == 201, issued.text
+    assert len(order_ids) == 2
+    invoice = issued.json()["data"]
+    assert invoice["amount"] == amount
+    assert invoice["payment"] == {
+        "method": "plisio",
+        "gateway_id": gateway_id,
+        "gateway_title": "Top-up Plisio",
+        "gateway_icon_url": "/media/plisio.png",
+        "currency": "USD",
+        "final_amount": "2.04",
+        "invoice_url": invoice_url,
+    }
+    assert "test-wallet-plisio-secret" not in issued.text
+    assert 0 < invoice.pop("expires_in") <= 3600
+    expires = datetime.fromisoformat(invoice["expires_at"])
+    assert await resolve(redis.client.hexpiretime(key, invoice["id"])) == [
+        int(expires.timestamp())
+    ]
+    detail = await client.get(f"{path}/{invoice['id']}", headers=admin)
+    assert detail.status_code == 200, detail.text
+    cached = detail.json()["data"]
+    assert 0 < cached.pop("expires_in") <= 3600
+    assert cached == invoice
+
+    cache = await container.get(WalletDepositCache)
+    saved = await cache.find(customer_id, UUID(invoice["id"]))
+    assert saved is not None and isinstance(saved.payment, PlisioPayment)
+    assert saved.payment.payment_id == order_ids[1]
+
+    async with container() as scope:
+        payments = await scope.get(ICryptoPaymentService)
+        assert (await payments.get_by_id(order_ids[0])).invoice_id is None
+        payment = await payments.get_by_id(order_ids[1])
+        assert payment.invoice_id == "deposit-123"
+        assert payment.confirmed_at is None
+        balances = await scope.get(IWalletBalanceService)
+        assert await balances.find(customer_id) is None
+        repo = await scope.get(CryptoPaymentRepository)
+        async with transaction():
+            for id in order_ids:
+                await repo.remove_by_id(id)
+
+    deleted = await client.delete(gateway_path, headers=admin)
+    assert deleted.status_code == 200, deleted.text
 
 
 async def _card(

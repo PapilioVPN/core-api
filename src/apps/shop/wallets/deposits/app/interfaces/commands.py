@@ -2,11 +2,17 @@
 
 from typing import Protocol
 
-from ...domain.dtos.records import DepositCreate
+from ...domain.dtos.records import CardDeposit, PlisioDeposit
 from ...domain.models.records import DepositInvoice
 
 
-class IWalletDepositCommand(Protocol):
+class ICardInvoiceCommand(Protocol):
     async def issue(
-        self, customer_id: int, data: DepositCreate
+        self, customer_id: int, data: CardDeposit
+    ) -> DepositInvoice: ...
+
+
+class IPlisioInvoiceCommand(Protocol):
+    async def issue(
+        self, customer_id: int, data: PlisioDeposit
     ) -> DepositInvoice: ...
