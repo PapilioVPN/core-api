@@ -6,11 +6,13 @@ from ...domain.dtos.records import TransactionPost
 from ...domain.models.records import WalletTransactionModel
 
 
-class IWalletTransactionCommand(Protocol):
+class IWalletCreditCommand(Protocol):
     async def credit(
         self, customer_id: int, data: TransactionPost
     ) -> WalletTransactionModel: ...
 
+
+class IWalletDebitCommand(Protocol):
     async def debit(
         self, customer_id: int, data: TransactionPost
     ) -> WalletTransactionModel: ...

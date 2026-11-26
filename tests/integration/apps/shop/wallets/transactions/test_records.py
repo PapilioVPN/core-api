@@ -27,7 +27,8 @@ from src.apps.shop.wallets.balance.app.interfaces.services import (
     IWalletBalanceService,
 )
 from src.apps.shop.wallets.transactions.app.interfaces.commands import (
-    IWalletTransactionCommand,
+    IWalletCreditCommand,
+    IWalletDebitCommand,
 )
 from src.apps.shop.wallets.transactions.app.interfaces.services import (
     IWalletTransactionService,
@@ -67,13 +68,12 @@ async def _post(
     direction: Direction = Direction.CREDIT,
 ) -> WalletTransactionModel:
     async with container() as scope:
-        transactions = await scope.get(IWalletTransactionCommand)
-        command = (
-            transactions.credit
-            if direction == Direction.CREDIT
-            else transactions.debit
-        )
-        row = await command(customer_id, data)
+        if direction == Direction.CREDIT:
+            credit = await scope.get(IWalletCreditCommand)
+            row = await credit.credit(customer_id, data)
+        else:
+            debit = await scope.get(IWalletDebitCommand)
+            row = await debit.debit(customer_id, data)
     return row
 
 

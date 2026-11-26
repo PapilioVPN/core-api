@@ -9,7 +9,10 @@ from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
 
-from ...app.interfaces.commands import IWalletTransactionCommand
+from ...app.interfaces.commands import (
+    IWalletCreditCommand,
+    IWalletDebitCommand,
+)
 from ...domain.dtos.records import TransactionPost
 from ..schemas.records import TransactionOutput
 
@@ -24,7 +27,7 @@ router = APIRouter(
 async def post_credit(
     customer_id: IdType,
     data: TransactionPost,
-    command: FromDishka[IWalletTransactionCommand],
+    command: FromDishka[IWalletCreditCommand],
 ) -> APIResponse[TransactionOutput, None]:
     row = await command.credit(customer_id, data)
     output = TransactionOutput.from_obj(row)
@@ -35,7 +38,7 @@ async def post_credit(
 async def post_debit(
     customer_id: IdType,
     data: TransactionPost,
-    command: FromDishka[IWalletTransactionCommand],
+    command: FromDishka[IWalletDebitCommand],
 ) -> APIResponse[TransactionOutput, None]:
     row = await command.debit(customer_id, data)
     output = TransactionOutput.from_obj(row)

@@ -6,6 +6,10 @@ from ...domain.models.records import WalletTransactionModel
 
 
 class IWalletTransactionService(Protocol):
+    async def create(
+        self, data: WalletTransactionModel
+    ) -> WalletTransactionModel: ...
+
     async def find(
         self, customer_id: int, transaction_id: int
     ) -> WalletTransactionModel | None: ...

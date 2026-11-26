@@ -9,6 +9,20 @@ class WalletTransactionService:
         """Bind the wallet transaction repository."""
         self.repo = repo
 
+    async def create(
+        self, data: WalletTransactionModel
+    ) -> WalletTransactionModel:
+        """Append the movement prepared inside the balance transaction.
+
+        Args:
+            data: Posted amount and the before and after balances.
+
+        Returns:
+            The recorded movement with its generated identity.
+        """
+        row = await self.repo.create(data)
+        return row
+
     async def find(
         self, customer_id: int, transaction_id: int
     ) -> WalletTransactionModel | None:

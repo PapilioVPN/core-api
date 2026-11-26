@@ -10,17 +10,17 @@ from src.apps.shop.wallets.balance.app.interfaces.services import (
 from ...domain.dtos.records import TransactionPost
 from ...domain.enums.records import Direction
 from ...domain.models.records import WalletTransactionModel
-from ...infra.pg.repositories.crud import WalletTransactionRepository
+from ..interfaces.services import IWalletTransactionService
 
 
-class WalletTransactionCommand:
+class WalletCreditCommand:
     def __init__(
         self,
-        repo: WalletTransactionRepository,
+        transactions: IWalletTransactionService,
         balances: IWalletBalanceService,
     ) -> None:
         """Bind the two request-scoped owners of posting and balance."""
-        self.repo = repo
+        self.transactions = transactions
         self.balances = balances
 
     @transactional
@@ -49,7 +49,7 @@ class WalletTransactionCommand:
                 loc=["amount"],
                 input=data.amount,
             )
-        row = await self.repo.create(
+        row = await self.transactions.create(
             WalletTransactionModel(
                 customer_id=customer_id,
                 direction=Direction.CREDIT,
@@ -60,6 +60,17 @@ class WalletTransactionCommand:
             )
         )
         return row
+
+
+class WalletDebitCommand:
+    def __init__(
+        self,
+        transactions: IWalletTransactionService,
+        balances: IWalletBalanceService,
+    ) -> None:
+        """Bind the two request-scoped owners of posting and balance."""
+        self.transactions = transactions
+        self.balances = balances
 
     @transactional
     async def debit(
@@ -87,7 +98,7 @@ class WalletTransactionCommand:
                 loc=["amount"],
                 input=data.amount,
             )
-        row = await self.repo.create(
+        row = await self.transactions.create(
             WalletTransactionModel(
                 customer_id=customer_id,
                 direction=Direction.DEBIT,

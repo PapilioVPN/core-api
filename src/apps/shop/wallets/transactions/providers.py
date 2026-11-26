@@ -2,8 +2,8 @@
 
 from dishka import Provider, Scope, provide
 
-from .app.commands.post import WalletTransactionCommand
-from .app.interfaces.commands import IWalletTransactionCommand
+from .app.commands.post import WalletCreditCommand, WalletDebitCommand
+from .app.interfaces.commands import IWalletCreditCommand, IWalletDebitCommand
 from .app.interfaces.services import IWalletTransactionService
 from .app.services.crud import WalletTransactionService
 from .infra.pg.repositories.crud import WalletTransactionRepository
@@ -16,6 +16,7 @@ class WalletTransactionProvider(Provider):
     service = provide(
         WalletTransactionService, provides=IWalletTransactionService
     )
-    command = provide(
-        WalletTransactionCommand, provides=IWalletTransactionCommand
+    credit_command = provide(
+        WalletCreditCommand, provides=IWalletCreditCommand
     )
+    debit_command = provide(WalletDebitCommand, provides=IWalletDebitCommand)
