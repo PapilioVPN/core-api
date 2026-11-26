@@ -49,6 +49,7 @@ async def picked(app: FastAPI, mode: PaymentMode) -> int | None:
     async with container() as scope:
         query = await scope.get(ICardPickQuery)
         record = await query.pick(mode)
+        assert await query.available(mode) is (record is not None)
     return record.id if record is not None else None
 
 
@@ -183,6 +184,35 @@ async def test_payment_cards(
     assert automatic["bank_id"] == saman_id
     assert await picked(app, PaymentMode.MANUAL) == saved["id"]
     assert await picked(app, PaymentMode.AUTO) == automatic["id"]
+
+    customer = await client.post(
+        "/admin/customers", headers=headers, json={"name": "Card Options"}
+    )
+    assert customer.status_code == 201, customer.text
+    customer_id = customer.json()["data"]["id"]
+    methods = f"/admin/wallets/{customer_id}/deposits/methods"
+    settings_path = "/admin/payment-settings"
+    policy = (await client.get(settings_path, headers=headers)).json()["data"]
+    for mode in (PaymentMode.MANUAL, PaymentMode.AUTO):
+        updated = await client.put(
+            settings_path,
+            headers=headers,
+            json={**policy, "auto_confirm": mode is PaymentMode.AUTO},
+        )
+        assert updated.status_code == 200, updated.text
+        choices = await client.get(
+            methods, headers=headers, params={"amount": 100}
+        )
+        assert choices.status_code == 200, choices.text
+        assert choices.json()["data"]["card_to_card"] == {
+            "mode": mode.value,
+            "currency": "IRR",
+        }
+        assert manual_number not in choices.text
+        assert auto_number not in choices.text
+    assert (
+        await client.put(settings_path, headers=headers, json=policy)
+    ).status_code == 200
 
     page = await client.get(
         CARDS,

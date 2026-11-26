@@ -1,7 +1,7 @@
 """Select an eligible receiving card against current banking references."""
 
 from papilio.infra.db.repositories.backends.postgresql import PGReader
-from sqlalchemy import func, select
+from sqlalchemy import Select, func, select
 from sqlmodel import col
 
 from src.apps.shop.banking.banks.infra.pg.tables import BankTable
@@ -13,6 +13,19 @@ from ..tables import PaymentCardTable
 
 
 class CardPickReader(PGReader):
+    async def available(self, mode: PaymentMode) -> bool:
+        """Check whether the requested mode has an eligible receiving card.
+
+        Args:
+            mode: Manual or automatic payment.
+
+        Returns:
+            Whether an active card and its issuer are eligible.
+        """
+        stmt = select(self._eligible(mode).exists())
+        result = await self.uow.execute(stmt)
+        return result.scalar_one()
+
     async def pick(self, mode: PaymentMode) -> PaymentCardModel | None:
         """Pick one random active card for the requested mode.
 
@@ -23,6 +36,12 @@ class CardPickReader(PGReader):
             A card whose current active issuer matches its saved issuer.
             None when no card meets the requested mode and issuer conditions.
         """
+        stmt = self._eligible(mode).order_by(func.random()).limit(1)
+        result = await self.uow.execute(stmt)
+        card = result.scalar_one_or_none()
+        return card
+
+    def _eligible(self, mode: PaymentMode) -> Select[tuple[PaymentCardTable]]:
         table = PaymentCardTable
         number = col(table.card_number)
         allowed = (
@@ -45,9 +64,5 @@ class CardPickReader(PGReader):
                 match.c.is_active.is_(True),
                 col(BankTable.is_active).is_(True),
             )
-            .order_by(func.random())
-            .limit(1)
         )
-        result = await self.uow.execute(stmt)
-        card = result.scalar_one_or_none()
-        return card
+        return stmt

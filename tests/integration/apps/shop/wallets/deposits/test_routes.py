@@ -27,10 +27,9 @@ pytestmark = pytest.mark.integration
 
 
 async def _headers(
-    app: FastAPI, client: AsyncClient, *, super_admin: bool
+    app: FastAPI, client: AsyncClient, *, super_admin: bool, suffix: int = 1
 ) -> dict[str, str]:
     container = cast(AsyncContainer, app.state.dishka_container)
-    suffix = 1 if super_admin else 2
     mobile = f"0917800480{suffix}"
     password = "isolated-wallet-deposits-password"
     async with container() as scope:
@@ -149,7 +148,94 @@ async def test_deposits_require_shop_access(
     detail = f"{path}/c119ee11-a4d6-4e31-ad14-877e0ed6c4b0"
     assert (await client.get(detail)).status_code == 401
     assert (await client.post(path, json={"amount": 1})).status_code == 401
-    headers = await _headers(app, client, super_admin=False)
+    headers = await _headers(app, client, super_admin=False, suffix=2)
     assert (await client.get(detail, headers=headers)).status_code == 403
     forbidden = await client.post(path, headers=headers, json={"amount": 1})
     assert forbidden.status_code == 403
+
+
+async def test_list_payment_methods(app: FastAPI, client: AsyncClient) -> None:
+    admin = await _headers(app, client, super_admin=True, suffix=3)
+    customer_id = await _customer(client, admin)
+    path = f"/admin/wallets/{customer_id}/deposits/methods"
+    assert (await client.get(path, params={"amount": 100})).status_code == 401
+    assert (
+        await client.get(path, headers=admin, params={"amount": 0})
+    ).status_code == 422
+    amount = 100_000_000
+    gateway = await client.post(
+        "/admin/crypto-gateways",
+        headers=admin,
+        json={
+            "kind": "plisio",
+            "title": "Top-up Gateway",
+            "icon_url": "/media/top-up.png",
+            "min_amount": amount,
+            "max_amount": amount * 2,
+            "is_active": True,
+        },
+    )
+    assert gateway.status_code == 201, gateway.text
+    gateway_id = gateway.json()["data"]["id"]
+    gateway_path = f"/admin/crypto-gateways/{gateway_id}"
+    empty = await client.get(path, headers=admin, params={"amount": amount})
+    assert empty.status_code == 200, empty.text
+    assert gateway_id not in [
+        item["id"] for item in empty.json()["data"]["gateways"]
+    ]
+    config = await client.put(
+        f"{gateway_path}/config",
+        headers=admin,
+        json={
+            "kind": "plisio",
+            "api_url": "https://api.plisio.net/api/v1",
+            "api_key": "test-deposit-gateway-credential",
+            "price_currency": "USD",
+        },
+    )
+    assert config.status_code == 200, config.text
+    for value in (amount, amount * 2):
+        response = await client.get(
+            path, headers=admin, params={"amount": value}
+        )
+        assert response.status_code == 200, response.text
+        data = response.json()["data"]
+        assert (data["customer_id"], data["amount"], data["currency"]) == (
+            customer_id,
+            value,
+            "IRR",
+        )
+        assert "card_to_card" in data
+        assert {
+            "id": gateway_id,
+            "kind": "plisio",
+            "title": "Top-up Gateway",
+            "icon_url": "/media/top-up.png",
+            "min_amount": amount,
+            "max_amount": amount * 2,
+            "price_currency": "USD",
+        } in data["gateways"]
+        assert response.json()["meta"]["total_items"] >= 1
+        assert "test-deposit-gateway-credential" not in response.text
+    for value in (amount - 1, amount * 2 + 1):
+        response = await client.get(
+            path, headers=admin, params={"amount": value}
+        )
+        ids = [item["id"] for item in response.json()["data"]["gateways"]]
+        assert gateway_id not in ids
+    extra_page = await client.get(
+        path, headers=admin, params={"amount": amount, "page": INT64_MAX}
+    )
+    assert extra_page.json()["data"]["gateways"] == []
+    assert extra_page.json()["meta"]["total_items"] >= 1
+    updated = await client.patch(
+        gateway_path, headers=admin, json={"is_active": False}
+    )
+    assert updated.status_code == 200, updated.text
+    disabled = await client.get(path, headers=admin, params={"amount": amount})
+    assert gateway_id not in [
+        item["id"] for item in disabled.json()["data"]["gateways"]
+    ]
+    assert (
+        await client.delete(gateway_path, headers=admin)
+    ).status_code == 200
