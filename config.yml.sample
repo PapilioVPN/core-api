@@ -19,7 +19,8 @@ db:
   pool_timeout: 5
   pool_recycle: 1800
   pool_size: 5
-  max_overflow: 5
+  # The Outbox relay uses two connections per configured publication.
+  max_overflow: 10
 crypto:
   encryption_key: replace-with-private-encryption-key
   password_salt: null
