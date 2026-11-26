@@ -4,6 +4,7 @@ from papilio.core.config import AppConfig, HTTPConfig, Settings
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.apps.core.storage.files.config import FileStorageConfig
+from src.apps.network.engines.xray.config import XrayConfig
 from src.apps.network.nodes.config import NodeHostConfig
 from src.settings.cli import CLIConfig
 
@@ -44,4 +45,5 @@ class CoreSettings(Settings):
     nats: NatsConfig | None = None
     scheduler: SchedulerConfig = Field(default_factory=SchedulerConfig)
     node_host: NodeHostConfig = Field(default_factory=NodeHostConfig)
+    xray: XrayConfig = Field(default_factory=XrayConfig)
     cli: CLIConfig = Field(default_factory=CLIConfig)
