@@ -6,13 +6,15 @@ from papilio.infra.db.tools.decorators import transactional
 from papilio.infra.scopes import Inject, request_scoped
 
 from src.apps.shop.crypto.gateways.app.interfaces.configs import (
+    INowPaymentsConfigQuery,
     IPlisioConfigQuery,
 )
 from src.apps.shop.crypto.gateways.app.interfaces.services import (
     ICryptoGatewayService,
 )
 
-from ...domain.results.invoice import Invoice, PlisioIssue
+from ...domain.policy import NOWPAYMENTS, PLISIO, RIAL, USD
+from ...domain.results.invoice import Invoice, NowPaymentsIssue, PlisioIssue
 from ..interfaces.services import ICryptoPaymentService
 
 
@@ -30,7 +32,8 @@ class PaymentIssueExecution:
         payments: ICryptoPaymentService = Inject(),
         gateways: ICryptoGatewayService = Inject(),
         configs: IPlisioConfigQuery = Inject(),
-    ) -> PlisioIssue | Invoice:
+        nowpayments: INowPaymentsConfigQuery = Inject(),
+    ) -> PlisioIssue | NowPaymentsIssue | Invoice:
         """Prepare issuance using the frozen amount and currency.
 
         Args:
@@ -38,6 +41,7 @@ class PaymentIssueExecution:
             payments: The payment service injected for this phase.
             gateways: The account service injected for this phase.
             configs: The internal Plisio settings reader.
+            nowpayments: The internal NOWPayments settings reader.
 
         Returns:
             The saved invoice or the inputs for a provider call.
@@ -51,23 +55,36 @@ class PaymentIssueExecution:
             result = Invoice(id=payment.invoice_id, url=payment.invoice_url)
         else:
             amount, currency = payment.quote_amount, payment.quote_currency
-            if amount is None or (currency != "IRR" and currency != "USD"):
+            if amount is None or (currency != RIAL and currency != USD):
                 raise ConflictException(
                     message="The payment must be quoted before issuance.",
                     message_code="crypto_payment_unquoted",
                     unique_dict={"payment_id": id},
                 )
             gateway = await gateways.get_by_id(payment.gateway_id)
-            if gateway.kind != "plisio" or not gateway.is_active:
+            if gateway.is_active and gateway.kind == PLISIO:
+                config = await configs.get(gateway.id)
+                result = PlisioIssue(
+                    payment_id=id,
+                    amount=amount,
+                    currency=currency,
+                    config=config,
+                )
+            elif (
+                gateway.is_active
+                and gateway.kind == NOWPAYMENTS
+                and currency == USD
+            ):
+                now_config = await nowpayments.get(gateway.id)
+                result = NowPaymentsIssue(
+                    payment_id=id, amount=amount, config=now_config
+                )
+            else:
                 raise ConflictException(
-                    message="The gateway cannot issue a Plisio invoice.",
+                    message="The gateway cannot issue a hosted invoice.",
                     message_code="crypto_gateway_issue_unavailable",
                     unique_dict={"gateway_id": gateway.id},
                 )
-            config = await configs.get(gateway.id)
-            result = PlisioIssue(
-                payment_id=id, amount=amount, currency=currency, config=config
-            )
         return result
 
     @request_scoped
@@ -79,7 +96,7 @@ class PaymentIssueExecution:
         *,
         payments: ICryptoPaymentService = Inject(),
     ) -> Invoice:
-        """Save the invoice returned by Plisio and return the stored result.
+        """Save the hosted invoice returned by the issuing provider.
 
         Args:
             id: Payment identity handed to the provider.

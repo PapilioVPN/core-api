@@ -1,6 +1,5 @@
 """Register a local payment with an active gateway."""
 
-from papilio.errors.exceptions import ValidationException
 from papilio.infra.db.tools.decorators import transactional
 
 from src.apps.shop.crypto.gateways.app.interfaces.services import (
@@ -9,6 +8,7 @@ from src.apps.shop.crypto.gateways.app.interfaces.services import (
 
 from ...domain.dtos.records import PaymentCreate
 from ...domain.models.records import CryptoPaymentModel
+from ...domain.policy import check_amount
 from ..interfaces.services import ICryptoPaymentService
 
 
@@ -35,13 +35,7 @@ class PaymentCreateCommand:
             ValidationException: The gateway does not accept new payments.
         """
         gateway = await self.gateways.get_by_id(data.gateway_id)
-        if not gateway.is_active:
-            raise ValidationException(
-                message="This gateway does not accept new payments.",
-                message_code="crypto_gateway_inactive",
-                loc=["gateway_id"],
-                input=data.gateway_id,
-            )
+        check_amount(gateway, data.amount)
         payment = await self.payments.create(
             CryptoPaymentModel(gateway_id=gateway.id, amount=data.amount)
         )

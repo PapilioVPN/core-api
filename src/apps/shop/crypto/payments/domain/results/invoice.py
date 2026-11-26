@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 
 from src.apps.shop.crypto.gateways.domain.dtos.configs import (
+    NowPaymentsConfig,
     PlisioConfig,
     PriceCurrency,
 )
@@ -22,3 +23,10 @@ class PlisioIssue:
     currency: PriceCurrency
     config: PlisioConfig = field(repr=False)
     expire_minutes: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class NowPaymentsIssue:
+    payment_id: int
+    amount: Decimal
+    config: NowPaymentsConfig = field(repr=False)

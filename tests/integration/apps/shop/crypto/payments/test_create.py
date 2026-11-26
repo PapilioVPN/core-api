@@ -80,3 +80,33 @@ async def test_create_payment(app: FastAPI, client: AsyncClient) -> None:
             PaymentCreate.model_validate(
                 {"gateway_id": active_id, "amount": invalid}
             )
+
+
+@pytest.mark.parametrize("amount", [99_999, 200_001])
+async def test_create_enforces_gateway_amount_bounds(
+    app: FastAPI, client: AsyncClient, amount: int
+) -> None:
+    container = cast(AsyncContainer, app.state.dishka_container)
+    async with container() as scope:
+        gateways = await scope.get(ICryptoGatewayService)
+        command = await scope.get(PaymentCreateCommand)
+        gateway = await gateways.create(
+            GatewayCreate(
+                kind="plisio",
+                title="Bounded payment",
+                is_active=True,
+                min_amount=100_000,
+                max_amount=200_000,
+            )
+        )
+        gateway_id = gateway.id
+        with pytest.raises(ValidationException) as exc:
+            await command.create(
+                PaymentCreate(gateway_id=gateway_id, amount=amount)
+            )
+        assert exc.value.message_code == "crypto_payment_amount_out_of_bounds"
+        for allowed in (100_000, 200_000):
+            payment = await command.create(
+                PaymentCreate(gateway_id=gateway_id, amount=allowed)
+            )
+            assert payment.amount == allowed

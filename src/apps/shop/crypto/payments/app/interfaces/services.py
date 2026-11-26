@@ -1,11 +1,14 @@
 """Operations owned by the cryptocurrency payment service."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Protocol
+
+from pydantic import JsonValue
 
 from ...domain.models.quote import Quote
 from ...domain.models.records import CryptoPaymentModel
 from ...domain.results.invoice import Invoice
+from ...domain.results.settlement import Settlement
 
 
 class ICryptoPaymentService(Protocol):
@@ -32,3 +35,15 @@ class ICryptoPaymentService(Protocol):
         settlement_id: str,
         confirmed_at: datetime,
     ) -> CryptoPaymentModel | None: ...
+
+
+class IPaymentPricingService(Protocol):
+    async def price(
+        self, payment: CryptoPaymentModel, *, max_age: timedelta
+    ) -> Quote: ...
+
+
+class IPaymentNotificationService(Protocol):
+    async def verify(
+        self, gateway_id: int, data: dict[str, JsonValue], signature: str
+    ) -> Settlement | None: ...

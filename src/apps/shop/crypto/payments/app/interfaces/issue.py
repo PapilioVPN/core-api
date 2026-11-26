@@ -2,7 +2,7 @@
 
 from typing import Protocol
 
-from ...domain.results.invoice import Invoice, PlisioIssue
+from ...domain.results.invoice import Invoice, NowPaymentsIssue, PlisioIssue
 
 
 class IPaymentIssuePipeline(Protocol):
@@ -12,6 +12,8 @@ class IPaymentIssuePipeline(Protocol):
 
 
 class IPaymentIssueExecution(Protocol):
-    async def prepare(self, id: int) -> PlisioIssue | Invoice: ...
+    async def prepare(
+        self, id: int
+    ) -> PlisioIssue | NowPaymentsIssue | Invoice: ...
 
     async def complete(self, id: int, data: Invoice) -> Invoice: ...

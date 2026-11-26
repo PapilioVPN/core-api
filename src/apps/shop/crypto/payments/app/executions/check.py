@@ -7,7 +7,6 @@ from papilio.errors.exceptions import ConflictException
 from papilio.infra.db.tools.decorators import transactional
 from papilio.infra.scopes import Inject, request_scoped
 from papilio.utils.dates import utc_now
-from papilio_tasks.apps.outbox import OutboxWriter
 
 from src.apps.shop.crypto.gateways.app.interfaces.configs import (
     IPlisioConfigQuery,
@@ -16,10 +15,11 @@ from src.apps.shop.crypto.gateways.app.interfaces.services import (
     ICryptoGatewayService,
 )
 
-from ...domain.events.records import PaymentConfirmed
 from ...domain.models.records import CryptoPaymentModel
+from ...domain.policy import PLISIO
 from ...domain.results.check import PlisioCheck
-from ...infra.broker.publishers import payment_confirmed
+from ...domain.results.settlement import Settlement
+from ..interfaces.commands import IPaymentConfirmCommand
 from ..interfaces.services import ICryptoPaymentService
 
 
@@ -81,7 +81,7 @@ class PaymentCheckExecution:
         if payment.confirmed_at is None:
             gateway = await gateways.get_by_id(payment.gateway_id)
             if (
-                gateway.kind != "plisio"
+                gateway.kind != PLISIO
                 or payment.invoice_id is None
                 or payment.quote_amount is None
                 or payment.quote_currency is None
@@ -104,7 +104,7 @@ class PaymentCheckExecution:
         settlement_id: str,
         *,
         payments: ICryptoPaymentService = Inject(),
-        outbox: OutboxWriter = Inject(),
+        command: IPaymentConfirmCommand = Inject(),
     ) -> CryptoPaymentModel:
         """Persist the first verified settlement and register its event.
 
@@ -113,18 +113,14 @@ class PaymentCheckExecution:
             invoice_id: Original provider invoice identity.
             settlement_id: Verified operation that received the payment.
             payments: Payment service injected for the short write.
-            outbox: Native writer for the same transaction.
+            command: Shared command that commits confirmation and publication.
 
         Returns:
             The stored payment, including after a concurrent confirmation.
         """
-        payment = await payments.confirm(
-            id, invoice_id, settlement_id, utc_now()
+        payment = await command.confirm(
+            Settlement(id, invoice_id, settlement_id)
         )
-        if payment is not None:
-            await outbox.append(
-                payment_confirmed, PaymentConfirmed(payment_id=payment.id)
-            )
-        else:
+        if payment is None:
             payment = await payments.get_by_id(id)
         return payment
