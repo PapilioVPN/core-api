@@ -2,7 +2,7 @@
 
 from papilio.infra.db.transaction import active_transaction
 
-from ...domain.results.configs import GatewayConfigView
+from ...domain.results.configs import ConfigFailure, GatewayConfigView
 from ..interfaces.cache import IGatewayConfigCache
 from ..interfaces.configs import IGatewayConfigService
 
@@ -17,12 +17,12 @@ class GatewayConfigQuery:
         self.service = service
         self.cache = cache
 
-    async def get(self, id: int) -> GatewayConfigView:
+    async def get(self, id: int) -> GatewayConfigView | ConfigFailure:
         """Read safe settings, bypassing cache in a transaction."""
         use_cache = active_transaction() is None
         view = await self.cache.find(id) if use_cache else None
         if view is None:
             view = await self.service.get(id)
-            if use_cache:
+            if use_cache and isinstance(view, GatewayConfigView):
                 await self.cache.store(view, self.ttl)
         return view

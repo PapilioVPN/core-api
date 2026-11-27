@@ -35,6 +35,10 @@ from src.apps.shop.crypto.payments.app.interfaces.services import (
     ICryptoPaymentService,
 )
 from src.apps.shop.crypto.payments.domain.dtos.records import PaymentCreate
+from src.apps.shop.crypto.payments.domain.models.records import (
+    CryptoPaymentModel,
+)
+from src.apps.shop.crypto.payments.domain.results.invoice import Invoice
 from src.apps.shop.crypto.payments.infra.broker.config import BrokerConfig
 from src.apps.shop.crypto.rates.app.interfaces.cache import IRateCache
 from src.apps.shop.crypto.rates.domain.models.records import Rate
@@ -86,6 +90,7 @@ async def test_confirm_signed_hosted_invoice(
         )
         id = payment.id
         frozen = await quote.quote(id, max_age=timedelta(minutes=1))
+        assert isinstance(frozen, CryptoPaymentModel)
         assert frozen.quote_amount == Decimal("2")
 
     def issue(req: Request) -> Response:
@@ -106,6 +111,7 @@ async def test_confirm_signed_hosted_invoice(
         connection.client = provider
         try:
             invoice = await pipeline.issue(id)
+            assert isinstance(invoice, Invoice)
         finally:
             connection.client = original
     assert invoice.id == "730"

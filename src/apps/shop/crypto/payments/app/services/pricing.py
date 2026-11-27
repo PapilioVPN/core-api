@@ -12,6 +12,7 @@ from src.apps.shop.crypto.gateways.app.interfaces.configs import (
 from src.apps.shop.crypto.gateways.app.interfaces.services import (
     ICryptoGatewayService,
 )
+from src.apps.shop.crypto.gateways.domain.results.configs import ConfigFailure
 from src.apps.shop.crypto.rates.app.interfaces.cache import IRateCache
 from src.apps.shop.crypto.rates.app.interfaces.services import (
     IConversionService,
@@ -39,7 +40,7 @@ class PaymentPricingService:
 
     async def price(
         self, payment: CryptoPaymentModel, *, max_age: timedelta
-    ) -> Quote | RateFailure:
+    ) -> Quote | RateFailure | ConfigFailure:
         """Price the original rial amount in the gateway's currency.
 
         Args:
@@ -64,10 +65,12 @@ class PaymentPricingService:
                     message_code="crypto_gateway_pricing_unsupported",
                     unique_dict={"kind": gateway.kind},
                 )
-        result: Quote | RateFailure = Quote(
+        result: Quote | RateFailure | ConfigFailure = Quote(
             amount=Decimal(payment.amount), currency=RIAL
         )
-        if currency == USD:
+        if isinstance(currency, ConfigFailure):
+            result = currency
+        elif currency == USD:
             rate = await self.rates.find(currency)
             if isinstance(rate, RateFailure):
                 result = rate

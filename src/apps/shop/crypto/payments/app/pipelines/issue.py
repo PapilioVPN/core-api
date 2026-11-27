@@ -2,7 +2,10 @@
 
 from dataclasses import replace
 
+from src.apps.shop.crypto.gateways.domain.results.configs import ConfigFailure
+
 from ...domain.results.invoice import Invoice, NowPaymentsIssue, PlisioIssue
+from ...domain.results.records import PaymentFailure
 from ..interfaces.gateways import INowPaymentsGateway, IPlisioGateway
 from ..interfaces.issue import IPaymentIssueExecution
 
@@ -21,7 +24,7 @@ class PaymentIssuePipeline:
 
     async def issue(
         self, id: int, *, expire_minutes: int | None = None
-    ) -> Invoice:
+    ) -> Invoice | ConfigFailure | PaymentFailure:
         """Return the saved invoice or issue one at the frozen price.
 
         Args:
@@ -29,21 +32,20 @@ class PaymentIssuePipeline:
             expire_minutes: Hosted payment window in minutes, if supplied.
 
         Returns:
-            The provider invoice identity and hosted URL.
+            The hosted invoice or its failure reason.
 
         Raises:
-            InvoiceUnavailable: The provider did not return a usable invoice.
             ConflictException: The payment is not ready or the invoice changed.
         """
         prepared = await self.execution.prepare(id)
         match prepared:
-            case Invoice():
+            case Invoice() | ConfigFailure():
                 invoice = prepared
             case PlisioIssue():
                 request = replace(prepared, expire_minutes=expire_minutes)
                 invoice = await self.plisio.issue(request)
             case NowPaymentsIssue():
                 invoice = await self.nowpayments.issue(prepared)
-        if not isinstance(prepared, Invoice):
+        if isinstance(invoice, Invoice) and not isinstance(prepared, Invoice):
             invoice = await self.execution.complete(id, invoice)
         return invoice

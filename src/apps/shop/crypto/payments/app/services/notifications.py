@@ -6,9 +6,10 @@ from pydantic import JsonValue
 from src.apps.shop.crypto.gateways.app.interfaces.configs import (
     INowPaymentsConfigQuery,
 )
+from src.apps.shop.crypto.gateways.domain.results.configs import ConfigFailure
 
-from ...domain.errors import InvalidNotification
-from ...domain.policy import check_invoice
+from ...domain.policy import matches_invoice
+from ...domain.results.records import PaymentFailure
 from ...domain.results.settlement import Settlement
 from ..interfaces.gateways import INowPaymentsNotification
 from ..interfaces.services import ICryptoPaymentService
@@ -29,7 +30,7 @@ class PaymentNotificationService:
     @transactional
     async def verify(
         self, gateway_id: int, data: dict[str, JsonValue], signature: str
-    ) -> Settlement | None:
+    ) -> Settlement | ConfigFailure | PaymentFailure | None:
         """Match a final signed notification to its original local invoice.
 
         Args:
@@ -38,23 +39,28 @@ class PaymentNotificationService:
             signature: The provider's HMAC header value.
 
         Returns:
-            The settlement when verified, or None for nonfinal updates.
-
-        Raises:
-            UnAuthorizedException: The account or signature is invalid.
-            ConflictException: The evidence does not match a paid invoice.
+            Verified evidence, None for nonfinal status, or a failure.
         """
         config = await self.configs.find(gateway_id)
         if config is None:
-            raise InvalidNotification()
-        invoice = self.decoder.decode(
-            gateway_id, data, signature, config.ipn_secret.get_secret_value()
-        )
-        settlement = None
-        if invoice is not None:
-            payment = await self.payments.get_by_id(
-                invoice.settlement.payment_id
+            result: Settlement | ConfigFailure | PaymentFailure | None = (
+                PaymentFailure.INVALID_NOTIFICATION
             )
-            check_invoice(gateway_id, payment, invoice)
-            settlement = invoice.settlement
-        return settlement
+        elif isinstance(config, ConfigFailure):
+            result = config
+        else:
+            invoice = self.decoder.decode(
+                data, signature, config.ipn_secret.get_secret_value()
+            )
+            if invoice is None or isinstance(invoice, PaymentFailure):
+                result = invoice
+            else:
+                payment = await self.payments.get_by_id(
+                    invoice.settlement.payment_id
+                )
+                result = (
+                    invoice.settlement
+                    if matches_invoice(gateway_id, payment, invoice)
+                    else PaymentFailure.INVOICE_MISMATCH
+                )
+        return result

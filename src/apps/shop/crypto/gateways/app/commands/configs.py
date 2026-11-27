@@ -1,8 +1,9 @@
 """Prepare gateway connection settings before writing them."""
 
+from papilio.errors.exceptions import ValidationException
+
 from ...domain.dtos.configs import ConfigWrite
-from ...domain.errors import GatewayKindMismatch
-from ...domain.results.configs import GatewayConfigView
+from ...domain.results.configs import ConfigFailure, GatewayConfigView
 from ..interfaces.configs import IGatewayConfigService
 from ..interfaces.services import ICryptoGatewayService
 
@@ -17,7 +18,9 @@ class GatewayConfigCommand:
         self.gateways = gateways
         self.configs = configs
 
-    async def save(self, id: int, data: ConfigWrite) -> GatewayConfigView:
+    async def save(
+        self, id: int, data: ConfigWrite
+    ) -> GatewayConfigView | ConfigFailure:
         """Replace one account's connection settings.
 
         Args:
@@ -30,10 +33,19 @@ class GatewayConfigCommand:
         Raises:
             NotFoundException: The account does not exist.
             ValidationException: The input targets a different provider.
-            ConfigUnavailable: A private deployment key is not configured.
         """
         gateway = await self.gateways.get_by_id(id)
         if gateway.kind != data.kind:
-            raise GatewayKindMismatch(data.kind)
+            raise ValidationException(
+                message="Configuration does not match the gateway provider.",
+                message_code="crypto_gateway_kind_mismatch",
+                loc=["kind"],
+                input=data.kind,
+            )
         record = await self.configs.save(id, data)
-        return GatewayConfigView.from_record(record, gateway.kind)
+        result = (
+            record
+            if isinstance(record, ConfigFailure)
+            else GatewayConfigView.from_record(record, gateway.kind)
+        )
+        return result

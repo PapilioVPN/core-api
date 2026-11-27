@@ -1,19 +1,26 @@
-"""Credential-free connection settings for the panel."""
+"""Connection metadata and expected configuration failures."""
 
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Self
 
 from ..dtos.configs import PriceCurrency
-from ..errors import ConfigUnavailable
 from ..models.configs import GatewayConfigModel
 
 
-def plisio_currency(record: GatewayConfigModel | None) -> PriceCurrency:
-    """Read Plisio's pricing currency, with IRR as the default."""
+class ConfigFailure(StrEnum):
+    UNAVAILABLE = "config_unavailable"
+
+
+def plisio_currency(
+    record: GatewayConfigModel | None,
+) -> PriceCurrency | ConfigFailure:
+    """Read an account's selected currency, defaulting to IRR."""
     value = record.config.get("price_currency", "IRR") if record else "IRR"
-    if not isinstance(value, str) or (value != "IRR" and value != "USD"):
-        raise ConfigUnavailable()
-    return value
+    result: PriceCurrency | ConfigFailure = ConfigFailure.UNAVAILABLE
+    if isinstance(value, str) and (value == "IRR" or value == "USD"):
+        result = value
+    return result
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,22 +34,26 @@ class GatewayConfigView:
     callback_url: str | None = None
 
     @classmethod
-    def from_record(cls, record: GatewayConfigModel, kind: str) -> Self:
-        """Return connection metadata without including encrypted values."""
+    def from_record(
+        cls, record: GatewayConfigModel, kind: str
+    ) -> Self | ConfigFailure:
+        """Read displayable settings without exposing encrypted credentials."""
+        result: Self | ConfigFailure = ConfigFailure.UNAVAILABLE
         api_url = record.config.get("api_url")
-        if not isinstance(api_url, str):
-            raise ConfigUnavailable()
-        callback_url = record.config.get("callback_url")
-        return cls(
-            gateway_id=record.gateway_id,
-            kind=kind,
-            api_url=api_url,
-            price_currency=plisio_currency(record)
-            if kind == "plisio"
-            else "USD",
-            has_api_key=bool(record.config.get("api_key")),
-            has_ipn_secret=bool(record.config.get("ipn_secret")),
-            callback_url=callback_url
-            if isinstance(callback_url, str)
-            else None,
-        )
+        currency = plisio_currency(record) if kind == "plisio" else "USD"
+        if isinstance(api_url, str) and not isinstance(
+            currency, ConfigFailure
+        ):
+            callback_url = record.config.get("callback_url")
+            result = cls(
+                gateway_id=record.gateway_id,
+                kind=kind,
+                api_url=api_url,
+                price_currency=currency,
+                has_api_key=bool(record.config.get("api_key")),
+                has_ipn_secret=bool(record.config.get("ipn_secret")),
+                callback_url=callback_url
+                if isinstance(callback_url, str)
+                else None,
+            )
+        return result

@@ -12,6 +12,7 @@ from src.apps.shop.crypto.gateways.app.interfaces.configs import (
 from src.apps.shop.crypto.gateways.app.interfaces.services import (
     ICryptoGatewayService,
 )
+from src.apps.shop.crypto.gateways.domain.results.configs import ConfigFailure
 
 from ...domain.policy import NOWPAYMENTS, PLISIO, RIAL, USD
 from ...domain.results.invoice import Invoice, NowPaymentsIssue, PlisioIssue
@@ -33,7 +34,7 @@ class PaymentIssueExecution:
         gateways: ICryptoGatewayService = Inject(),
         configs: IPlisioConfigQuery = Inject(),
         nowpayments: INowPaymentsConfigQuery = Inject(),
-    ) -> PlisioIssue | NowPaymentsIssue | Invoice:
+    ) -> PlisioIssue | NowPaymentsIssue | Invoice | ConfigFailure:
         """Prepare issuance using the frozen amount and currency.
 
         Args:
@@ -48,7 +49,6 @@ class PaymentIssueExecution:
 
         Raises:
             ConflictException: The payment or gateway cannot issue an invoice.
-            ConfigUnavailable: The gateway credentials cannot be read.
         """
         payment = await payments.get_by_id(id)
         if payment.invoice_id is not None and payment.invoice_url is not None:
@@ -64,21 +64,21 @@ class PaymentIssueExecution:
             gateway = await gateways.get_by_id(payment.gateway_id)
             if gateway.is_active and gateway.kind == PLISIO:
                 config = await configs.get(gateway.id)
-                result = PlisioIssue(
-                    payment_id=id,
-                    amount=amount,
-                    currency=currency,
-                    config=config,
+                result = (
+                    config
+                    if isinstance(config, ConfigFailure)
+                    else PlisioIssue(id, amount, currency, config)
                 )
             elif (
                 gateway.is_active
                 and gateway.kind == NOWPAYMENTS
                 and currency == USD
             ):
-                now_config = await nowpayments.get(gateway.id)
-                result = NowPaymentsIssue(
-                    payment_id=id, amount=amount, config=now_config
-                )
+                now_config = await nowpayments.find(gateway.id)
+                if isinstance(now_config, ConfigFailure) or now_config is None:
+                    result = ConfigFailure.UNAVAILABLE
+                else:
+                    result = NowPaymentsIssue(id, amount, now_config)
             else:
                 raise ConflictException(
                     message="The gateway cannot issue a hosted invoice.",

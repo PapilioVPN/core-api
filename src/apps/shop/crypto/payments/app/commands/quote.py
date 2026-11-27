@@ -5,6 +5,7 @@ from datetime import timedelta
 from papilio.errors.exceptions import ConflictException
 from papilio.infra.db.tools.decorators import transactional
 
+from src.apps.shop.crypto.gateways.domain.results.configs import ConfigFailure
 from src.apps.shop.crypto.rates.domain.results.records import RateFailure
 
 from ...domain.models.records import CryptoPaymentModel
@@ -22,7 +23,7 @@ class PaymentQuoteCommand:
     @transactional
     async def quote(
         self, id: int, *, max_age: timedelta
-    ) -> CryptoPaymentModel | RateFailure:
+    ) -> CryptoPaymentModel | RateFailure | ConfigFailure:
         """Save the invoice quote once, before making any provider call.
 
         Args:
@@ -37,10 +38,10 @@ class PaymentQuoteCommand:
             ConflictException: Pricing is unsupported or another write won.
         """
         payment = await self.payments.get_by_id(id)
-        result: CryptoPaymentModel | RateFailure = payment
+        result: CryptoPaymentModel | RateFailure | ConfigFailure = payment
         if payment.quote_amount is None:
             quote = await self.pricing.price(payment, max_age=max_age)
-            if isinstance(quote, RateFailure):
+            if isinstance(quote, (RateFailure, ConfigFailure)):
                 result = quote
             else:
                 saved = await self.payments.set_quote(id, quote)

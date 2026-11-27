@@ -6,7 +6,11 @@ from papilio.tools.checks import Checks
 
 from ...domain.dtos.configs import ConfigWrite, PriceCurrency
 from ...domain.models.configs import GatewayConfigModel
-from ...domain.results.configs import GatewayConfigView, plisio_currency
+from ...domain.results.configs import (
+    ConfigFailure,
+    GatewayConfigView,
+    plisio_currency,
+)
 from ...infra.crypto.codec import encode
 from ...infra.pg.repositories.configs import GatewayConfigRepository
 from ..decorators.configs import forget_cache
@@ -31,7 +35,7 @@ class GatewayConfigService(Checks[GatewayConfigModel]):
         self.crypto = crypto
 
     @transactional
-    async def get(self, id: int) -> GatewayConfigView:
+    async def get(self, id: int) -> GatewayConfigView | ConfigFailure:
         """Read the saved settings without decrypting credentials.
 
         Args:
@@ -42,7 +46,6 @@ class GatewayConfigService(Checks[GatewayConfigModel]):
 
         Raises:
             NotFoundException: The account or its settings do not exist.
-            ConfigUnavailable: The stored connection metadata is invalid.
         """
         gateway = await self.gateways.get_by_id(id)
         record = await self.find(id)
@@ -61,24 +64,23 @@ class GatewayConfigService(Checks[GatewayConfigModel]):
         record = await self.repo.get(id)
         return record
 
-    async def plisio_price(self, id: int) -> PriceCurrency:
+    async def plisio_price(self, id: int) -> PriceCurrency | ConfigFailure:
         """Read authoritative pricing for a Plisio account.
 
         Args:
             id: Plisio gateway account identity.
 
         Returns:
-            The saved pricing currency, or IRR until one is set.
-
-        Raises:
-            ConfigUnavailable: The stored currency is invalid.
+            The saved currency, default IRR, or an invalid settings result.
         """
         record = await self.find(id)
         return plisio_currency(record)
 
     @forget_cache.one
     @transactional
-    async def save(self, id: int, data: ConfigWrite) -> GatewayConfigModel:
+    async def save(
+        self, id: int, data: ConfigWrite
+    ) -> GatewayConfigModel | ConfigFailure:
         """Persist prepared settings and invalidate the cached panel view.
 
         Args:
@@ -86,13 +88,12 @@ class GatewayConfigService(Checks[GatewayConfigModel]):
             data: Validated settings, with credentials to encrypt.
 
         Returns:
-            The stored settings.
-
-        Raises:
-            ConfigUnavailable: A deployment key is not configured.
+            The stored settings or an encryption failure.
         """
         config = encode(data, self.crypto.encryption_key)
-        record = await self.repo.save(
-            GatewayConfigModel(gateway_id=id, config=config)
-        )
-        return record
+        result: GatewayConfigModel | ConfigFailure = ConfigFailure.UNAVAILABLE
+        if not isinstance(config, ConfigFailure):
+            result = await self.repo.save(
+                GatewayConfigModel(gateway_id=id, config=config)
+            )
+        return result

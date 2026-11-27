@@ -45,8 +45,11 @@ from src.apps.shop.crypto.payments.app.pipelines.check import (
     PaymentCheckPipeline,
 )
 from src.apps.shop.crypto.payments.domain.dtos.records import PaymentCreate
-from src.apps.shop.crypto.payments.domain.errors import CheckUnavailable
+from src.apps.shop.crypto.payments.domain.models.records import (
+    CryptoPaymentModel,
+)
 from src.apps.shop.crypto.payments.domain.results.invoice import Invoice
+from src.apps.shop.crypto.payments.domain.results.records import PaymentFailure
 from src.apps.shop.crypto.payments.infra.pg.tables import CryptoPaymentTable
 from src.bootstrap.outbox import pending as outbox
 from src.bootstrap.relay import create_relay_app
@@ -85,7 +88,8 @@ async def _payment(container: AsyncContainer, invoice_id: str) -> int:
         payment = await create.create(
             PaymentCreate(gateway_id=gateway_id, amount=1_220_000)
         )
-        await quote.quote(payment.id, max_age=timedelta(minutes=2))
+        priced = await quote.quote(payment.id, max_age=timedelta(minutes=2))
+        assert isinstance(priced, CryptoPaymentModel)
         async with transaction():
             await payments.set_invoice(
                 payment.id,
@@ -146,30 +150,44 @@ async def test_check_plisio_payment(
         connection.client = upstream
         try:
             pending = await pipeline.check(payment_id)
+            assert isinstance(pending, CryptoPaymentModel)
             assert pending.confirmed_at is None
             status = "completed"
             if switched:
                 parent = "foreign-invoice"
-                assert (await pipeline.check(payment_id)).confirmed_at is None
+                unchecked = await pipeline.check(payment_id)
+                assert isinstance(unchecked, CryptoPaymentModel)
+                assert unchecked.confirmed_at is None
                 parent = "root-invoice"
 
             order_number = str(payment_id + 1)
-            assert (await pipeline.check(payment_id)).confirmed_at is None
+            unchecked = await pipeline.check(payment_id)
+            assert isinstance(unchecked, CryptoPaymentModel)
+            assert unchecked.confirmed_at is None
             order_number = str(payment_id)
             quote["source_amount"] = "1220001"
-            assert (await pipeline.check(payment_id)).confirmed_at is None
+            unchecked = await pipeline.check(payment_id)
+            assert isinstance(unchecked, CryptoPaymentModel)
+            assert unchecked.confirmed_at is None
             quote["source_amount"] = "1220000"
             quote["source_currency"] = "USD"
-            assert (await pipeline.check(payment_id)).confirmed_at is None
+            unchecked = await pipeline.check(payment_id)
+            assert isinstance(unchecked, CryptoPaymentModel)
+            assert unchecked.confirmed_at is None
             quote["source_currency"] = "IRR"
             received = "0.00008"
-            assert (await pipeline.check(payment_id)).confirmed_at is None
+            unchecked = await pipeline.check(payment_id)
+            assert isinstance(unchecked, CryptoPaymentModel)
+            assert unchecked.confirmed_at is None
             received = "0.00009"
             fail = True
-            with pytest.raises(CheckUnavailable):
+            assert (
                 await pipeline.check(payment_id)
+                is PaymentFailure.CHECK_UNAVAILABLE
+            )
             fail = False
             confirmed = await pipeline.check(payment_id)
+            assert isinstance(confirmed, CryptoPaymentModel)
             assert confirmed.confirmed_at is not None
             assert confirmed.settlement_id == (
                 "child-invoice" if switched else "root-invoice"
@@ -179,6 +197,7 @@ async def test_check_plisio_payment(
 
             before = len(calls)
             replay = await pipeline.check(payment_id)
+            assert isinstance(replay, CryptoPaymentModel)
             assert replay.confirmed_at == confirmed.confirmed_at
             assert len(calls) == before
         finally:

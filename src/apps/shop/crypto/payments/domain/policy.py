@@ -1,6 +1,6 @@
 """Admission checks and matching rules for cryptocurrency payments."""
 
-from papilio.errors.exceptions import ConflictException, ValidationException
+from papilio.errors.exceptions import ValidationException
 
 from src.apps.shop.crypto.gateways.domain.models.records import (
     CryptoGatewayModel,
@@ -35,23 +35,13 @@ def check_amount(gateway: CryptoGatewayModel, amount: int) -> None:
         )
 
 
-def check_invoice(
+def matches_invoice(
     gateway_id: int, payment: CryptoPaymentModel, evidence: PaidInvoice
-) -> None:
-    """Require the same issuing account, invoice and original quote."""
-    if (
-        payment.gateway_id != gateway_id
-        or payment.invoice_id != evidence.settlement.invoice_id
-        or payment.quote_amount != evidence.amount
-        or payment.quote_currency != evidence.currency
-    ):
-        raise invoice_mismatch(gateway_id)
-
-
-def invoice_mismatch(gateway_id: int) -> ConflictException:
-    """Report that a finished notification does not identify a full invoice."""
-    return ConflictException(
-        message="The notification does not match a full invoice payment.",
-        message_code="nowpayments_invoice_mismatch",
-        unique_dict={"gateway_id": gateway_id},
+) -> bool:
+    """Match the issuing account, invoice and frozen quote."""
+    return (
+        payment.gateway_id == gateway_id
+        and payment.invoice_id == evidence.settlement.invoice_id
+        and payment.quote_amount == evidence.amount
+        and payment.quote_currency == evidence.currency
     )

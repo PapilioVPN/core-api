@@ -8,24 +8,28 @@ from src.apps.shop.crypto.gateways.domain.dtos.configs import PlisioConfig
 
 from ...domain.results.check import Operation
 from ...domain.results.invoice import Invoice, NowPaymentsIssue, PlisioIssue
+from ...domain.results.records import PaymentFailure
 from ...domain.results.settlement import PaidInvoice
 
 
 class IPlisioGateway(Protocol):
-    async def issue(self, data: PlisioIssue) -> Invoice: ...
+    async def issue(self, data: PlisioIssue) -> Invoice | PaymentFailure: ...
 
-    async def read(self, config: PlisioConfig, id: str) -> Operation: ...
+    async def read(
+        self, config: PlisioConfig, id: str
+    ) -> Operation | PaymentFailure: ...
 
 
 class INowPaymentsGateway(Protocol):
-    async def issue(self, data: NowPaymentsIssue) -> Invoice: ...
+    async def issue(
+        self, data: NowPaymentsIssue
+    ) -> Invoice | PaymentFailure: ...
 
 
 class INowPaymentsNotification(Protocol):
     def decode(
         self,
-        gateway_id: int,
         data: dict[str, JsonValue],
         signature: str,
         secret: str,
-    ) -> PaidInvoice | None: ...
+    ) -> PaidInvoice | PaymentFailure | None: ...

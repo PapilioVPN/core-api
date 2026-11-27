@@ -1,56 +1,45 @@
-"""Check one due batch with bounded parallel provider I/O."""
+"""Check reserved payments in bounded batches."""
 
-from asyncio import Semaphore, TaskGroup
-from logging import getLogger
-
-from papilio.errors.base import APPException
+from asyncio import TaskGroup
+from itertools import batched
 
 from ...domain.dtos.recheck import PaymentRecheck
+from ...domain.models.records import CryptoPaymentModel
 from ...domain.results.check import RecheckStats
 from ..interfaces.check import IPaymentCheckExecution
 from .check import PaymentCheckPipeline
-
-log = getLogger(__name__)
 
 
 class PaymentRecheckPipeline:
     def __init__(
         self, execution: IPaymentCheckExecution, check: PaymentCheckPipeline
     ) -> None:
-        """Bind the batch selector and the existing one-payment check."""
+        """Bind the batch selector and the one-payment check."""
         self.execution = execution
         self.check = check
 
     async def run(self, query: PaymentRecheck) -> RecheckStats:
-        """Claim one batch and check payments independently.
+        """Claim due payments and check each group independently.
 
         Args:
             query: Validated batch size, retry spacing and concurrency.
 
         Returns:
-            Counts of selected, confirmed and failed payment checks.
+            Counts of selected, confirmed and unsuccessful checks.
         """
         ids = await self.execution.claim(limit=query.limit, delay=query.delay)
-        slots = Semaphore(query.concurrency)
-        async with TaskGroup() as group:
-            checks = [group.create_task(self._check(id, slots)) for id in ids]
-        results = [task.result() for task in checks]
+        confirmed = failed = 0
+        for batch in batched(ids, query.concurrency):
+            async with TaskGroup() as group:
+                checks = [
+                    group.create_task(self.check.check(id)) for id in batch
+                ]
+            for check in checks:
+                result = check.result()
+                if not isinstance(result, CryptoPaymentModel):
+                    failed += 1
+                elif result.confirmed_at is not None:
+                    confirmed += 1
         return RecheckStats(
-            selected=len(ids),
-            confirmed=sum(result is True for result in results),
-            failed=sum(result is None for result in results),
+            selected=len(ids), confirmed=confirmed, failed=failed
         )
-
-    async def _check(self, id: int, slots: Semaphore) -> bool | None:
-        result = None
-        async with slots:
-            try:
-                payment = await self.check.check(id)
-                result = payment.confirmed_at is not None
-            except APPException as error:
-                log.warning(
-                    "Crypto payment %s check failed: %s",
-                    id,
-                    error.message_code,
-                )
-        return result

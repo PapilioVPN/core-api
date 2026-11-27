@@ -3,7 +3,6 @@
 from datetime import timedelta
 
 from dishka import AsyncContainer
-from papilio.errors.exceptions import ConflictException
 from papilio.infra.db.tools.decorators import transactional
 from papilio.infra.scopes import Inject, request_scoped
 from papilio.utils.dates import utc_now
@@ -14,10 +13,12 @@ from src.apps.shop.crypto.gateways.app.interfaces.configs import (
 from src.apps.shop.crypto.gateways.app.interfaces.services import (
     ICryptoGatewayService,
 )
+from src.apps.shop.crypto.gateways.domain.results.configs import ConfigFailure
 
 from ...domain.models.records import CryptoPaymentModel
 from ...domain.policy import PLISIO
 from ...domain.results.check import PlisioCheck
+from ...domain.results.records import PaymentFailure
 from ...domain.results.settlement import Settlement
 from ..interfaces.commands import IPaymentConfirmCommand
 from ..interfaces.services import ICryptoPaymentService
@@ -61,7 +62,7 @@ class PaymentCheckExecution:
         payments: ICryptoPaymentService = Inject(),
         gateways: ICryptoGatewayService = Inject(),
         configs: IPlisioConfigQuery = Inject(),
-    ) -> PlisioCheck | CryptoPaymentModel:
+    ) -> PlisioCheck | CryptoPaymentModel | ConfigFailure | PaymentFailure:
         """Load an issued payment and the account that issued it.
 
         Args:
@@ -71,13 +72,12 @@ class PaymentCheckExecution:
             configs: Internal Plisio credentials reader.
 
         Returns:
-            The settled payment or the inputs for checking it.
-
-        Raises:
-            ConflictException: No Plisio invoice can be checked.
+            The settled payment, check inputs, or the unavailability reason.
         """
         payment = await payments.get_by_id(id)
-        result: PlisioCheck | CryptoPaymentModel = payment
+        result: (
+            PlisioCheck | CryptoPaymentModel | ConfigFailure | PaymentFailure
+        ) = payment
         if payment.confirmed_at is None:
             gateway = await gateways.get_by_id(payment.gateway_id)
             if (
@@ -86,13 +86,14 @@ class PaymentCheckExecution:
                 or payment.quote_amount is None
                 or payment.quote_currency is None
             ):
-                raise ConflictException(
-                    message="This payment has no Plisio invoice to check.",
-                    message_code="crypto_payment_check_unsupported",
-                    unique_dict={"payment_id": id},
+                result = PaymentFailure.CHECK_UNAVAILABLE
+            else:
+                config = await configs.get(gateway.id)
+                result = (
+                    config
+                    if isinstance(config, ConfigFailure)
+                    else PlisioCheck(payment, payment.invoice_id, config)
                 )
-            config = await configs.get(gateway.id)
-            result = PlisioCheck(payment, payment.invoice_id, config)
         return result
 
     @request_scoped

@@ -5,6 +5,7 @@ from functools import wraps
 from types import CoroutineType
 from typing import Any, Concatenate
 
+from ...domain.results.configs import ConfigFailure
 from ..interfaces.cache import IGatewayConfigCacheOwner
 
 
@@ -20,7 +21,8 @@ class forget_cache:
             self: Owner, id: int, /, *args: P.args, **kwargs: P.kwargs
         ) -> R:
             result = await operation(self, id, *args, **kwargs)
-            await self.cache.forget(id)
+            if not isinstance(result, ConfigFailure):
+                await self.cache.forget(id)
             return result
 
         return wrapped

@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 from decimal import Decimal
+from enum import StrEnum
 
 from src.apps.shop.crypto.gateways.domain.dtos.configs import PlisioConfig
 
@@ -15,10 +16,16 @@ class PlisioCheck:
     config: PlisioConfig = field(repr=False)
 
 
+class OperationStatus(StrEnum):
+    COMPLETED = "completed"
+    REPLACED = "replaced"
+    OTHER = "other"
+
+
 @dataclass(frozen=True, slots=True)
 class Operation:
     id: str
-    status: str
+    status: OperationStatus
     parent_id: str | None
     child_ids: tuple[str, ...]
     order_id: str | None

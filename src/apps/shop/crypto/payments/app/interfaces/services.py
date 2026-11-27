@@ -5,11 +5,13 @@ from typing import Protocol
 
 from pydantic import JsonValue
 
+from src.apps.shop.crypto.gateways.domain.results.configs import ConfigFailure
 from src.apps.shop.crypto.rates.domain.results.records import RateFailure
 
 from ...domain.models.quote import Quote
 from ...domain.models.records import CryptoPaymentModel
 from ...domain.results.invoice import Invoice
+from ...domain.results.records import PaymentFailure
 from ...domain.results.settlement import Settlement
 
 
@@ -42,10 +44,10 @@ class ICryptoPaymentService(Protocol):
 class IPaymentPricingService(Protocol):
     async def price(
         self, payment: CryptoPaymentModel, *, max_age: timedelta
-    ) -> Quote | RateFailure: ...
+    ) -> Quote | RateFailure | ConfigFailure: ...
 
 
 class IPaymentNotificationService(Protocol):
     async def verify(
         self, gateway_id: int, data: dict[str, JsonValue], signature: str
-    ) -> Settlement | None: ...
+    ) -> Settlement | ConfigFailure | PaymentFailure | None: ...
