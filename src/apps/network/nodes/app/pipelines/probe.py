@@ -1,8 +1,8 @@
 """Reserve due nodes and check them through the HostService gateway."""
 
-from asyncio import Semaphore, TaskGroup
+from asyncio import TaskGroup
 from datetime import timedelta
-from logging import getLogger
+from itertools import batched
 from math import ceil
 
 from ...config import NodeHostConfig
@@ -15,8 +15,6 @@ from ...domain.results.probe import (
 )
 from ..executions.probe import NodeProbeExecution
 from ..interfaces.host import INodeHostGateway
-
-log = getLogger(__name__)
 
 _CONNECTION_STATUSES = {
     HostStatsStatus.AVAILABLE: NodeConnectionStatus.REACHABLE,
@@ -59,35 +57,25 @@ class NodeProbePipeline:
                 reclaim_after=delay + rpc_budget,
                 limit=checks.batch_size,
             )
-            slots = Semaphore(checks.concurrency)
-            async with TaskGroup() as group:
-                tasks = [
-                    group.create_task(self._probe(claim, slots))
-                    for claim in claims
-                ]
-            result = NodeProbeBatch(
-                selected=len(claims),
-                recorded=sum(task.result() for task in tasks),
-            )
+            recorded = 0
+            for batch in batched(claims, checks.concurrency):
+                async with TaskGroup() as group:
+                    tasks = [
+                        group.create_task(self._probe(claim))
+                        for claim in batch
+                    ]
+                recorded += sum(task.result() for task in tasks)
+            result = NodeProbeBatch(selected=len(claims), recorded=recorded)
         return result
 
-    async def _probe(self, claim: NodeProbeClaim, slots: Semaphore) -> bool:
+    async def _probe(self, claim: NodeProbeClaim) -> bool:
+        """Read outside SQL, then record the typed outcome for this claim."""
         target = claim.target
-        async with slots:
-            try:
-                outcome = await self.gateway.read(
-                    target.id, target.address, target.port
-                )
-            except Exception as error:
-                log.warning(
-                    "Node %s host check raised %s",
-                    target.id,
-                    type(error).__name__,
-                )
-                status = NodeConnectionStatus.FAILED
-            else:
-                status = _CONNECTION_STATUSES.get(
-                    outcome.status, NodeConnectionStatus.FAILED
-                )
-            recorded = await self.execution.complete(claim, status)
+        outcome = await self.gateway.read(
+            target.id, target.address, target.port
+        )
+        status = _CONNECTION_STATUSES.get(
+            outcome.status, NodeConnectionStatus.FAILED
+        )
+        recorded = await self.execution.complete(claim, status)
         return recorded
