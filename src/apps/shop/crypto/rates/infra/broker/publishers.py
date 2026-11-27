@@ -4,7 +4,8 @@ from taskiq import AsyncBroker
 from taskiq.exceptions import SendTaskError
 from taskiq.kicker import AsyncKicker
 
-from ...domain.errors import RefreshUnavailable
+from ...domain.models.records import Rate
+from ...domain.results.records import RateFailure
 from .tasks import refresh_rate
 
 
@@ -13,18 +14,19 @@ class RateRefreshPublisher:
         """Borrow the HTTP application's job transport."""
         self.broker = broker
 
-    async def enqueue(self) -> str:
+    async def enqueue(self) -> str | RateFailure:
         """Queue a rate refresh with no serialized arguments.
 
         Returns:
-            The native ID after JetStream acknowledges the enqueue.
-
-        Raises:
-            RefreshUnavailable: The broker did not confirm publication.
+            The native task ID, or a queue failure.
         """
-        kicker = AsyncKicker[[], None](refresh_rate.name, self.broker, {})
+        kicker = AsyncKicker[[], Rate | RateFailure](
+            refresh_rate.name, self.broker, {}
+        )
         try:
             task = await kicker.kiq()
-        except SendTaskError as error:
-            raise RefreshUnavailable() from error
-        return task.task_id
+        except SendTaskError:
+            result = RateFailure.QUEUE_UNAVAILABLE
+        else:
+            result = task.task_id
+        return result

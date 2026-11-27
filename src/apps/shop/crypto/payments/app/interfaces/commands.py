@@ -3,6 +3,8 @@
 from datetime import timedelta
 from typing import Protocol
 
+from src.apps.shop.crypto.rates.domain.results.records import RateFailure
+
 from ...domain.dtos.records import PaymentCreate
 from ...domain.models.records import CryptoPaymentModel
 from ...domain.results.settlement import Settlement
@@ -15,7 +17,7 @@ class IPaymentCreateCommand(Protocol):
 class IPaymentQuoteCommand(Protocol):
     async def quote(
         self, id: int, *, max_age: timedelta
-    ) -> CryptoPaymentModel: ...
+    ) -> CryptoPaymentModel | RateFailure: ...
 
 
 class IPaymentConfirmCommand(Protocol):

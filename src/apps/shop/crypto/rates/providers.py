@@ -16,7 +16,7 @@ from .app.interfaces.refresh import IRateRefreshPublisher
 from .app.interfaces.services import IConversionService
 from .app.pipelines.refresh import RateRefreshPipeline
 from .app.services.conversion import ConversionService
-from .domain.errors import RefreshUnavailable
+from .domain.results.records import RateFailure
 from .infra.redis.cache import RateCache
 from .infra.wallex.client import WallexRateGateway
 
@@ -36,7 +36,7 @@ class CryptoRateProvider(Provider):
     @provide
     async def publisher(
         self, settings: CoreSettings
-    ) -> AsyncIterator[IRateRefreshPublisher | None]:
+    ) -> AsyncIterator[IRateRefreshPublisher | RateFailure]:
         """Open the optional jobs transport on the first manual refresh."""
         nats = settings.nats
         if (
@@ -44,7 +44,7 @@ class CryptoRateProvider(Provider):
             or settings.redis is None
             or not find_spec("taskiq_nats")
         ):
-            yield None
+            yield RateFailure.QUEUE_UNAVAILABLE
         else:
             from src.shared.jobs import create_job_transport
 
@@ -55,8 +55,9 @@ class CryptoRateProvider(Provider):
                 try:
                     async with timeout(nats.connect_timeout):
                         await transport.startup()
-                except (NatsError, OSError) as error:
-                    raise RefreshUnavailable() from error
-                yield RateRefreshPublisher(transport)
+                except (NatsError, OSError, TimeoutError):
+                    yield RateFailure.QUEUE_UNAVAILABLE
+                else:
+                    yield RateRefreshPublisher(transport)
             finally:
                 await transport.shutdown()

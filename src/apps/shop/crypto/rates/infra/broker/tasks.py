@@ -2,6 +2,8 @@
 
 from papilio_tasks.apps.schedulers import Task
 
+from ...domain.models.records import Rate
+from ...domain.results.records import RateFailure
 from .config import BrokerConfig
 
-refresh_rate = Task[[], None](name=BrokerConfig.refresh_task)
+refresh_rate = Task[[], Rate | RateFailure](name=BrokerConfig.refresh_task)

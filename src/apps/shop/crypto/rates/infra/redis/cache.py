@@ -6,17 +6,22 @@ from papilio.infra.redis.client import RedisClient, resolve
 from pydantic import TypeAdapter, ValidationError
 from redis.exceptions import RedisError
 
-from ...domain.errors import RateUnavailable
 from ...domain.models.records import Rate
+from ...domain.results.records import RateFailure
 
 _rate = TypeAdapter(Rate)
 
 
-def _decode(currency: str, raw: str | bytes) -> Rate:
-    rate = _rate.validate_json(raw)
-    if rate.currency != currency:
-        raise RateUnavailable()
-    return rate
+def _decode(currency: str, raw: str | bytes) -> Rate | RateFailure:
+    result: Rate | RateFailure = RateFailure.INVALID_RATE
+    try:
+        rate = _rate.validate_json(raw)
+    except ValidationError:
+        pass
+    else:
+        if rate.currency == currency:
+            result = rate
+    return result
 
 
 class RateCache:
@@ -26,70 +31,70 @@ class RateCache:
         """Borrow the application Redis client when configured."""
         self.redis = redis
 
-    async def save(self, data: Rate) -> Rate:
-        """Replace the latest observation for one pricing currency.
+    async def save(self, data: Rate) -> Rate | RateFailure:
+        """Save the latest observation or return a cache failure.
 
         Args:
             data: Rials per currency unit, with the source and fetch time.
 
         Returns:
-            The observation now saved in Redis.
-
-        Raises:
-            RateUnavailable: The rate could not be saved in Redis.
+            The saved observation, or a cache failure.
         """
-        redis = self.redis
-        if redis is None:
-            raise RateUnavailable()
-        try:
-            await resolve(
-                redis.client.hset(
-                    self.key, data.currency, _rate.dump_json(data)
+        result: Rate | RateFailure = RateFailure.CACHE_UNAVAILABLE
+        if self.redis is not None:
+            try:
+                await resolve(
+                    self.redis.client.hset(
+                        self.key, data.currency, _rate.dump_json(data)
+                    )
                 )
-            )
-        except RedisError as error:
-            raise RateUnavailable() from error
-        return data
+            except RedisError:
+                pass
+            else:
+                result = data
+        return result
 
-    async def find(self, currency: str) -> Rate | None:
+    async def find(self, currency: str) -> Rate | RateFailure | None:
         """Read the latest observation without extending its freshness.
 
         Args:
             currency: Exact pricing currency code.
 
         Returns:
-            The cached observation, or None when that currency is missing.
-
-        Raises:
-            RateUnavailable: Redis is unavailable or the rate is invalid.
+            An observation, None for an absent key, or a failure.
         """
-        redis = self.redis
-        if redis is None:
-            raise RateUnavailable()
-        try:
-            raw = await resolve(redis.client.hget(self.key, currency))
-            rate = _decode(currency, raw) if raw is not None else None
-        except (RedisError, ValidationError) as error:
-            raise RateUnavailable() from error
-        return rate
+        result: Rate | RateFailure | None = RateFailure.CACHE_UNAVAILABLE
+        if self.redis is not None:
+            try:
+                raw = await resolve(self.redis.client.hget(self.key, currency))
+            except RedisError:
+                pass
+            else:
+                result = _decode(currency, raw) if raw is not None else None
+        return result
 
-    async def find_all(self) -> list[Rate]:
-        """Read the current observations without refreshing or extending them.
+    async def find_all(self) -> list[Rate] | RateFailure:
+        """Read observations without refreshing or extending them.
 
         Returns:
-            Cached rates in currency order, empty before the first refresh.
-
-        Raises:
-            RateUnavailable: Redis is unavailable or an observation is invalid.
+            Cached observations in currency order or a failure.
         """
-        redis = self.redis
-        if redis is None:
-            raise RateUnavailable()
-        try:
-            values = cast(
-                dict[str, str], await resolve(redis.client.hgetall(self.key))
-            )
-            rates = [_decode(code, values[code]) for code in sorted(values)]
-        except (RedisError, ValidationError) as error:
-            raise RateUnavailable() from error
-        return rates
+        result: list[Rate] | RateFailure = RateFailure.CACHE_UNAVAILABLE
+        if self.redis is not None:
+            try:
+                values = cast(
+                    dict[str, str],
+                    await resolve(self.redis.client.hgetall(self.key)),
+                )
+            except RedisError:
+                pass
+            else:
+                rates: list[Rate] = []
+                result = rates
+                for currency in sorted(values):
+                    rate = _decode(currency, values[currency])
+                    if isinstance(rate, RateFailure):
+                        result = rate
+                        break
+                    rates.append(rate)
+        return result

@@ -22,6 +22,7 @@ from src.apps.core.access.users.app.interfaces.commands import (
 )
 from src.apps.core.access.users.domain.dtos.records import UserCreate
 from src.apps.shop.crypto.rates.app.interfaces.cache import IRateCache
+from src.apps.shop.crypto.rates.domain.models.records import Rate
 from src.settings.config import CoreSettings, NatsConfig, SchedulerConfig
 
 pytestmark = pytest.mark.integration
@@ -181,7 +182,7 @@ async def test_refresh_jobs(
         assert task.args == [] and task.kwargs == {}
         await receiver.callback(message)
         rate = await cache.find("USD")
-        assert rate is not None and rate.rial_rate == Decimal("600010")
+        assert isinstance(rate, Rate) and rate.rial_rate == Decimal("600010")
         current = await client.get(RATES, headers=headers)
         assert current.status_code == 200, current.text
         assert current.headers["cache-control"] == "no-store"
@@ -212,7 +213,9 @@ async def test_refresh_jobs(
             scheduled = await wait_for(anext(messages), timeout=3)
             await receiver.callback(scheduled)
             rate = await cache.find("USD")
-            assert rate is not None and rate.rial_rate == Decimal("600020")
+            assert isinstance(rate, Rate) and rate.rial_rate == Decimal(
+                "600020"
+            )
             updated = await client.get(RATES, headers=headers)
             assert updated.status_code == 200, updated.text
             assert updated.json()["data"][0]["rial_rate"] == "600020"

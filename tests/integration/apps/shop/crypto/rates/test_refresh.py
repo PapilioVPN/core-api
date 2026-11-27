@@ -17,7 +17,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from src.apps.shop.crypto.rates.app.pipelines.refresh import (
     RateRefreshPipeline,
 )
-from src.apps.shop.crypto.rates.domain.errors import RateUnavailable
+from src.apps.shop.crypto.rates.domain.models.records import Rate
+from src.apps.shop.crypto.rates.domain.results.records import RateFailure
 from src.settings.config import CoreSettings
 
 pytestmark = pytest.mark.integration
@@ -64,6 +65,7 @@ async def test_refresh_rate(
             pipeline = await container.get(RateRefreshPipeline)
             before = utc_now()
             first = await pipeline.run()
+            assert isinstance(first, Rate)
             assert first.currency == "USD"
             assert first.source == "wallex_usdt"
             assert first.rial_rate == Decimal("123456.78901234567890")
@@ -75,22 +77,20 @@ async def test_refresh_rate(
 
             price = "22345.1"
             updated = await pipeline.run()
+            assert isinstance(updated, Rate)
             assert updated.rial_rate == Decimal("223451")
             saved_raw = await resolve(redis.client.hget(key, "USD"))
             assert saved_raw is not None and saved_raw != first_raw
 
             for invalid_price in ("0", "NaN"):
                 price = invalid_price
-                with pytest.raises(RateUnavailable):
-                    await pipeline.run()
+                assert await pipeline.run() is RateFailure.INVALID_RATE
             price = "22345.1"
             quote = "IRR"
-            with pytest.raises(RateUnavailable):
-                await pipeline.run()
+            assert await pipeline.run() is RateFailure.INVALID_RATE
             quote = "TMN"
             status = 503
-            with pytest.raises(RateUnavailable):
-                await pipeline.run()
+            assert await pipeline.run() is RateFailure.MARKET_UNAVAILABLE
         finally:
             connection.client = original
 

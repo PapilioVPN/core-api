@@ -16,6 +16,7 @@ from src.apps.shop.crypto.rates.app.interfaces.cache import IRateCache
 from src.apps.shop.crypto.rates.app.interfaces.services import (
     IConversionService,
 )
+from src.apps.shop.crypto.rates.domain.results.records import RateFailure
 
 from ...domain.models.quote import Quote
 from ...domain.models.records import CryptoPaymentModel
@@ -38,7 +39,7 @@ class PaymentPricingService:
 
     async def price(
         self, payment: CryptoPaymentModel, *, max_age: timedelta
-    ) -> Quote:
+    ) -> Quote | RateFailure:
         """Price the original rial amount in the gateway's currency.
 
         Args:
@@ -46,11 +47,10 @@ class PaymentPricingService:
             max_age: Maximum age of a rate observation.
 
         Returns:
-            The invoice quote before it is frozen.
+            A quote or the reason the required observation cannot be used.
 
         Raises:
             ConflictException: The gateway does not support pricing.
-            RateUnavailable: The needed rate is missing or stale.
         """
         gateway = await self.gateways.get_by_id(payment.gateway_id)
         match gateway.kind:
@@ -64,13 +64,23 @@ class PaymentPricingService:
                     message_code="crypto_gateway_pricing_unsupported",
                     unique_dict={"kind": gateway.kind},
                 )
-        quote = Quote(amount=Decimal(payment.amount), currency=RIAL)
+        result: Quote | RateFailure = Quote(
+            amount=Decimal(payment.amount), currency=RIAL
+        )
         if currency == USD:
             rate = await self.rates.find(currency)
-            usd = self.conversion.to_usd(
-                payment.amount, rate, now=utc_now(), max_age=max_age
-            )
-            quote = Quote(
-                amount=usd.amount, currency=currency, rate=usd.rial_rate
-            )
-        return quote
+            if isinstance(rate, RateFailure):
+                result = rate
+            else:
+                usd = self.conversion.to_usd(
+                    payment.amount, rate, now=utc_now(), max_age=max_age
+                )
+                if isinstance(usd, RateFailure):
+                    result = usd
+                else:
+                    result = Quote(
+                        amount=usd.amount,
+                        currency=currency,
+                        rate=usd.rial_rate,
+                    )
+        return result

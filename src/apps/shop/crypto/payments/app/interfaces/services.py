@@ -5,6 +5,8 @@ from typing import Protocol
 
 from pydantic import JsonValue
 
+from src.apps.shop.crypto.rates.domain.results.records import RateFailure
+
 from ...domain.models.quote import Quote
 from ...domain.models.records import CryptoPaymentModel
 from ...domain.results.invoice import Invoice
@@ -40,7 +42,7 @@ class ICryptoPaymentService(Protocol):
 class IPaymentPricingService(Protocol):
     async def price(
         self, payment: CryptoPaymentModel, *, max_age: timedelta
-    ) -> Quote: ...
+    ) -> Quote | RateFailure: ...
 
 
 class IPaymentNotificationService(Protocol):

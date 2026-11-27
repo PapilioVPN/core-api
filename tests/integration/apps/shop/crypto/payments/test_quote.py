@@ -27,9 +27,12 @@ from src.apps.shop.crypto.payments.app.interfaces.services import (
 )
 from src.apps.shop.crypto.payments.domain.dtos.records import PaymentCreate
 from src.apps.shop.crypto.payments.domain.models.quote import Quote
+from src.apps.shop.crypto.payments.domain.models.records import (
+    CryptoPaymentModel,
+)
 from src.apps.shop.crypto.rates.app.interfaces.cache import IRateCache
-from src.apps.shop.crypto.rates.domain.errors import RateUnavailable
 from src.apps.shop.crypto.rates.domain.models.records import Rate
+from src.apps.shop.crypto.rates.domain.results.records import RateFailure
 
 pytestmark = pytest.mark.integration
 
@@ -66,11 +69,13 @@ async def test_quote_payment(app: FastAPI, client: AsyncClient) -> None:
     async with container() as scope:
         command = await scope.get(PaymentQuoteCommand)
         rial = await command.quote(rial_id, max_age=max_age)
+        assert isinstance(rial, CryptoPaymentModel)
         assert rial.quote_currency == "IRR"
         assert rial.quote_amount == Decimal(original)
         assert rial.quote_rate is None
-        with pytest.raises(RateUnavailable):
+        assert (
             await command.quote(dollar_id, max_age=max_age)
+        ) is RateFailure.MISSING_RATE
         await rates.save(
             Rate(
                 currency="USD",
@@ -79,8 +84,9 @@ async def test_quote_payment(app: FastAPI, client: AsyncClient) -> None:
                 fetched_at=utc_now() - 2 * max_age,
             )
         )
-        with pytest.raises(RateUnavailable):
+        assert (
             await command.quote(dollar_id, max_age=max_age)
+        ) is RateFailure.STALE_RATE
 
     async with container() as scope:
         command = await scope.get(PaymentQuoteCommand)
@@ -97,6 +103,7 @@ async def test_quote_payment(app: FastAPI, client: AsyncClient) -> None:
             )
         )
         dollar = await command.quote(dollar_id, max_age=max_age)
+        assert isinstance(dollar, CryptoPaymentModel)
         assert dollar.amount == original
         assert dollar.quote_currency == "USD"
         assert dollar.quote_amount == Decimal("2.04")
@@ -113,6 +120,7 @@ async def test_quote_payment(app: FastAPI, client: AsyncClient) -> None:
     async with container() as scope:
         command = await scope.get(PaymentQuoteCommand)
         replay = await command.quote(dollar_id, max_age=max_age)
+        assert isinstance(replay, CryptoPaymentModel)
         assert replay.quote_amount == Decimal("2.04")
         assert replay.quote_rate == Decimal("600000")
 

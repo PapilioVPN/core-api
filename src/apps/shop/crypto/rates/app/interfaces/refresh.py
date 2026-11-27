@@ -2,6 +2,8 @@
 
 from typing import Protocol
 
+from ...domain.results.records import RateFailure
+
 
 class IRateRefreshPublisher(Protocol):
-    async def enqueue(self) -> str: ...
+    async def enqueue(self) -> str | RateFailure: ...
