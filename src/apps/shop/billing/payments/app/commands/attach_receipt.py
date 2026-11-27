@@ -1,4 +1,4 @@
-"""Register bank payments and reserve exact automatic transfer amounts."""
+"""Attach an uploaded receipt to an existing bank payment."""
 
 from papilio.errors.exceptions import ConflictException
 from papilio.infra.db.tools.decorators import transactional
@@ -34,7 +34,7 @@ class PaymentAttachReceiptCommand:
 
         Raises:
             NotFoundException: The payment does not exist.
-            ConflictException: A concurrent submission or decision won.
+            ConflictException: The payment cannot accept the supplied receipt.
         """
         payment = await self.payments.get_by_id(id)
         if (
@@ -52,4 +52,16 @@ class PaymentAttachReceiptCommand:
                     unique_dict={"id": id},
                 )
             payment = saved
+        else:
+            receipt = (
+                await self.receipts.get_by_id(payment.receipt_id)
+                if payment.receipt_id is not None
+                else None
+            )
+            if receipt is None or receipt.image_url != image_url:
+                raise ConflictException(
+                    message="The payment cannot accept this receipt.",
+                    message_code="payment_receipt_unavailable",
+                    unique_dict={"id": id},
+                )
         return payment

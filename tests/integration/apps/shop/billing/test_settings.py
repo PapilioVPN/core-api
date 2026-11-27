@@ -16,6 +16,7 @@ from dishka import AsyncContainer
 from fastapi import FastAPI
 from httpx import AsyncClient
 from papilio.core.config import RedisConfig
+from papilio.errors.exceptions import ConflictException, ValidationException
 from papilio.infra.db.transaction import transaction
 from papilio.infra.redis.client import RedisClient, resolve
 from papilio.utils.dates import utc_now
@@ -33,8 +34,15 @@ from src.apps.shop.billing.deposits.domain.models.records import DepositModel
 from src.apps.shop.billing.payment_settings.app.interfaces.services import (
     IPaymentSettingsService,
 )
+from src.apps.shop.billing.payments.app.interfaces.services import (
+    IPaymentRegistrationService,
+)
+from src.apps.shop.billing.payments.domain.models.records import PaymentModel
 from src.apps.shop.billing.payments.infra.pg.repositories.crud import (
     PaymentRepository,
+)
+from src.apps.shop.billing.payments.routers.schemas.records import (
+    PaymentOutput,
 )
 from src.bootstrap.events import create_events
 from src.settings.config import CoreSettings, NatsConfig
@@ -157,6 +165,69 @@ async def test_payment_settings(
     )
 
 
+async def reserve(app: FastAPI, amount: int) -> PaymentModel:
+    container = cast(AsyncContainer, app.state.dishka_container)
+    async with container() as scope:
+        registration = await scope.get(IPaymentRegistrationService)
+        payment = await registration.reserve_auto(amount)
+    return payment
+
+
+async def test_manual_payment_with_auto_enabled(
+    app: FastAPI, client: AsyncClient, billing_admin: dict[str, str]
+) -> None:
+    path = "/admin/payments"
+    settings = {"auto_confirm": True, "digits": 4, "window_hours": 1}
+    enabled = await client.put(SETTINGS, headers=billing_admin, json=settings)
+    assert enabled.status_code == 200, enabled.text
+    try:
+        image = {"image_url": "/media/receipt.jpg"}
+        manual = await client.post(
+            path, headers=billing_admin, json={"amount": 80_000, **image}
+        )
+        assert manual.status_code == 201, manual.text
+        data = manual.json()["data"]
+        assert data["receipt_id"] is not None
+        assert data["auto_confirm"] is False
+        assert data["transfer_amount"] is None
+        missing = await client.post(
+            path, headers=billing_admin, json={"amount": 80_000}
+        )
+        assert missing.status_code == 422, missing.text
+
+        with pytest.raises(ValidationException) as invalid:
+            await reserve(app, -1)
+        assert invalid.value.message_code == "payment_amount_invalid"
+        automatic = await reserve(app, 180_000)
+        receipt = f"{path}/{automatic.id}/receipt"
+        assert (await client.put(receipt, json=image)).status_code == 401
+        attached = await client.put(receipt, headers=billing_admin, json=image)
+        assert attached.status_code == 200, attached.text
+        data = attached.json()["data"]
+        assert data["receipt_id"] is not None
+        assert data["amount"] == automatic.amount
+        assert data["transfer_amount"] == automatic.transfer_amount
+        assert data["status"] == "pending"
+        replay = await client.put(receipt, headers=billing_admin, json=image)
+        assert replay.status_code == 200, replay.text
+        assert replay.json()["data"] == data
+        other = await client.put(
+            receipt,
+            headers=billing_admin,
+            json={"image_url": "/media/other.jpg"},
+        )
+        assert other.status_code == 409, other.text
+    finally:
+        await client.put(
+            SETTINGS,
+            headers=billing_admin,
+            json={"auto_confirm": False, "digits": 5, "window_hours": 24},
+        )
+    with pytest.raises(ConflictException) as unavailable:
+        await reserve(app, 180_000)
+    assert unavailable.value.message_code == "automatic_payment_disabled"
+
+
 async def test_automatic_payment(
     app: FastAPI, client: AsyncClient, billing_admin: dict[str, str]
 ) -> None:
@@ -186,17 +257,9 @@ async def test_automatic_payment(
         await dispatch(before_issue.json()["data"]["id"])
 
         created = []
-        responses = await gather(
-            client.post(
-                payments, headers=billing_admin, json={"amount": 110_000}
-            ),
-            client.post(
-                payments, headers=billing_admin, json={"amount": 110_000}
-            ),
-        )
-        for response in responses:
-            assert response.status_code == 201, response.text
-            payment = response.json()["data"]
+        records = await gather(reserve(app, 110_000), reserve(app, 110_000))
+        for record in records:
+            payment = PaymentOutput.from_obj(record).model_dump(mode="json")
             assert payment["amount"] == 110_000
             assert payment["receipt_id"] is None
             assert payment["status"] == "pending"
@@ -327,6 +390,7 @@ async def test_automatic_payment(
 
 async def test_deposit_event(
     pg: CoreSettings,
+    app: FastAPI,
     client: AsyncClient,
     billing_admin: dict[str, str],
     tmp_path: Path,
@@ -348,14 +412,11 @@ async def test_deposit_event(
         )
         issued = await client.post(f"{SETTINGS}/key", headers=billing_admin)
         key = issued.json()["data"]["key"]
-        created = await client.post(
-            "/admin/payments", headers=billing_admin, json={"amount": 618_000}
-        )
-        payment = created.json()["data"]
+        payment = await reserve(app, 618_000)
         received = await client.post(
             "/hooks/deposits",
             headers={"X-API-Key": key},
-            json={"amount": payment["transfer_amount"]},
+            json={"amount": payment.transfer_amount},
         )
         assert received.status_code == 201, received.text
         deposit = received.json()["data"]
@@ -371,7 +432,7 @@ async def test_deposit_event(
             report = await client.get(
                 f"/admin/deposits/{deposit['id']}", headers=billing_admin
             )
-            if report.json()["data"]["payment_id"] == payment["id"]:
+            if report.json()["data"]["payment_id"] == payment.id:
                 break
             await sleep(0.1)
         else:

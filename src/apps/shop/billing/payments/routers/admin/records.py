@@ -10,12 +10,13 @@ from src.apps.core.access.auth.routers.dependencies.authorization import (
 )
 
 from ...app.interfaces.commands import (
+    IPaymentAttachReceiptCommand,
     IPaymentConfirmCommand,
     IPaymentCreateCommand,
     IPaymentRejectCommand,
 )
 from ...app.interfaces.queries import IPaymentQuery
-from ...domain.dtos.records import PaymentCreate
+from ...domain.dtos.records import PaymentCreate, PaymentReceipt
 from ...domain.dtos.review import PaymentReview
 from ...domain.enums.records import PaymentStatus
 from ..schemas.records import (
@@ -47,6 +48,17 @@ async def get_payment(
     detail = await query.get_by_id(id)
     output = PaymentDetailOutput.from_obj(detail)
     return APIResponse[PaymentDetailOutput, None].from_data(output)
+
+
+@router.put("/{id:int}/receipt")
+async def put_payment_receipt(
+    id: IdType,
+    data: PaymentReceipt,
+    command: FromDishka[IPaymentAttachReceiptCommand],
+) -> APIResponse[PaymentOutput, None]:
+    payment = await command.attach_receipt(id, data.image_url)
+    output = PaymentOutput.from_obj(payment)
+    return APIResponse[PaymentOutput, None].from_data(output)
 
 
 @router.patch("/{id:int}/review")
