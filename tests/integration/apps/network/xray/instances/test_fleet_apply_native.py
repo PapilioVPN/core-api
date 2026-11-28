@@ -15,10 +15,12 @@ import yaml
 from dishka import AsyncContainer
 from fastapi import FastAPI
 from httpx import AsyncClient
+from pydantic import SecretStr
 
-from src.apps.network.nodes.app.interfaces.services import INodeService
-from src.apps.network.nodes.config import NodeHostConfig, NodeHostTarget
-from src.apps.network.nodes.domain.dtos.records import NodeCreate
+from src.apps.network.nodes.registry.app.interfaces.services import (
+    INodeService,
+)
+from src.apps.network.nodes.registry.domain.dtos.records import NodeCreate
 from src.bootstrap.events import create_events
 from src.settings.config import CoreSettings, NatsConfig
 
@@ -58,7 +60,7 @@ async def test_fleet_apply_reaches_two_nodes_and_reports_failed_peer(
     assert metadata["config_sha256"] == digest
     original = [source.read_bytes() for _, _, _, source in node_pair]
     container = cast(AsyncContainer, app.state.dishka_container)
-    targets: dict[int, NodeHostTarget] = {}
+    targets: list[int] = []
     async with container() as scope:
         nodes = await scope.get(INodeService)
         for index, (grpc_port, _, ca, _) in enumerate(node_pair):
@@ -67,17 +69,11 @@ async def test_fleet_apply_reaches_two_nodes_and_reports_failed_peer(
                     name=f"Fleet Xray {index}",
                     address="127.0.0.1",
                     port=grpc_port,
+                    api_key=SecretStr(node_api_key),
+                    ca_pem=ca.cert_pem.bytes().decode(),
                 )
             )
-            target = NodeHostTarget.model_validate(
-                {
-                    "address": node.address,
-                    "port": grpc_port,
-                    "api_key": node_api_key,
-                    "ca_pem": ca.cert_pem.bytes().decode(),
-                }
-            )
-            targets[node.id] = target
+            targets.append(node.id)
         absent = await nodes.create(
             NodeCreate(
                 name="Fleet unconfigured",
@@ -85,7 +81,6 @@ async def test_fleet_apply_reaches_two_nodes_and_reports_failed_peer(
                 port=81,
             )
         )
-    pg.node_host = NodeHostConfig(targets=targets)
     pg.nats = NatsConfig(servers=[broker])
     _, first_http_port, first_ca, _ = node_pair[0]
     tls = ssl.create_default_context()

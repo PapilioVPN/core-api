@@ -4,7 +4,9 @@ from datetime import datetime
 
 from papilio.utils.dates import utc_now
 
-from src.apps.network.nodes.app.interfaces.endpoints import INodeEndpointQuery
+from src.apps.network.nodes.registry.app.interfaces.endpoints import (
+    INodeEndpointQuery,
+)
 
 from ...domain.dtos.identity import XrayExecutionRequestKey
 from ...domain.enums.fleet import XrayFleetOperationStatus

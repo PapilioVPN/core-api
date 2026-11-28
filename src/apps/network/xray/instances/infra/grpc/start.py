@@ -6,7 +6,7 @@ from grpc import StatusCode
 from grpc.aio import AioRpcError
 from papilio.utils.dates import utc_now
 
-from src.apps.network.nodes.infra.grpc.channels import NodeChannels
+from src.apps.network.nodes.connections.infra.grpc.channels import NodeChannels
 
 from ...domain.enums.start import XrayStartReason, XrayStartState
 from ...domain.enums.status import XrayInstanceState
@@ -82,10 +82,8 @@ class XrayStartGateway:
         ],
         expected: XrayInstanceState,
     ) -> XrayStartOutcome:
+        channel = await self.channels.get(target.node)
         remaining = (target.deadline_at - utc_now()).total_seconds()
-        channel = self.channels.get(
-            target.node_id, target.address, target.port
-        )
         if remaining <= 0:
             outcome = XrayStartOutcome(
                 XrayStartState.UNKNOWN, XrayStartReason.DISPATCH_EXPIRED

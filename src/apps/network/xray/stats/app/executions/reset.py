@@ -7,7 +7,9 @@ from papilio.infra.db.tools.decorators import transactional
 from papilio.infra.scopes import Inject, request_scoped
 from papilio.utils.dates import utc_now
 
-from src.apps.network.nodes.app.interfaces.services import INodeService
+from src.apps.network.nodes.registry.app.interfaces.services import (
+    INodeService,
+)
 
 from ...domain.enums.reset import ResetReason, ResetState
 from ...domain.results.reset import ResetOutcome, ResetTarget
@@ -41,10 +43,8 @@ class XrayResetExecution:
                 operation.port,
             ):
                 target = ResetTarget(
-                    operation.node_id,
+                    node.endpoint(),
                     operation.instance_id,
-                    operation.address,
-                    operation.port,
                     operation.selection(),
                     deadline,
                 )

@@ -1,7 +1,11 @@
 """Decode a correlated Node OpenVPN lifecycle observation."""
 
-from src.apps.network.nodes.domain.enums.observation import NodeInstanceState
-from src.apps.network.nodes.infra.grpc.observation import valid_config_digest
+from src.apps.network.nodes.connections.infra.grpc.observation import (
+    valid_config_digest,
+)
+from src.apps.network.nodes.observations.domain.enums.observation import (
+    NodeInstanceState,
+)
 
 from ...domain.results.status import OpenVPNStatus
 from .v1.openvpn_instances_pb2 import OpenVPNInstanceState as WireState

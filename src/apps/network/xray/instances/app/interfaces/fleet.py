@@ -1,8 +1,9 @@
-"""Panel admission and tracking for local Start and Stop selections."""
+"""Panel admission and tracking for Xray lifecycle selections."""
 
 from typing import Protocol
 
 from ...domain.dtos.fleet import (
+    XrayFleetRestartInput,
     XrayFleetStartInput,
     XrayFleetStopInput,
     XrayFleetTrackingInput,
@@ -31,4 +32,16 @@ class IXrayFleetStopCommand(Protocol):
 class IXrayFleetStopQuery(Protocol):
     async def get(
         self, data: XrayFleetTrackingInput
+    ) -> tuple[XrayFleetOperationResult, ...]: ...
+
+
+class IXrayFleetRestartCommand(Protocol):
+    async def restart(
+        self, revision_id: int, data: XrayFleetRestartInput
+    ) -> tuple[XrayFleetOperationResult, ...]: ...
+
+
+class IXrayFleetRestartQuery(Protocol):
+    async def get(
+        self, revision_id: int, data: XrayFleetTrackingInput
     ) -> tuple[XrayFleetOperationResult, ...]: ...

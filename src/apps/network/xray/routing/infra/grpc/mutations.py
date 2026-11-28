@@ -4,17 +4,14 @@ from grpc import StatusCode
 from grpc.aio import AioRpcError
 from papilio.utils.dates import utc_now
 
-from src.apps.network.nodes.infra.grpc.channels import NodeChannels
+from src.apps.network.nodes.connections.infra.grpc.channels import NodeChannels
 
-from ...domain.dtos.mutations import (
-    AppendRule,
-    ClearBalancer,
-    RemoveRule,
-    ReplaceRules,
-    RoutingIntent,
-    SetBalancer,
+from ...domain.dtos.mutations import RoutingIntent
+from ...domain.enums.operation import (
+    RoutingAction,
+    RoutingFailure,
+    RoutingState,
 )
-from ...domain.enums.operation import RoutingFailure, RoutingState
 from ...domain.results.operation import RoutingOutcome, RoutingTarget
 from .v1 import routing_pb2 as wire
 from .v1.routing_pb2_grpc import XrayRoutingServiceStub
@@ -52,10 +49,8 @@ class XrayRoutingGateway:
             Node acknowledgement, a definite rejection or uncertainty.
             Caller cancellation propagates.
         """
+        channel = await self.channels.get(target.node)
         remaining = (target.deadline_at - utc_now()).total_seconds()
-        channel = self.channels.get(
-            target.node_id, target.address, target.port
-        )
         if remaining <= 0:
             outcome = RoutingOutcome(
                 RoutingState.UNKNOWN, RoutingFailure.DISPATCH_EXPIRED
@@ -94,9 +89,9 @@ class XrayRoutingGateway:
         intent: RoutingIntent,
         timeout: float,
     ) -> None:
-        match intent:
-            case AppendRule() | ReplaceRules():
-                replace = isinstance(intent, ReplaceRules)
+        match intent.action:
+            case RoutingAction.APPEND | RoutingAction.REPLACE:
+                replace = intent.action is RoutingAction.REPLACE
                 modes = wire.XrayRoutingRuleMode
                 await stub.AddRoutingRule(
                     wire.XrayAddRoutingRuleRequest(
@@ -109,20 +104,20 @@ class XrayRoutingGateway:
                     ),
                     timeout=timeout,
                 )
-            case RemoveRule():
+            case RoutingAction.REMOVE:
                 await stub.RemoveRoutingRule(
                     wire.XrayRemoveRoutingRuleRequest(
                         id=instance_id, rule_tag=intent.tag
                     ),
                     timeout=timeout,
                 )
-            case SetBalancer() | ClearBalancer():
+            case RoutingAction.OVERRIDE | RoutingAction.CLEAR:
                 await stub.OverrideBalancerTarget(
                     wire.XrayOverrideBalancerTargetRequest(
                         id=instance_id,
                         tag=intent.tag,
                         target=intent.override.target
-                        if isinstance(intent, SetBalancer)
+                        if intent.action is RoutingAction.OVERRIDE
                         else "",
                     ),
                     timeout=timeout,

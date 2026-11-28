@@ -7,7 +7,9 @@ from papilio.infra.db.tools.decorators import transactional
 from papilio.utils.dates import utc_now
 from papilio_tasks.apps.outbox import OutboxWriter
 
-from src.apps.network.nodes.app.interfaces.services import INodeService
+from src.apps.network.nodes.registry.app.interfaces.services import (
+    INodeService,
+)
 
 from ...domain.enums.start import XrayExecutionAction, XrayStartState
 from ...domain.events.apply import XrayApplyRequested

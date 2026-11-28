@@ -14,8 +14,3 @@ class RestartRolloutReason(StrEnum):
     TARGET_FAILED = "target_failed"
     TARGET_UNKNOWN = "target_unknown"
     DIGEST_MISMATCH = "digest_mismatch"
-
-
-class RestartRolloutDelivery(StrEnum):
-    DISPATCH = "dispatch"
-    SETTLED = "settled"

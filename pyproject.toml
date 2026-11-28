@@ -61,7 +61,6 @@ markers = [
 line-length = 79
 target-version = "py313"
 extend-exclude = [
-    "src/apps/network/nodes/infra/grpc/v1/*_pb2*",
     "src/apps/network/*/*/infra/grpc/v1/*_pb2*",
 ]
 
@@ -71,7 +70,6 @@ select = ["E", "F", "I", "W"]
 [tool.pyright]
 include = ["src", "tests"]
 ignore = [
-    "src/apps/network/nodes/infra/grpc/v1/host_pb2_grpc.py",
     "src/apps/network/*/*/infra/grpc/v1/*_pb2_grpc.py",
 ]
 pythonVersion = "3.13"

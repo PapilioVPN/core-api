@@ -8,10 +8,12 @@ from papilio.tools.checks import IDChecks
 from papilio.utils.dates import utc_now
 from papilio_tasks.apps.outbox import OutboxWriter
 
-from src.apps.network.nodes.app.interfaces.services import INodeService
+from src.apps.network.nodes.registry.app.interfaces.services import (
+    INodeService,
+)
 
 from ...domain.dtos.mutations import RoutingIntent
-from ...domain.enums.operation import RoutingAction, RoutingPayloadFailure
+from ...domain.enums.operation import RoutingAction
 from ...domain.events.control import RoutingRequested
 from ...domain.models.operation import XrayRoutingOperationModel
 from ...domain.results.operation import RoutingPayload
@@ -39,7 +41,7 @@ class XrayRoutingOperations(IDChecks[XrayRoutingOperationModel]):
 
     async def submit(
         self, node_id: int, instance_id: str, key: UUID, intent: RoutingIntent
-    ) -> XrayRoutingOperationModel | RoutingPayloadFailure:
+    ) -> XrayRoutingOperationModel | None:
         """Register an operator mutation and publish only its durable identity.
 
         Args:
@@ -56,8 +58,8 @@ class XrayRoutingOperations(IDChecks[XrayRoutingOperationModel]):
             ConflictException: The target is disabled, busy or the key differs.
         """
         payload = await self.codec.seal(intent)
-        if isinstance(payload, RoutingPayloadFailure):
-            operation = payload
+        if payload is None:
+            operation = None
         else:
             operation = await self._admit(
                 node_id, instance_id, key, intent.action, payload

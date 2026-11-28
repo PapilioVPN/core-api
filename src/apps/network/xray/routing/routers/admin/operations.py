@@ -26,7 +26,6 @@ from ...domain.dtos.mutations import (
     RoutingRuleInput,
     SetBalancer,
 )
-from ...domain.enums.operation import RoutingPayloadFailure
 from ...domain.models.operation import XrayRoutingOperationModel
 from ..dependencies.cache import no_store
 from ..schemas.operations import RoutingOperationOutput
@@ -123,10 +122,10 @@ async def get_routing_operation(
 
 
 def _admission_response(
-    record: XrayRoutingOperationModel | RoutingPayloadFailure,
+    record: XrayRoutingOperationModel | None,
     response: Response,
 ) -> APIResponse[RoutingOperationOutput, None]:
-    if isinstance(record, RoutingPayloadFailure):
+    if record is None:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         result = APIResponse[RoutingOperationOutput, None](
             success=False,

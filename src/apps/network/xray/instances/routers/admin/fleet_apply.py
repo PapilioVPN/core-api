@@ -1,22 +1,12 @@
 """Accept and track bounded revision applications across selected targets."""
 
-from typing import Annotated
-
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Depends, Response, status
 from papilio.api.responses.envelope import APIResponse
 from papilio.types.aliases import IdType
 
-from src.apps.core.access.auth.app.validators.authorization import (
-    validate_admin_permission,
-)
-from src.apps.core.access.auth.domain.enums.permissions import AdminPermission
-from src.apps.core.access.auth.domain.results.identity import AdminIdentity
 from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
-)
-from src.apps.core.access.auth.routers.dependencies.identity import (
-    current_admin,
 )
 
 from ...app.interfaces.fleet_apply import (
@@ -27,14 +17,8 @@ from ...domain.dtos.fleet_apply import (
     XrayFleetApplyInput,
     XrayFleetApplyTrackingInput,
 )
+from ..dependencies.authorization import require_fleet_read
 from ..schemas.fleet_apply import XrayFleetApplyOutput
-
-
-async def _require_read(
-    identity: Annotated[AdminIdentity, Depends(current_admin)],
-) -> None:
-    validate_admin_permission(identity, "network", AdminPermission.READ)
-
 
 router = APIRouter(
     prefix="/admin/nodes/xray/config-revisions/{revision_id:int}/apply-operations",
@@ -63,7 +47,7 @@ async def apply_fleet(
     )
 
 
-@router.post("/status", dependencies=[Depends(_require_read)])
+@router.post("/status", dependencies=[Depends(require_fleet_read)])
 async def get_fleet_apply(
     revision_id: IdType,
     data: XrayFleetApplyTrackingInput,

@@ -3,7 +3,8 @@
 from grpc import StatusCode
 from grpc.aio import AioRpcError
 
-from src.apps.network.nodes.infra.grpc.channels import NodeChannels
+from src.apps.network.nodes.connections.infra.grpc.channels import NodeChannels
+from src.apps.network.nodes.registry.domain.results.records import NodeEndpoint
 
 from ...domain.enums.dry_run import XrayValidationStatus
 from ...domain.results.dry_run import XrayValidationOutcome
@@ -34,18 +35,14 @@ class XrayConfigGateway:
     async def validate(
         self,
         *,
-        node_id: int,
-        address: str,
-        port: int,
+        node: NodeEndpoint,
         instance_id: str,
         source: bytes,
     ) -> XrayValidationOutcome:
         """Ask the exact configured target to validate the proposal.
 
         Args:
-            node_id: Registry identity bound to the management credentials.
-            address: Registered management address.
-            port: Registered management port.
+            node: The selected revision of the registered management endpoint.
             instance_id: Instance selected by the administrator.
             source: Exact candidate bytes, never the node's configured file.
 
@@ -53,7 +50,7 @@ class XrayConfigGateway:
             A validation or transport outcome without raw diagnostics.
             Caller cancellation remains native.
         """
-        channel = self.channels.get(node_id, address, port)
+        channel = await self.channels.get(node)
         if channel is None:
             outcome = XrayValidationOutcome(
                 XrayValidationStatus.NOT_CONFIGURED

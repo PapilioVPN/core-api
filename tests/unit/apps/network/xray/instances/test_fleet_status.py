@@ -5,8 +5,10 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from src.apps.network.nodes.app.interfaces.endpoints import INodeEndpointQuery
-from src.apps.network.nodes.domain.results.records import NodeEndpoint
+from src.apps.network.nodes.registry.app.interfaces.endpoints import (
+    INodeEndpointQuery,
+)
+from src.apps.network.nodes.registry.domain.results.records import NodeEndpoint
 from src.apps.network.xray.instances.app.interfaces.status import (
     IXrayStatusGateway,
 )
@@ -40,9 +42,7 @@ async def test_fleet_shares_capacity_and_releases_it_after_cancellation() -> (
     waiting = Event()
     gateway = Mock(spec=IXrayStatusGateway)
 
-    async def read(
-        node_id: int, address: str, port: int, instance_id: str
-    ) -> XrayStatusResult:
+    async def read(node: NodeEndpoint, instance_id: str) -> XrayStatusResult:
         if instance_id == "held":
             entered.set()
             await waiting.wait()
@@ -70,9 +70,7 @@ async def test_fleet_shares_capacity_and_releases_it_after_cancellation() -> (
             XrayStatusCode.BUSY,
         ]
         nodes.get_endpoints.assert_awaited_with((10, 20))
-        gateway.read.assert_awaited_once_with(
-            10, endpoint.address, 443, "held"
-        )
+        gateway.read.assert_awaited_once_with(endpoint, "held")
     finally:
         task.cancel()
         with pytest.raises(CancelledError):

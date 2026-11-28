@@ -2,8 +2,10 @@
 
 from typing import Protocol
 
-from src.apps.network.nodes.domain.models.records import NodeModel
-from src.apps.network.nodes.domain.results.observation import NodeObservation
+from src.apps.network.nodes.observations.domain.results.observation import (
+    NodeObservation,
+)
+from src.apps.network.nodes.registry.domain.models.records import NodeModel
 
 from ...domain.results.status import WireGuardStatus
 

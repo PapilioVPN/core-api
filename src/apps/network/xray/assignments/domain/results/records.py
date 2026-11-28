@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 
-from src.apps.network.nodes.domain.results.records import NodeEndpoint
+from src.apps.network.nodes.registry.domain.results.records import NodeEndpoint
 from src.apps.network.xray.instances.domain.results.status import (
     XrayStatusResult,
 )

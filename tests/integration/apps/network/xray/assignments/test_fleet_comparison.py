@@ -19,7 +19,6 @@ from src.apps.core.access.auth.domain.results.identity import AdminIdentity
 from src.apps.core.access.auth.routers.dependencies.identity import (
     current_admin,
 )
-from src.apps.network.nodes.config import NodeHostConfig
 from src.apps.network.xray.instances.app.interfaces.status import (
     IXrayStatusFanout,
 )
@@ -159,9 +158,7 @@ async def test_fleet_comparison_limits_sql_and_preserves_live_outcomes(
             fanout = cast(
                 XrayStatusFanout, await container.get(IXrayStatusFanout)
             )
-            await _verify_comparison(
-                client, headers, pg.node_host, ca, port, peer, fanout
-            )
+            await _verify_comparison(client, headers, ca, port, peer, fanout)
     finally:
         await server.stop(0)
 
@@ -169,7 +166,6 @@ async def test_fleet_comparison_limits_sql_and_preserves_live_outcomes(
 async def _verify_comparison(
     client: AsyncClient,
     headers: dict[str, str],
-    config: NodeHostConfig,
     ca: trustme.CA,
     port: int,
     peer: ComparisonPeer,
@@ -178,7 +174,13 @@ async def _verify_comparison(
     live = await client.post(
         "/admin/nodes",
         headers=headers,
-        json={"name": "Comparison live", "address": "127.0.0.1", "port": port},
+        json={
+            "name": "Comparison live",
+            "address": "127.0.0.1",
+            "port": port,
+            "api_key": _KEY,
+            "ca_pem": ca.cert_pem.bytes().decode(),
+        },
     )
     disabled = await client.post(
         "/admin/nodes",
@@ -193,19 +195,6 @@ async def _verify_comparison(
     assert live.status_code == disabled.status_code == 201
     live_id = live.json()["data"]["id"]
     disabled_id = disabled.json()["data"]["id"]
-    configured = NodeHostConfig.model_validate(
-        {
-            "targets": {
-                live_id: {
-                    "address": "127.0.0.1",
-                    "port": port,
-                    "ca_pem": ca.cert_pem.bytes().decode(),
-                    "api_key": _KEY,
-                }
-            }
-        }
-    )
-    config.targets.update(configured.targets)
     created = await client.post(
         "/admin/xray/revisions",
         headers=headers,

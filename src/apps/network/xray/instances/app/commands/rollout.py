@@ -6,7 +6,9 @@ from papilio.errors.exceptions import ConflictException, NotFoundException
 from papilio.infra.db.tools.decorators import transactional
 from papilio.utils.dates import utc_now
 
-from src.apps.network.nodes.app.interfaces.endpoints import INodeEndpointQuery
+from src.apps.network.nodes.registry.app.interfaces.endpoints import (
+    INodeEndpointQuery,
+)
 from src.apps.network.xray.revisions.app.interfaces.records import (
     IXrayRevisionService,
 )
@@ -49,7 +51,7 @@ class RestartRolloutCommand:
         """Commit one stable plan or replay its current durable snapshot."""
         plan = await self.repository.find_request(request_key)
         if plan is None:
-            revision = await self.revisions.get_by_id(revision_id)
+            revision = await self.revisions.lock_for_reference(revision_id)
             plan = await self.repository.insert(
                 XrayRestartRolloutModel(
                     request_key=request_key,

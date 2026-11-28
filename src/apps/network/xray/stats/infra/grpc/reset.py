@@ -3,7 +3,7 @@
 from grpc.aio import AioRpcError
 from papilio.utils.dates import utc_now
 
-from src.apps.network.nodes.infra.grpc.channels import NodeChannels
+from src.apps.network.nodes.connections.infra.grpc.channels import NodeChannels
 
 from ...domain.enums.reset import (
     ResetEffect,
@@ -33,10 +33,8 @@ class XrayResetGateway:
 
     async def reset(self, target: ResetTarget) -> ResetOutcome:
         """Send one operation and map Node's explicit evidence."""
+        channel = await self.channels.get(target.node)
         remaining = (target.deadline_at - utc_now()).total_seconds()
-        channel = self.channels.get(
-            target.node_id, target.address, target.port
-        )
         if remaining <= 0:
             result = ResetOutcome(
                 ResetState.UNKNOWN, ResetReason.DISPATCH_EXPIRED

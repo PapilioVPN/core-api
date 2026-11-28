@@ -33,7 +33,7 @@ class XrayFleetApplyCommand:
         data: XrayFleetApplyInput,
     ) -> tuple[XrayFleetOperationResult, ...]:
         """Commit accepted operations and identity-only events together."""
-        await self.revisions.get_by_id(revision_id)
+        await self.revisions.lock_for_reference(revision_id)
         keys = tuple(
             (row.node_id, row.instance_id, row.request_key)
             for row in data.targets

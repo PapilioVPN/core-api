@@ -8,5 +8,5 @@ class XrayDesiredRevisionModel(PersistenceEntity):
     node_id: int = ForeignKeyField("tbl_nodes.id", ondelete="RESTRICT")
     instance_id: str = CharField(63)
     revision_id: int = ForeignKeyField(
-        "tbl_xray_revisions.id", ondelete="RESTRICT"
+        "tbl_xray_revisions.id", ondelete="RESTRICT", index=True
     )

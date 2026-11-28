@@ -110,3 +110,31 @@ class XrayFleetStopQuery:
             revision_id=None,
         )
         return _observe(keys, records)
+
+
+class XrayFleetRestartQuery:
+    def __init__(self, repo: IXrayStartRepository) -> None:
+        self.repo = repo
+
+    async def get(
+        self, revision_id: int, data: XrayFleetTrackingInput
+    ) -> tuple[XrayFleetOperationResult, ...]:
+        """Read the tracked restarts for one revision in a set query.
+
+        Args:
+            revision_id: Exact saved source scope for the selected restarts.
+            data: Node, instance and operation IDs in the requested order.
+
+        Returns:
+            Per-target outcomes, retaining missing results and duplicates.
+        """
+        keys = tuple(
+            (row.node_id, row.instance_id, row.operation_id)
+            for row in data.targets
+        )
+        records = await self.repo.find_operations(
+            tuple(dict.fromkeys(keys)),
+            action=XrayExecutionAction.RESTART,
+            revision_id=revision_id,
+        )
+        return _observe(keys, records)

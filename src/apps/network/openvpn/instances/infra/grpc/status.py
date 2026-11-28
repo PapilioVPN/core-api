@@ -1,9 +1,11 @@
 """Call the versioned OpenVPN GetStatus RPC."""
 
-from src.apps.network.nodes.domain.models.records import NodeModel
-from src.apps.network.nodes.domain.results.observation import NodeObservation
-from src.apps.network.nodes.infra.grpc.channels import NodeChannels
-from src.apps.network.nodes.infra.grpc.observation import observe
+from src.apps.network.nodes.connections.infra.grpc.channels import NodeChannels
+from src.apps.network.nodes.connections.infra.grpc.observation import observe
+from src.apps.network.nodes.observations.domain.results.observation import (
+    NodeObservation,
+)
+from src.apps.network.nodes.registry.domain.models.records import NodeModel
 
 from ...domain.results.status import OpenVPNStatus
 from .codec import decode

@@ -123,7 +123,7 @@ async def test_rollout_creates_only_first_operation(
                 )
             )
         retry = await pipeline.run(result["id"], operation_id)
-        assert retry is not None and 0 < retry.seconds <= 45
+        assert retry is not None and 0 < retry <= 45
         async with engine.begin() as connection:
             await connection.execute(
                 update(XrayStartTable)

@@ -8,7 +8,9 @@ from papilio.types.aliases import IdType
 from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
-from src.apps.network.nodes.domain.dtos.identity import NodeInstanceID
+from src.apps.network.nodes.connections.domain.dtos.identity import (
+    NodeInstanceID,
+)
 
 from ...app.interfaces.status import IOpenVPNStatusQuery
 from ..schemas.status import (

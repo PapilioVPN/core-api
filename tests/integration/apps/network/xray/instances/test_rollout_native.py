@@ -15,10 +15,12 @@ from dishka import AsyncContainer
 from fastapi import FastAPI
 from faststream.exceptions import NackMessage
 from httpx import AsyncClient
+from pydantic import SecretStr
 
-from src.apps.network.nodes.app.interfaces.services import INodeService
-from src.apps.network.nodes.config import NodeHostConfig, NodeHostTarget
-from src.apps.network.nodes.domain.dtos.records import NodeCreate
+from src.apps.network.nodes.registry.app.interfaces.services import (
+    INodeService,
+)
+from src.apps.network.nodes.registry.domain.dtos.records import NodeCreate
 from src.apps.network.xray.instances.app.pipelines.control import (
     XrayControlPipeline,
 )
@@ -48,7 +50,7 @@ async def test_real_rollout_recovers_after_worker_exit_and_halts_on_rejection(
         app, client, mobile="09120000787", role_key="xray-rollout-native"
     )
     container = cast(AsyncContainer, app.state.dishka_container)
-    targets = {}
+    targets: list[int] = []
     for index, (grpc_port, http_port, ca, _) in enumerate(node_pair):
         tls = ssl.create_default_context()
         ca.configure_trust(tls)
@@ -67,17 +69,11 @@ async def test_real_rollout_recovers_after_worker_exit_and_halts_on_rejection(
                     name=f"Restart rollout {index}",
                     address="127.0.0.1",
                     port=grpc_port,
+                    api_key=SecretStr(node_api_key),
+                    ca_pem=ca.cert_pem.bytes().decode(),
                 )
             )
-        targets[node.id] = NodeHostTarget.model_validate(
-            {
-                "address": node.address,
-                "port": grpc_port,
-                "api_key": node_api_key,
-                "ca_pem": ca.cert_pem.bytes().decode(),
-            }
-        )
-    pg.node_host = NodeHostConfig(targets=targets)
+        targets.append(node.id)
     pg.nats = NatsConfig(servers=[broker], graceful_timeout=1)
     selection = {
         "targets": [{"node_id": id, "instance_id": "edge"} for id in targets]

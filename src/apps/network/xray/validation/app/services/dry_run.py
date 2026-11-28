@@ -1,15 +1,14 @@
 """Validate exact candidate bytes without changing the running engine."""
 
-from src.apps.network.nodes.app.interfaces.services import INodeService
+from src.apps.network.nodes.registry.app.interfaces.services import (
+    INodeService,
+)
 from src.apps.network.xray.revisions.app.interfaces.records import (
     IXrayRevisionService,
     IXraySourceDigest,
 )
 from src.apps.network.xray.revisions.domain.dtos.source import (
     XrayConfigCandidate,
-)
-from src.apps.network.xray.revisions.domain.results.records import (
-    XraySourceFailure,
 )
 
 from ...domain.enums.dry_run import XrayValidationStatus
@@ -60,7 +59,7 @@ class XrayConfigValidationService:
 
     async def validate_revision(
         self, node_id: int, instance_id: str, revision_id: int
-    ) -> XrayConfigValidation | XraySourceFailure:
+    ) -> XrayConfigValidation | None:
         """Dry-run the exact stored revision, without a caller-supplied body.
 
         Args:
@@ -75,8 +74,8 @@ class XrayConfigValidationService:
             NotFoundException: The node or revision is absent.
         """
         revision = await self.revisions.get_source(revision_id)
-        if isinstance(revision, XraySourceFailure):
-            result = revision
+        if revision is None:
+            result = None
         else:
             result = await self._validate(
                 node_id,
@@ -92,9 +91,7 @@ class XrayConfigValidationService:
         node = await self.nodes.get_by_id(node_id)
         if node.is_enabled:
             outcome = await self.gateway.validate(
-                node_id=node_id,
-                address=node.address,
-                port=node.port,
+                node=node.endpoint(),
                 instance_id=instance_id,
                 source=source,
             )

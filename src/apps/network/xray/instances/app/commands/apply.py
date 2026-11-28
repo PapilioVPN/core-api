@@ -42,7 +42,7 @@ class XrayApplyCommand:
             NotFoundException: The revision or Node does not exist.
             ConflictException: The target is unavailable or the key conflicts.
         """
-        await self.revisions.get_by_id(revision_id)
+        await self.revisions.lock_for_reference(revision_id)
         operation = await self.admission.submit(
             node_id, instance_id, request_key, revision_id=revision_id
         )

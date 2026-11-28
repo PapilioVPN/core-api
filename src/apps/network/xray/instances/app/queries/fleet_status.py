@@ -2,7 +2,9 @@
 
 from asyncio import Task, TaskGroup
 
-from src.apps.network.nodes.app.interfaces.endpoints import INodeEndpointQuery
+from src.apps.network.nodes.registry.app.interfaces.endpoints import (
+    INodeEndpointQuery,
+)
 
 from ...domain.dtos.fleet_status import XrayFleetStatusInput
 from ...domain.enums.status import XrayStatusCode

@@ -12,11 +12,13 @@ from dishka import AsyncContainer
 from fastapi import FastAPI
 from httpx import AsyncClient
 
-from src.apps.network.nodes.app.interfaces.services import INodeService
-from src.apps.network.nodes.config import NodeHostConfig
-from src.apps.network.nodes.domain.dtos.records import NodeCreate
+from src.apps.network.nodes.registry.app.interfaces.services import (
+    INodeService,
+)
+from src.apps.network.nodes.registry.domain.dtos.records import NodeCreate
 from src.apps.network.xray.revisions.infra.crypto import digest
 from src.settings.config import CoreSettings
+from tests.integration.apps.network.nodes.credentials import enroll_nodes
 
 from ...nodes.auth import admin_headers
 
@@ -100,17 +102,11 @@ async def test_native_xray_validation_and_status(
             )
         )
     assert row.id is not None
-    pg.node_host = NodeHostConfig.model_validate(
+    await enroll_nodes(
+        app,
         {
-            "targets": {
-                row.id: {
-                    "address": row.address,
-                    "port": row.port,
-                    "api_key": node_api_key,
-                    "ca_pem": ca.cert_pem.bytes().decode(),
-                }
-            }
-        }
+            row.id: (node_api_key, ca.cert_pem.bytes().decode()),
+        },
     )
     url = f"/admin/nodes/{row.id}/xray/instances/edge/config-validations"
     panel_status = url.removesuffix("/config-validations")

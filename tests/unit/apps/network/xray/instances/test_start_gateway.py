@@ -8,7 +8,8 @@ from grpc import StatusCode
 from grpc.aio import AioRpcError, Metadata
 from papilio.utils.dates import utc_now
 
-from src.apps.network.nodes.infra.grpc.channels import NodeChannels
+from src.apps.network.nodes.connections.infra.grpc.channels import NodeChannels
+from src.apps.network.nodes.registry.domain.results.records import NodeEndpoint
 from src.apps.network.xray.instances.domain.enums.start import (
     XrayStartReason,
     XrayStartState,
@@ -66,7 +67,9 @@ async def test_start_requires_confirmed_digest(
     )
     gateway = XrayStartGateway(Mock(spec=NodeChannels))
     target = XrayStartTarget(
-        1, "edge", "localhost", 8081, utc_now() + timedelta(seconds=45)
+        NodeEndpoint(1, "localhost", 8081, True),
+        "edge",
+        utc_now() + timedelta(seconds=45),
     )
 
     outcome = await gateway.start(target)

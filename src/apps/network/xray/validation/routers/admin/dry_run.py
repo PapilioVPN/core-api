@@ -15,9 +15,6 @@ from src.apps.network.xray.instances.domain.dtos.identity import XrayInstanceID
 from src.apps.network.xray.revisions.domain.dtos.source import (
     XrayConfigCandidate,
 )
-from src.apps.network.xray.revisions.domain.results.records import (
-    XraySourceFailure,
-)
 
 from ...app.interfaces.dry_run import IXrayConfigValidation
 from ..schemas.dry_run import (
@@ -55,7 +52,7 @@ async def validate_revision(
     result = await validation.validate_revision(
         node_id, instance_id, revision_id
     )
-    if isinstance(result, XraySourceFailure):
+    if result is None:
         response.status_code = HTTPStatus.SERVICE_UNAVAILABLE
         body = APIResponse[XrayRevisionValidationOutput, None](
             success=False,

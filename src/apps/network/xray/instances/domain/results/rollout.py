@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 
-from ..enums.rollout import RestartRolloutDelivery
 from ..models.rollout import (
     XrayRestartRolloutModel,
     XrayRestartRolloutTargetModel,
@@ -28,10 +27,6 @@ class RestartRolloutSnapshot:
 
 
 @dataclass(frozen=True, slots=True)
-class RetryRestartRolloutDelivery:
-    seconds: float
-
-
-type RestartRolloutDecision = (
-    RestartRolloutDelivery | RetryRestartRolloutDelivery
-)
+class RestartRolloutDecision:
+    dispatch: bool = False
+    retry_after: float | None = None

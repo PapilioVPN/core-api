@@ -33,6 +33,7 @@ class XrayStartModel(PersistenceEntity):
     revision_id: int | None = ForeignKeyField(
         "tbl_xray_revisions.id",
         ondelete="RESTRICT",
+        index=True,
         nullable=True,
         default=None,
     )

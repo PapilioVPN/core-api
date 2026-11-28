@@ -1,8 +1,14 @@
 """Read Xray outbound health from a selected registered Node."""
 
-from src.apps.network.nodes.app.interfaces.services import INodeService
-from src.apps.network.nodes.domain.enums.observation import NodeReadStatus
-from src.apps.network.nodes.domain.results.observation import NodeObservation
+from src.apps.network.nodes.observations.domain.enums.observation import (
+    NodeReadStatus,
+)
+from src.apps.network.nodes.observations.domain.results.observation import (
+    NodeObservation,
+)
+from src.apps.network.nodes.registry.app.interfaces.services import (
+    INodeService,
+)
 
 from ...domain.results.health import XrayOutboundSample
 from ..interfaces.health import IXrayOutboundHealthGateway

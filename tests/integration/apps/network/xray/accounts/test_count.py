@@ -13,10 +13,12 @@ from dishka import AsyncContainer
 from fastapi import FastAPI
 from httpx import AsyncClient
 
-from src.apps.network.nodes.app.interfaces.services import INodeService
-from src.apps.network.nodes.config import NodeHostConfig
-from src.apps.network.nodes.domain.dtos.records import NodeCreate
+from src.apps.network.nodes.registry.app.interfaces.services import (
+    INodeService,
+)
+from src.apps.network.nodes.registry.domain.dtos.records import NodeCreate
 from src.settings.config import CoreSettings
+from tests.integration.apps.network.nodes.credentials import enroll_nodes
 
 from ...nodes.auth import admin_headers
 
@@ -95,17 +97,11 @@ async def test_vless_count_reads_true_membership(
                 port=grpc_port,
             )
         )
-    pg.node_host = NodeHostConfig.model_validate(
+    await enroll_nodes(
+        app,
         {
-            "targets": {
-                node.id: {
-                    "address": node.address,
-                    "port": grpc_port,
-                    "api_key": node_api_key,
-                    "ca_pem": ca.cert_pem.bytes().decode(),
-                }
-            }
-        }
+            node.id: (node_api_key, ca.cert_pem.bytes().decode()),
+        },
     )
     headers = await admin_headers(
         app, client, mobile="09120000773", role_key="native-vless-count"

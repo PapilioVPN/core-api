@@ -1,8 +1,14 @@
 """Use the selected enabled registry entry for OpenVPN dry run."""
 
-from src.apps.network.nodes.app.interfaces.services import INodeService
-from src.apps.network.nodes.domain.enums.observation import NodeReadStatus
-from src.apps.network.nodes.domain.results.observation import NodeObservation
+from src.apps.network.nodes.observations.domain.enums.observation import (
+    NodeReadStatus,
+)
+from src.apps.network.nodes.observations.domain.results.observation import (
+    NodeObservation,
+)
+from src.apps.network.nodes.registry.app.interfaces.services import (
+    INodeService,
+)
 
 from ...domain.dtos.dry_run import OpenVPNCandidate
 from ...domain.results.dry_run import OpenVPNValidation

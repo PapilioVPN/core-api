@@ -19,7 +19,7 @@ from ..enums.rollout import RestartRolloutReason, RestartRolloutState
 class XrayRestartRolloutModel(PersistenceEntity):
     request_key: UUID = Field(nullable=False)
     revision_id: int = ForeignKeyField(
-        "tbl_xray_revisions.id", ondelete="RESTRICT"
+        "tbl_xray_revisions.id", ondelete="RESTRICT", index=True
     )
     config_sha256: str = CharField(64)
     position: int = IntField(default=1)

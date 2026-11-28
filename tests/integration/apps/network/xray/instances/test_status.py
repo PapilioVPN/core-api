@@ -11,9 +11,10 @@ from fastapi import FastAPI
 from grpc import aio
 from httpx import ASGITransport, AsyncClient
 
-from src.apps.network.nodes.app.interfaces.services import INodeService
-from src.apps.network.nodes.config import NodeHostConfig
-from src.apps.network.nodes.domain.dtos.records import NodeCreate
+from src.apps.network.nodes.registry.app.interfaces.services import (
+    INodeService,
+)
+from src.apps.network.nodes.registry.domain.dtos.records import NodeCreate
 from src.apps.network.xray.instances.infra.grpc.v1.instances_pb2 import (
     XrayInstanceRequest,
     XrayInstanceState,
@@ -25,6 +26,7 @@ from src.apps.network.xray.instances.infra.grpc.v1.instances_pb2_grpc import (
 )
 from src.bootstrap.api import create_api
 from src.settings.config import CoreSettings
+from tests.integration.apps.network.nodes.credentials import enroll_nodes
 
 from ...nodes.auth import admin_headers
 
@@ -153,17 +155,11 @@ async def test_status_reuses_channel_and_releases_database(
                     )
                 )
             assert row.id is not None
-            pg.node_host = NodeHostConfig.model_validate(
+            await enroll_nodes(
+                app,
                 {
-                    "targets": {
-                        row.id: {
-                            "address": row.address,
-                            "port": port,
-                            "ca_pem": ca.cert_pem.bytes().decode(),
-                            "api_key": _KEY,
-                        }
-                    }
-                }
+                    row.id: (_KEY, ca.cert_pem.bytes().decode()),
+                },
             )
             node_url = f"/admin/nodes/{row.id}"
             instances = f"{node_url}/xray/instances"

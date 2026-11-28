@@ -18,4 +18,13 @@ class XrayLogLine:
     missed_before: int | None
 
 
-type XrayLogFeed = AsyncIterator[XrayLogLine | XrayLogEnd]
+@dataclass(frozen=True, slots=True)
+class XrayLogEvent:
+    line: XrayLogLine | None = None
+    end: XrayLogEnd | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class XrayLogFeed:
+    events: AsyncIterator[XrayLogEvent] | None = None
+    end: XrayLogEnd | None = None

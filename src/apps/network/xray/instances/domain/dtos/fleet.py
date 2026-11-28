@@ -1,4 +1,4 @@
-"""Explicit bounded selections for local Start and Stop."""
+"""Explicit bounded selections for Xray lifecycle operations."""
 
 from functools import partial
 from typing import Annotated
@@ -32,6 +32,16 @@ class XrayFleetStopInput(BaseDTO):
         Field(min_length=1, max_length=16),
         AfterValidator(
             partial(require_distinct_targets, selection="a Stop selection")
+        ),
+    ]
+
+
+class XrayFleetRestartInput(BaseDTO):
+    targets: Annotated[
+        list[XrayFleetRequestTarget],
+        Field(min_length=1, max_length=16),
+        AfterValidator(
+            partial(require_distinct_targets, selection="a Restart selection")
         ),
     ]
 

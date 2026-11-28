@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import TypedDict
 
+from src.apps.network.nodes.registry.domain.results.records import NodeEndpoint
+
 from ..enums.reset import (
     ResetEffect,
     ResetKind,
@@ -32,10 +34,8 @@ class ResetSelection:
 
 @dataclass(frozen=True, slots=True)
 class ResetTarget:
-    node_id: int
+    node: NodeEndpoint
     instance_id: str
-    address: str
-    port: int
     selection: ResetSelection
     deadline_at: datetime
 

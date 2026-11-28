@@ -2,7 +2,9 @@
 
 from dataclasses import dataclass
 
-from src.apps.network.nodes.domain.enums.observation import NodeInstanceState
+from src.apps.network.nodes.observations.domain.enums.observation import (
+    NodeInstanceState,
+)
 
 
 @dataclass(frozen=True, slots=True)

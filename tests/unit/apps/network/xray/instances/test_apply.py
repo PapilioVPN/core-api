@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock
 import pytest
 from papilio.utils.dates import utc_now
 
+from src.apps.network.nodes.registry.domain.results.records import NodeEndpoint
 from src.apps.network.xray.instances.app.executions.start import (
     XrayStartExecution,
 )
@@ -26,7 +27,6 @@ from src.apps.network.xray.instances.domain.results.start import (
 )
 from src.apps.network.xray.revisions.domain.results.records import (
     XrayRevisionSource,
-    XraySourceFailure,
 )
 
 pytestmark = pytest.mark.unit
@@ -38,7 +38,10 @@ async def test_apply_requires_source_and_matching_digest(
 ) -> None:
     source = b'{ "remarks": "revision source" }\n'
     target = XrayStartTarget(
-        1, "edge", "localhost", 8081, utc_now() + timedelta(seconds=45), 2
+        NodeEndpoint(1, "localhost", 8081, True),
+        "edge",
+        utc_now() + timedelta(seconds=45),
+        2,
     )
     execution = AsyncMock(spec=XrayStartExecution)
     execution.claim.return_value = target
@@ -51,7 +54,7 @@ async def test_apply_requires_source_and_matching_digest(
         XrayStartState.SUCCEEDED, applied_config_sha256=observed_digest
     )
     if not source_available:
-        execution.load_source.return_value = XraySourceFailure.UNAVAILABLE
+        execution.load_source.return_value = None
 
     await XrayStartPipeline(execution, gateway).run(3)
 

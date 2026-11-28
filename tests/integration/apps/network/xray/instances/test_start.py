@@ -18,12 +18,14 @@ from fastapi import FastAPI
 from httpx import AsyncClient, Response
 from nats import connect
 
-from src.apps.network.nodes.app.interfaces.services import INodeService
-from src.apps.network.nodes.config import NodeHostConfig
-from src.apps.network.nodes.domain.dtos.records import NodeCreate
+from src.apps.network.nodes.registry.app.interfaces.services import (
+    INodeService,
+)
+from src.apps.network.nodes.registry.domain.dtos.records import NodeCreate
 from src.apps.network.xray.instances.infra.broker.config import BrokerConfig
 from src.bootstrap.events import create_events
 from src.settings.config import CoreSettings, NatsConfig
+from tests.integration.apps.network.nodes.credentials import enroll_nodes
 
 from ...nodes.auth import admin_headers
 
@@ -100,17 +102,11 @@ async def test_start_and_apply_execute_the_selected_source(
     node_id = row.id
     instance_url = f"/admin/nodes/{node_id}/xray/instances/edge"
     start_url = f"{instance_url}/start-operations"
-    pg.node_host = NodeHostConfig.model_validate(
+    await enroll_nodes(
+        app,
         {
-            "targets": {
-                node_id: {
-                    "address": "127.0.0.1",
-                    "port": grpc_port,
-                    "api_key": node_api_key,
-                    "ca_pem": ca.cert_pem.bytes().decode(),
-                }
-            }
-        }
+            node_id: (node_api_key, ca.cert_pem.bytes().decode()),
+        },
     )
     pg.nats = NatsConfig(servers=[url])
     events = create_events(pg)

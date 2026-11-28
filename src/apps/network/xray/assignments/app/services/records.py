@@ -2,7 +2,9 @@
 
 from papilio.infra.db.tools.decorators import transactional
 
-from src.apps.network.nodes.app.interfaces.services import INodeService
+from src.apps.network.nodes.registry.app.interfaces.services import (
+    INodeService,
+)
 from src.apps.network.xray.revisions.app.interfaces.records import (
     IXrayRevisionService,
 )
@@ -28,7 +30,7 @@ class XrayAssignmentService:
     ) -> XrayDesiredRevision:
         """Point this registered instance at one immutable saved revision."""
         await self.nodes.get_by_id(node_id)
-        revision = await self.revisions.get_by_id(revision_id)
+        revision = await self.revisions.lock_for_reference(revision_id)
         record = await self.repo.set_revision(
             node_id, instance_id, revision.id
         )

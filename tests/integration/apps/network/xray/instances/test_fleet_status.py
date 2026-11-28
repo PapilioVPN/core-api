@@ -13,14 +13,16 @@ from fastapi import FastAPI
 from grpc import aio
 from httpx import ASGITransport, AsyncClient
 
-from src.apps.network.nodes.app.interfaces.services import INodeService
-from src.apps.network.nodes.config import NodeHostConfig
-from src.apps.network.nodes.domain.dtos.records import NodeCreate
+from src.apps.network.nodes.registry.app.interfaces.services import (
+    INodeService,
+)
+from src.apps.network.nodes.registry.domain.dtos.records import NodeCreate
 from src.apps.network.xray.instances.infra.grpc.v1.instances_pb2_grpc import (
     add_XrayInstancesServiceServicer_to_server,
 )
 from src.bootstrap.api import create_api
 from src.settings.config import CoreSettings
+from tests.integration.apps.network.nodes.credentials import enroll_nodes
 
 from ...nodes.auth import admin_headers
 from .test_status import _KEY, StatusPeer
@@ -150,23 +152,12 @@ async def test_fleet_status_keeps_real_node_result_while_a_peer_times_out(
                         port=peer_port,
                     )
                 )
-            pg.node_host = NodeHostConfig.model_validate(
+            await enroll_nodes(
+                app,
                 {
-                    "targets": {
-                        live.id: {
-                            "address": live.address,
-                            "port": real_grpc,
-                            "ca_pem": real_ca.cert_pem.bytes().decode(),
-                            "api_key": node_api_key,
-                        },
-                        controlled.id: {
-                            "address": controlled.address,
-                            "port": peer_port,
-                            "ca_pem": ca.cert_pem.bytes().decode(),
-                            "api_key": _KEY,
-                        },
-                    }
-                }
+                    live.id: (node_api_key, real_ca.cert_pem.bytes().decode()),
+                    controlled.id: (_KEY, ca.cert_pem.bytes().decode()),
+                },
             )
             order = [
                 (live.id, "edge"),

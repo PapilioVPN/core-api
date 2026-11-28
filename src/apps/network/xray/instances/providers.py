@@ -4,6 +4,7 @@ from dishka import Provider, Scope, provide
 
 from .app.commands.apply import XrayApplyCommand
 from .app.commands.fleet_apply import XrayFleetApplyCommand
+from .app.commands.fleet_restart import XrayFleetRestartCommand
 from .app.commands.fleet_start import XrayFleetStartCommand
 from .app.commands.fleet_stop import XrayFleetStopCommand
 from .app.commands.restart import XrayRestartCommand
@@ -12,6 +13,8 @@ from .app.executions.rollout import RestartRolloutExecution
 from .app.executions.start import XrayStartExecution
 from .app.interfaces.apply import IXrayApplyCommand
 from .app.interfaces.fleet import (
+    IXrayFleetRestartCommand,
+    IXrayFleetRestartQuery,
     IXrayFleetStartCommand,
     IXrayFleetStartQuery,
     IXrayFleetStopCommand,
@@ -46,6 +49,7 @@ from .app.pipelines.rollout import RestartRolloutPipeline
 from .app.pipelines.start import XrayStartPipeline
 from .app.queries.fleet import (
     XrayFleetApplyQuery,
+    XrayFleetRestartQuery,
     XrayFleetStartQuery,
     XrayFleetStopQuery,
 )
@@ -85,6 +89,12 @@ class XrayInstancesProvider(Provider):
     )
     fleet_apply_query = provide(
         XrayFleetApplyQuery, provides=IXrayFleetApplyQuery
+    )
+    fleet_restart = provide(
+        XrayFleetRestartCommand, provides=IXrayFleetRestartCommand
+    )
+    fleet_restart_query = provide(
+        XrayFleetRestartQuery, provides=IXrayFleetRestartQuery
     )
     fleet_start = provide(
         XrayFleetStartCommand, provides=IXrayFleetStartCommand

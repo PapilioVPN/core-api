@@ -2,28 +2,22 @@
 
 from papilio.infra.db.tools.decorators import transactional
 
-from src.apps.network.nodes.app.interfaces.endpoints import INodeEndpointQuery
-from src.apps.network.xray.revisions.app.interfaces.records import (
-    IXrayRevisionService,
+from src.apps.network.nodes.registry.app.interfaces.endpoints import (
+    INodeEndpointQuery,
 )
 
-from ...domain.results.records import (
-    XrayAssignmentSelection,
-    XrayDesiredRevision,
-)
-from ..interfaces.records import IXrayAssignmentRepository
+from ...domain.results.records import XrayAssignmentSelection
+from ..interfaces.records import IXrayAssignmentReader
 
 
 class XrayAssignmentQuery:
     def __init__(
         self,
         nodes: INodeEndpointQuery,
-        revisions: IXrayRevisionService,
-        repo: IXrayAssignmentRepository,
+        assignments: IXrayAssignmentReader,
     ) -> None:
         self.nodes = nodes
-        self.revisions = revisions
-        self.repo = repo
+        self.assignments = assignments
 
     @transactional
     async def get(
@@ -31,11 +25,5 @@ class XrayAssignmentQuery:
     ) -> XrayAssignmentSelection:
         """Finish SQL before the target can be used by the Node query."""
         node = await self.nodes.get_endpoint(node_id)
-        assignment = await self.repo.find(node_id, instance_id)
-        desired = None
-        if assignment is not None:
-            revision = await self.revisions.get_by_id(assignment.revision_id)
-            desired = XrayDesiredRevision(
-                revision.id, revision.config_sha256, assignment.updated_at
-            )
+        desired = await self.assignments.select_one(node_id, instance_id)
         return XrayAssignmentSelection(node, desired)

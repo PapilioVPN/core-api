@@ -7,8 +7,11 @@ import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
 
-from src.apps.network.nodes.infra.pg.readers.endpoints import (
+from src.apps.network.nodes.registry.infra.pg.readers.endpoints import (
     NodeEndpointReader,
+)
+from src.apps.network.xray.assignments.infra.pg.readers.records import (
+    XrayAssignmentReader,
 )
 
 from ...nodes.auth import admin_headers
@@ -28,6 +31,7 @@ async def test_desired_revision_upsert_clear_and_unavailable_observation(
         side_effect=AssertionError("Scalar assignment used the endpoint set")
     )
     monkeypatch.setattr(NodeEndpointReader, "select_endpoints", batch_lookup)
+    monkeypatch.setattr(XrayAssignmentReader, "select_desired", batch_lookup)
     path = ASSIGNMENT_PATH.format(node_id=999999, instance_id="edge")
     denied = await client.get(path)
     assert denied.status_code == 401, denied.text

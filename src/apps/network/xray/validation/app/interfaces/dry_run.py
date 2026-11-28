@@ -2,11 +2,9 @@
 
 from typing import Protocol
 
+from src.apps.network.nodes.registry.domain.results.records import NodeEndpoint
 from src.apps.network.xray.revisions.domain.dtos.source import (
     XrayConfigCandidate,
-)
-from src.apps.network.xray.revisions.domain.results.records import (
-    XraySourceFailure,
 )
 
 from ...domain.results.dry_run import (
@@ -19,9 +17,7 @@ class IXrayConfigGateway(Protocol):
     async def validate(
         self,
         *,
-        node_id: int,
-        address: str,
-        port: int,
+        node: NodeEndpoint,
         instance_id: str,
         source: bytes,
     ) -> XrayValidationOutcome: ...
@@ -37,4 +33,4 @@ class IXrayConfigValidation(Protocol):
 
     async def validate_revision(
         self, node_id: int, instance_id: str, revision_id: int
-    ) -> XrayConfigValidation | XraySourceFailure: ...
+    ) -> XrayConfigValidation | None: ...

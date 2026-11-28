@@ -6,7 +6,6 @@ from papilio.infra.db.tools.decorators import transactional
 from papilio.utils.dates import utc_now
 
 from ...domain.enums.rollout import (
-    RestartRolloutDelivery,
     RestartRolloutReason,
     RestartRolloutState,
 )
@@ -17,10 +16,7 @@ from ...domain.enums.start import (
 )
 from ...domain.models.rollout import XrayRestartRolloutModel
 from ...domain.models.start import XrayStartModel
-from ...domain.results.rollout import (
-    RestartRolloutDecision,
-    RetryRestartRolloutDelivery,
-)
+from ...domain.results.rollout import RestartRolloutDecision
 from ..interfaces.rollout import IRestartRolloutRepository
 from ..interfaces.start import IXrayStartRepository
 from .rollout_schedule import RestartRolloutSchedule
@@ -43,7 +39,7 @@ class RestartRolloutProgress:
     ) -> RestartRolloutDecision:
         """Consult durable state before dispatch or acknowledgement."""
         plan = await self.rollouts.lock(rollout_id)
-        decision: RestartRolloutDecision = RestartRolloutDelivery.SETTLED
+        decision = RestartRolloutDecision()
         if plan is not None and plan.state is RestartRolloutState.RUNNING:
             target = await self.rollouts.target(plan.id, plan.position)
             if target is not None and target.operation_id == operation_id:
@@ -70,14 +66,14 @@ class RestartRolloutProgress:
         operation: XrayStartModel,
         now: datetime,
     ) -> RestartRolloutDecision:
-        decision: RestartRolloutDecision = RestartRolloutDelivery.SETTLED
+        decision = RestartRolloutDecision()
         if operation.state is XrayStartState.QUEUED:
-            decision = RestartRolloutDelivery.DISPATCH
+            decision = RestartRolloutDecision(dispatch=True)
         elif operation.state is XrayStartState.RUNNING:
             deadline = operation.deadline_at
             if deadline is not None and deadline > now:
-                decision = RetryRestartRolloutDelivery(
-                    (deadline - now).total_seconds()
+                decision = RestartRolloutDecision(
+                    retry_after=(deadline - now).total_seconds()
                 )
             else:
                 # A lost reply is not authority to issue Stop again.

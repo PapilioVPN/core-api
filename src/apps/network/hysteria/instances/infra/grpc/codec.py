@@ -1,7 +1,11 @@
 """Decode a correlated Node Hysteria lifecycle observation."""
 
-from src.apps.network.nodes.domain.enums.observation import NodeInstanceState
-from src.apps.network.nodes.infra.grpc.observation import valid_config_digest
+from src.apps.network.nodes.connections.infra.grpc.observation import (
+    valid_config_digest,
+)
+from src.apps.network.nodes.observations.domain.enums.observation import (
+    NodeInstanceState,
+)
 
 from ...domain.results.status import HysteriaStatus
 from .v1.hysteria_instances_pb2 import HysteriaInstanceState as WireState

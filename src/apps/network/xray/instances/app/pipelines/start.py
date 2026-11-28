@@ -2,10 +2,6 @@
 
 from papilio.errors.exceptions import NotFoundException
 
-from src.apps.network.xray.revisions.domain.results.records import (
-    XraySourceFailure,
-)
-
 from ...domain.enums.start import XrayStartReason, XrayStartState
 from ...domain.results.start import XrayStartOutcome
 from ..executions.start import XrayStartExecution
@@ -34,8 +30,8 @@ class XrayStartPipeline:
                     else None
                 )
             except NotFoundException:
-                source = XraySourceFailure.UNAVAILABLE
-            if isinstance(source, XraySourceFailure):
+                source = None
+            if target.revision_id is not None and source is None:
                 outcome = XrayStartOutcome(
                     XrayStartState.FAILED, XrayStartReason.REVISION_UNAVAILABLE
                 )

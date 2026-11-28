@@ -2,9 +2,6 @@
 
 from papilio.errors.exceptions import NotFoundException
 
-from src.apps.network.xray.revisions.domain.results.records import (
-    XraySourceFailure,
-)
 from src.apps.network.xray.validation.app.interfaces.dry_run import (
     IXrayConfigGateway,
 )
@@ -61,14 +58,12 @@ class XrayControlPipeline:
             try:
                 source = await self.execution.load_source(target.revision_id)
             except NotFoundException:
-                source = XraySourceFailure.UNAVAILABLE
-            if isinstance(source, XraySourceFailure):
+                source = None
+            if source is None:
                 outcome = failure
             else:
                 validation = await self.validation.validate(
-                    node_id=target.node_id,
-                    address=target.address,
-                    port=target.port,
+                    node=target.node,
                     instance_id=target.instance_id,
                     source=source.config_json,
                 )

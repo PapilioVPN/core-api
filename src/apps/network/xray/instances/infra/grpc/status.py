@@ -5,7 +5,8 @@ from datetime import UTC, datetime
 from grpc import StatusCode
 from grpc.aio import AioRpcError
 
-from src.apps.network.nodes.infra.grpc.channels import NodeChannels
+from src.apps.network.nodes.connections.infra.grpc.channels import NodeChannels
+from src.apps.network.nodes.registry.domain.results.records import NodeEndpoint
 
 from ...domain.enums.status import XrayStatusCode
 from ...domain.results.status import XrayStatusResult
@@ -28,31 +29,25 @@ class XrayStatusGateway:
     def __init__(self, channels: NodeChannels) -> None:
         """Borrow the shared channel owner without holding a DB scope."""
         self.channels = channels
-        self.stubs: dict[int, XrayInstancesServiceStub] = {}
 
     async def read(
-        self, node_id: int, address: str, port: int, instance_id: str
+        self, node: NodeEndpoint, instance_id: str
     ) -> XrayStatusResult:
         """Issue one GetStatus call with a bounded deadline.
 
         Args:
-            node_id: Core identity that owns the management target.
-            address: Registered management address.
-            port: Registered management port.
+            node: The selected revision of the registered management endpoint.
             instance_id: Native Xray instance ID.
 
         Returns:
             A correlated observation or a stable, credential-free outcome.
             Caller cancellation propagates.
         """
-        channel = self.channels.get(node_id, address, port)
+        channel = await self.channels.get(node)
         if channel is None:
             result = XrayStatusResult(XrayStatusCode.NOT_CONFIGURED)
         else:
-            stub = self.stubs.get(node_id)
-            if stub is None:
-                stub = XrayInstancesServiceStub(channel)
-                self.stubs[node_id] = stub
+            stub = XrayInstancesServiceStub(channel)
             try:
                 reply: XrayInstanceStatus = await stub.GetStatus(
                     XrayInstanceRequest(id=instance_id),

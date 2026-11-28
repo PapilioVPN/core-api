@@ -3,6 +3,8 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from src.apps.network.nodes.registry.domain.results.records import NodeEndpoint
+
 from ..enums.operation import RoutingAction, RoutingFailure, RoutingState
 
 
@@ -14,10 +16,8 @@ class RoutingPayload:
 
 @dataclass(frozen=True, slots=True)
 class RoutingTarget:
-    node_id: int
+    node: NodeEndpoint
     instance_id: str
-    address: str
-    port: int
     action: RoutingAction
     deadline_at: datetime
     payload: RoutingPayload = field(repr=False)

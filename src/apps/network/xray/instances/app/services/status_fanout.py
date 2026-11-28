@@ -2,7 +2,7 @@
 
 from anyio import CapacityLimiter, WouldBlock
 
-from src.apps.network.nodes.domain.results.records import NodeEndpoint
+from src.apps.network.nodes.registry.domain.results.records import NodeEndpoint
 
 from ...domain.enums.status import XrayStatusCode
 from ...domain.results.status import XrayStatusResult
@@ -26,9 +26,7 @@ class XrayStatusFanout:
             result = XrayStatusResult(XrayStatusCode.BUSY)
         else:
             try:
-                result = await self.gateway.read(
-                    endpoint.id, endpoint.address, endpoint.port, instance_id
-                )
+                result = await self.gateway.read(endpoint, instance_id)
             finally:
                 self.capacity.release()
         return result

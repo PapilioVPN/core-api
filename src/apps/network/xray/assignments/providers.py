@@ -3,11 +3,11 @@
 from dishka import Provider, Scope, provide
 
 from .app.interfaces.fleet_comparison import (
-    IXrayAssignmentReader,
     IXrayFleetComparisonQuery,
 )
 from .app.interfaces.records import (
     IXrayAssignmentQuery,
+    IXrayAssignmentReader,
     IXrayAssignmentRepository,
     IXrayAssignmentService,
     IXrayRevisionComparisonQuery,
@@ -16,7 +16,7 @@ from .app.queries.comparison import XrayRevisionComparisonQuery
 from .app.queries.fleet_comparison import XrayFleetComparisonQuery
 from .app.queries.records import XrayAssignmentQuery
 from .app.services.records import XrayAssignmentService
-from .infra.pg.readers.fleet_comparison import XrayAssignmentReader
+from .infra.pg.readers.records import XrayAssignmentReader
 from .infra.pg.repositories.records import XrayAssignmentRepository
 
 

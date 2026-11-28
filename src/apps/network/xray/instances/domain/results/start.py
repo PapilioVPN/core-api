@@ -3,15 +3,15 @@
 from dataclasses import dataclass
 from datetime import datetime
 
+from src.apps.network.nodes.registry.domain.results.records import NodeEndpoint
+
 from ..enums.start import XrayExecutionAction, XrayStartReason, XrayStartState
 
 
 @dataclass(frozen=True, slots=True)
 class XrayStartTarget:
-    node_id: int
+    node: NodeEndpoint
     instance_id: str
-    address: str
-    port: int
     deadline_at: datetime
     revision_id: int | None = None
     action: XrayExecutionAction = XrayExecutionAction.START

@@ -26,6 +26,6 @@ async def run_rollout(
     pipeline: FromDishka[RestartRolloutPipeline],
 ) -> None:
     """Delay duplicate running deliveries until their dispatch deadline."""
-    retry = await pipeline.run(event.rollout_id, event.operation_id)
-    if retry is not None:
-        raise NackMessage(delay=retry.seconds)
+    retry_after = await pipeline.run(event.rollout_id, event.operation_id)
+    if retry_after is not None:
+        raise NackMessage(delay=retry_after)

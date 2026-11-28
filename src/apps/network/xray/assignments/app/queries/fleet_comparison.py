@@ -4,8 +4,10 @@ from asyncio import Task, TaskGroup
 
 from papilio.infra.db.tools.decorators import transactional
 
-from src.apps.network.nodes.app.interfaces.endpoints import INodeEndpointQuery
-from src.apps.network.nodes.domain.results.records import NodeEndpoint
+from src.apps.network.nodes.registry.app.interfaces.endpoints import (
+    INodeEndpointQuery,
+)
+from src.apps.network.nodes.registry.domain.results.records import NodeEndpoint
 from src.apps.network.xray.instances.app.interfaces.status import (
     IXrayStatusFanout,
 )
@@ -22,7 +24,7 @@ from ...domain.results.records import (
     XrayDesiredRevision,
     XrayFleetComparisonItem,
 )
-from ..interfaces.fleet_comparison import IXrayAssignmentReader
+from ..interfaces.records import IXrayAssignmentReader
 from ..policies.comparison import build_comparison
 
 

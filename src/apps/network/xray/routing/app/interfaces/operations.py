@@ -5,7 +5,6 @@ from typing import Protocol
 from uuid import UUID
 
 from ...domain.dtos.mutations import RoutingIntent
-from ...domain.enums.operation import RoutingPayloadFailure
 from ...domain.models.operation import XrayRoutingOperationModel
 from ...domain.results.operation import (
     RoutingOutcome,
@@ -15,13 +14,9 @@ from ...domain.results.operation import (
 
 
 class IRoutingPayloadCodec(Protocol):
-    async def seal(
-        self, intent: RoutingIntent
-    ) -> RoutingPayload | RoutingPayloadFailure: ...
+    async def seal(self, intent: RoutingIntent) -> RoutingPayload | None: ...
 
-    async def open(
-        self, payload: RoutingPayload
-    ) -> RoutingIntent | RoutingPayloadFailure: ...
+    async def open(self, payload: RoutingPayload) -> RoutingIntent | None: ...
 
 
 class IXrayRoutingGateway(Protocol):
@@ -59,7 +54,7 @@ class IXrayRoutingOperationRepository(Protocol):
 class IXrayRoutingOperations(Protocol):
     async def submit(
         self, node_id: int, instance_id: str, key: UUID, intent: RoutingIntent
-    ) -> XrayRoutingOperationModel | RoutingPayloadFailure: ...
+    ) -> XrayRoutingOperationModel | None: ...
 
     async def get(
         self, node_id: int, instance_id: str, id: int

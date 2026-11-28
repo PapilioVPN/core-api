@@ -43,7 +43,7 @@ class XrayRestartCommand:
             NotFoundException: The revision or Node is absent.
             ConflictException: The target is unavailable or the key conflicts.
         """
-        await self.revisions.get_by_id(revision_id)
+        await self.revisions.lock_for_reference(revision_id)
         operation = await self.admission.submit(
             node_id,
             instance_id,

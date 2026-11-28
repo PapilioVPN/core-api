@@ -7,13 +7,14 @@ from papilio.infra.db.tools.decorators import transactional
 from papilio.infra.scopes import Inject, request_scoped
 from papilio.utils.dates import utc_now
 
-from src.apps.network.nodes.app.interfaces.services import INodeService
+from src.apps.network.nodes.registry.app.interfaces.services import (
+    INodeService,
+)
 from src.apps.network.xray.revisions.app.interfaces.records import (
     IXrayRevisionService,
 )
 from src.apps.network.xray.revisions.domain.results.records import (
     XrayRevisionSource,
-    XraySourceFailure,
 )
 
 from ...domain.enums.start import (
@@ -67,10 +68,8 @@ class XrayStartExecution:
                 operation.port,
             ):
                 target = XrayStartTarget(
-                    operation.node_id,
+                    node.endpoint(),
                     operation.instance_id,
-                    operation.address,
-                    operation.port,
                     deadline,
                     revision_id=operation.revision_id,
                     action=operation.action,
@@ -91,7 +90,7 @@ class XrayStartExecution:
         revision_id: int,
         *,
         revisions: IXrayRevisionService = Inject(),
-    ) -> XrayRevisionSource | XraySourceFailure:
+    ) -> XrayRevisionSource | None:
         """Resolve and materialize the selected source in its own scope.
 
         Args:

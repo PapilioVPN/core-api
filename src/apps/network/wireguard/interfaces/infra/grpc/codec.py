@@ -1,6 +1,8 @@
 """Decode the named interface observation and its optional digest."""
 
-from src.apps.network.nodes.infra.grpc.observation import valid_config_digest
+from src.apps.network.nodes.connections.infra.grpc.observation import (
+    valid_config_digest,
+)
 
 from ...domain.results.status import WireGuardStatus
 from .v1.interfaces_pb2 import WireGuardInterfaceStatus

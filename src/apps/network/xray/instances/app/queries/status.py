@@ -1,7 +1,9 @@
 """Read the selected registered node's observed Xray state."""
 
-from src.apps.network.nodes.app.interfaces.services import INodeService
-from src.apps.network.nodes.domain.results.records import NodeEndpoint
+from src.apps.network.nodes.registry.app.interfaces.services import (
+    INodeService,
+)
+from src.apps.network.nodes.registry.domain.results.records import NodeEndpoint
 
 from ...domain.enums.status import XrayStatusCode
 from ...domain.results.status import XrayStatusResult
@@ -30,10 +32,7 @@ class XrayStatusQuery:
             NotFoundException: The node is not registered.
         """
         node = await self.nodes.get_by_id(node_id)
-        endpoint = NodeEndpoint(
-            node.id, node.address, node.port, node.is_enabled
-        )
-        result = await self.observe_target(endpoint, instance_id)
+        result = await self.observe_target(node.endpoint(), instance_id)
         return result
 
     async def observe_target(
@@ -41,9 +40,7 @@ class XrayStatusQuery:
     ) -> XrayStatusResult:
         """Observe the exact registry snapshot without another SQL read."""
         if node.is_enabled:
-            result = await self.gateway.read(
-                node.id, node.address, node.port, instance_id
-            )
+            result = await self.gateway.read(node, instance_id)
         else:
             result = XrayStatusResult(XrayStatusCode.DISABLED)
         return result

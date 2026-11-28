@@ -2,7 +2,6 @@
 
 from ...domain.enums.operation import (
     RoutingFailure,
-    RoutingPayloadFailure,
     RoutingState,
 )
 from ...domain.results.operation import RoutingOutcome
@@ -30,10 +29,7 @@ class XrayRoutingPipeline:
         target = await self.execution.claim(id)
         if target is not None:
             intent = await self.codec.open(target.payload)
-            if (
-                isinstance(intent, RoutingPayloadFailure)
-                or intent.action != target.action
-            ):
+            if intent is None or intent.action != target.action:
                 outcome = RoutingOutcome(
                     RoutingState.FAILED, RoutingFailure.PAYLOAD_UNAVAILABLE
                 )

@@ -31,22 +31,6 @@ jwt:
   access_token_expire_minutes: 15
   refresh_token_expire_minutes: 20160
 redis: null
-# Live Node host stats use the registered ID and the same management endpoint.
-# Enable management TLS and set the matching management.api_key on Node.
-# Set the API key only in private deployment settings.
-# node_host:
-#   timeout_seconds: 3
-#   checks:
-#     interval_seconds: 60  # Set to null to disable scheduled checks.
-#     stale_after_seconds: 180
-#     batch_size: 32
-#     concurrency: 8
-#   targets:
-#     1:
-#       address: node.example.com
-#       port: 8081
-#       api_key: replace-with-private-node-key
-#       # ca_pem: |  # Optional private CA PEM. Otherwise use default trust.
 cli:
   color: true
   theme:

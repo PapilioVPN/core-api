@@ -8,7 +8,6 @@ from papilio.security.crypto import decrypt, encrypt
 from src.shared.utils.asyncio.threads import ThreadRunner
 
 from ...domain.dtos.mutations import RoutingIntent, intent_adapter
-from ...domain.enums.operation import RoutingPayloadFailure
 from ...domain.results.operation import RoutingPayload
 
 
@@ -19,12 +18,8 @@ def _seal(intent: RoutingIntent, key: str) -> RoutingPayload:
     )
 
 
-def _open(
-    payload: RoutingPayload, key: str
-) -> RoutingIntent | RoutingPayloadFailure:
-    result: RoutingIntent | RoutingPayloadFailure = (
-        RoutingPayloadFailure.UNAVAILABLE
-    )
+def _open(payload: RoutingPayload, key: str) -> RoutingIntent | None:
+    result = None
     try:
         data = decrypt(payload.ciphertext, key).encode()
         if sha256(data).hexdigest() == payload.digest:
@@ -46,9 +41,7 @@ class RoutingPayloadCodec:
         )
         self.threads = threads
 
-    async def seal(
-        self, intent: RoutingIntent
-    ) -> RoutingPayload | RoutingPayloadFailure:
+    async def seal(self, intent: RoutingIntent) -> RoutingPayload | None:
         """Encrypt and fingerprint the typed request before SQL admission.
 
         Args:
@@ -57,16 +50,12 @@ class RoutingPayloadCodec:
         Returns:
             Sealed intent or its protection failure.
         """
-        result: RoutingPayload | RoutingPayloadFailure = (
-            RoutingPayloadFailure.UNAVAILABLE
-        )
+        result = None
         if self.key is not None:
             result = await self.threads.run(_seal, intent, self.key)
         return result
 
-    async def open(
-        self, payload: RoutingPayload
-    ) -> RoutingIntent | RoutingPayloadFailure:
+    async def open(self, payload: RoutingPayload) -> RoutingIntent | None:
         """Recover a validated intent whose fingerprint matches storage.
 
         Args:
@@ -75,9 +64,7 @@ class RoutingPayloadCodec:
         Returns:
             Verified intent or its protection failure.
         """
-        result: RoutingIntent | RoutingPayloadFailure = (
-            RoutingPayloadFailure.UNAVAILABLE
-        )
+        result = None
         if self.key is not None:
             result = await self.threads.run(_open, payload, self.key)
         return result

@@ -33,7 +33,3 @@ class RoutingFailure(StrEnum):
     UNAVAILABLE = "unavailable"
     UNCONFIRMED = "unconfirmed"
     DISPATCH_EXPIRED = "dispatch_expired"
-
-
-class RoutingPayloadFailure(StrEnum):
-    UNAVAILABLE = "routing_payload_unavailable"

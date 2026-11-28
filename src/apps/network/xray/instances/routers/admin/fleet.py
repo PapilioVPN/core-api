@@ -1,21 +1,11 @@
 """Accept and track bounded local Start and Stop selections from the Panel."""
 
-from typing import Annotated
-
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Depends, Response, status
 from papilio.api.responses.envelope import APIResponse
 
-from src.apps.core.access.auth.app.validators.authorization import (
-    validate_admin_permission,
-)
-from src.apps.core.access.auth.domain.enums.permissions import AdminPermission
-from src.apps.core.access.auth.domain.results.identity import AdminIdentity
 from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
-)
-from src.apps.core.access.auth.routers.dependencies.identity import (
-    current_admin,
 )
 
 from ...app.interfaces.fleet import (
@@ -30,14 +20,8 @@ from ...domain.dtos.fleet import (
     XrayFleetTrackingInput,
 )
 from ...domain.results.fleet import XrayFleetOperationResult
+from ..dependencies.authorization import require_fleet_read
 from ..schemas.fleet import XrayFleetOperationOutput
-
-
-async def _require_read(
-    identity: Annotated[AdminIdentity, Depends(current_admin)],
-) -> None:
-    validate_admin_permission(identity, "network", AdminPermission.READ)
-
 
 router = APIRouter(
     prefix="/admin/nodes/xray/instances",
@@ -71,7 +55,9 @@ async def start_fleet(
     return _fleet_response(results, response)
 
 
-@router.post("/start-operations/status", dependencies=[Depends(_require_read)])
+@router.post(
+    "/start-operations/status", dependencies=[Depends(require_fleet_read)]
+)
 async def get_fleet_start(
     data: XrayFleetTrackingInput,
     response: Response,
@@ -98,7 +84,9 @@ async def stop_fleet(
     return _fleet_response(results, response)
 
 
-@router.post("/stop-operations/status", dependencies=[Depends(_require_read)])
+@router.post(
+    "/stop-operations/status", dependencies=[Depends(require_fleet_read)]
+)
 async def get_fleet_stop(
     data: XrayFleetTrackingInput,
     response: Response,

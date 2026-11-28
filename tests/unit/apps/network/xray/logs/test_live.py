@@ -6,9 +6,10 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from grpc import StatusCode
 
-from src.apps.network.nodes.domain.models.records import NodeModel
-from src.apps.network.nodes.infra.grpc.channels import NodeChannels
+from src.apps.network.nodes.connections.infra.grpc.channels import NodeChannels
+from src.apps.network.nodes.registry.domain.models.records import NodeModel
 from src.apps.network.xray.logs.domain.enums.live import XrayLogEnd
+from src.apps.network.xray.logs.domain.results.live import XrayLogEvent
 from src.apps.network.xray.logs.infra.grpc import live
 from src.apps.network.xray.logs.infra.grpc.codec import decode_line
 from src.apps.network.xray.logs.infra.grpc.v1 import logs_pb2 as wire
@@ -59,14 +60,14 @@ async def test_no_wait_admission_releases_only_the_owned_calls(
     gateway = live.XrayLogsGateway(channels)
     node = NodeModel(id=3, name="Logs", address="logs.invalid", port=81)
     async with gateway.follow(node, "edge") as first:
-        assert not isinstance(first, XrayLogEnd)
+        assert first.events is not None
         async with gateway.follow(node, "edge") as rejected:
-            assert rejected == XrayLogEnd.BUSY
+            assert rejected.end is XrayLogEnd.BUSY
         assert start.call_count == 1
         calls[0].cancel.assert_not_called()
     calls[0].cancel.assert_called_once()
     async with gateway.follow(node, "edge") as reopened:
-        assert not isinstance(reopened, XrayLogEnd)
+        assert reopened.events is not None
         calls[1].cancel.assert_not_called()
     calls[1].cancel.assert_called_once()
     channel.close.assert_not_called()
@@ -84,7 +85,7 @@ async def test_stalled_open_times_out_before_any_log_arrives(
     gateway = live.XrayLogsGateway(Mock(spec=NodeChannels))
     node = NodeModel(id=3, name="Logs", address="logs.invalid", port=81)
     async with gateway.follow(node, "edge") as outcome:
-        assert outcome == XrayLogEnd.TIMEOUT
+        assert outcome.end is XrayLogEnd.TIMEOUT
     call.cancel.assert_called_once()
     assert gateway.capacity.borrowed_tokens == 0
 
@@ -107,9 +108,9 @@ async def test_closed_rpc_drains_buffered_lines(
     node = NodeModel(id=3, name="Logs", address="logs.invalid", port=81)
 
     async with gateway.follow(node, "edge") as feed:
-        assert not isinstance(feed, XrayLogEnd)
-        assert [event async for event in feed] == [
-            decode_line(buffered, None),
-            XrayLogEnd.ENDED,
+        assert feed.events is not None
+        assert [event async for event in feed.events] == [
+            XrayLogEvent(line=decode_line(buffered, None)),
+            XrayLogEvent(end=XrayLogEnd.ENDED),
         ]
     call.cancel.assert_called_once()

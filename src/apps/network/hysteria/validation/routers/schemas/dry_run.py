@@ -4,7 +4,7 @@ from typing import Literal
 
 from papilio.schemas.outputs import BaseOutput
 
-from src.apps.network.nodes.routers.schemas.observation import (
+from src.apps.network.nodes.observations.routers.schemas.observation import (
     NodeObservationOutput,
 )
 

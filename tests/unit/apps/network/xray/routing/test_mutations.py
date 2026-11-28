@@ -8,7 +8,8 @@ from grpc import StatusCode
 from grpc.aio import AioRpcError, Metadata
 from papilio.utils.dates import utc_now
 
-from src.apps.network.nodes.infra.grpc.channels import NodeChannels
+from src.apps.network.nodes.connections.infra.grpc.channels import NodeChannels
+from src.apps.network.nodes.registry.domain.results.records import NodeEndpoint
 from src.apps.network.xray.routing.domain.dtos.mutations import ClearBalancer
 from src.apps.network.xray.routing.domain.enums.operation import (
     RoutingAction,
@@ -55,10 +56,8 @@ async def test_clear_override_preserves_presence_and_does_not_retry(
     )
     gateway = mutations.XrayRoutingGateway(Mock(spec=NodeChannels))
     target = RoutingTarget(
-        1,
+        NodeEndpoint(1, "localhost", 8081, True),
         "edge",
-        "localhost",
-        8081,
         RoutingAction.CLEAR,
         utc_now() + timedelta(seconds=15),
         RoutingPayload("", ""),

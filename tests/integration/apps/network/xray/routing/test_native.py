@@ -18,12 +18,14 @@ from fastapi import FastAPI
 from httpx import AsyncClient
 from nats import connect
 
-from src.apps.network.nodes.app.interfaces.services import INodeService
-from src.apps.network.nodes.config import NodeHostConfig
-from src.apps.network.nodes.domain.dtos.records import NodeCreate
+from src.apps.network.nodes.registry.app.interfaces.services import (
+    INodeService,
+)
+from src.apps.network.nodes.registry.domain.dtos.records import NodeCreate
 from src.apps.network.xray.routing.infra.broker.config import BrokerConfig
 from src.bootstrap.events import create_events
 from src.settings.config import CoreSettings, NatsConfig
+from tests.integration.apps.network.nodes.credentials import enroll_nodes
 
 from ...nodes.auth import admin_headers
 
@@ -97,17 +99,11 @@ async def test_xray_live_routing(
                 name="Isolated routing", address="127.0.0.1", port=grpc_port
             )
         )
-    pg.node_host = NodeHostConfig.model_validate(
+    await enroll_nodes(
+        app,
         {
-            "targets": {
-                node.id: {
-                    "address": node.address,
-                    "port": grpc_port,
-                    "api_key": node_api_key,
-                    "ca_pem": ca.cert_pem.bytes().decode(),
-                }
-            }
-        }
+            node.id: (node_api_key, ca.cert_pem.bytes().decode()),
+        },
     )
     pg.nats = NatsConfig(servers=[broker_url])
     base = f"/admin/nodes/{node.id}/xray/instances/edge/routing"

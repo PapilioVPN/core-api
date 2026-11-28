@@ -1,8 +1,14 @@
 """Read the routing state of an enabled registered Xray instance."""
 
-from src.apps.network.nodes.app.interfaces.services import INodeService
-from src.apps.network.nodes.domain.enums.observation import NodeReadStatus
-from src.apps.network.nodes.domain.results.observation import NodeObservation
+from src.apps.network.nodes.observations.domain.enums.observation import (
+    NodeReadStatus,
+)
+from src.apps.network.nodes.observations.domain.results.observation import (
+    NodeObservation,
+)
+from src.apps.network.nodes.registry.app.interfaces.services import (
+    INodeService,
+)
 
 from ...domain.dtos.probe import XrayRouteProbe
 from ...domain.results.reads import (
