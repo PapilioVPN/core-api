@@ -18,7 +18,6 @@ RETIRED_TABLES = {
     "tbl_categories",
     "tbl_category_attributes",
     "tbl_volume_ranges_legacy",
-    "tbl_ocr_requests_legacy",
 }
 
 get_bootstrapper().boot_sqlmodels()
@@ -32,17 +31,10 @@ def migrate(connection: Connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=metadata,
-        include_name=lambda name, type_, parents: (
-            (
-                type_ != "table"
-                or name not in RETIRED_TABLES
-                or name in SQLModel.metadata.tables
-            )
-            and not (
-                type_ == "column"
-                and parents.get("table_name") == "tbl_receipts"
-                and name == "legacy_extraction_status"
-            )
+        include_name=lambda name, type_, _: (
+            type_ != "table"
+            or name not in RETIRED_TABLES
+            or name in SQLModel.metadata.tables
         ),
     )
     with context.begin_transaction():
