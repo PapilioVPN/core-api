@@ -70,6 +70,18 @@ class PaymentCardRepository(PGPersistenceRepository[PaymentCardModel]):
             raise _duplicate() from None
         return card
 
+    async def find_by_number(self, number: str) -> PaymentCardModel | None:
+        """Read the card matching the unique destination number.
+
+        Args:
+            number: Exact destination card number.
+
+        Returns:
+            The matching card, or None if the number is not registered.
+        """
+        card = await self.get_one(col(self.table.card_number) == number)
+        return card
+
     async def list(
         self,
         *,

@@ -56,6 +56,18 @@ class PaymentCardService(IDChecks[PaymentCardModel]):
         card = self._check_for_id_existence(id, card)
         return card
 
+    async def find_by_number(self, number: str) -> PaymentCardModel | None:
+        """Find a receiving card by its exact number, including inactive cards.
+
+        Args:
+            number: Validated destination card number.
+
+        Returns:
+            The stored card or None if not registered.
+        """
+        card = await self.repo.find_by_number(number)
+        return card
+
     async def get_by_ids(
         self, ids: Sequence[int]
     ) -> Sequence[PaymentCardModel]:
