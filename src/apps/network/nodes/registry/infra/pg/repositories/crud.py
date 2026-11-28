@@ -13,6 +13,11 @@ from sqlmodel import col
 from src.apps.network.nodes.connections.domain.enums.connection import (
     NodeConnectionStatus,
 )
+from src.shared.infra.pg.order import (
+    display_position,
+    display_position_changes,
+    lock_display_positions,
+)
 
 from ....domain.models.records import NodeModel
 from ..tables import NodeTable
@@ -20,6 +25,43 @@ from ..tables import NodeTable
 
 class NodeRepository(PGPersistenceRepository[NodeModel]):
     table = NodeTable
+
+    async def lock_sort_positions(
+        self, ids: tuple[int, ...]
+    ) -> dict[int, int]:
+        """Read the current display positions of selected nodes under lock.
+
+        Args:
+            ids: Distinct requested node identities.
+
+        Returns:
+            Present node IDs and the display positions they occupy.
+        """
+        table = self.table
+        stmt = lock_display_positions(
+            col(table.sort_order), col(table.id), ids
+        )
+        result = await self.uow.execute(stmt)
+        return {id: position for id, position in result.tuples()}
+
+    async def set_sort_positions(self, positions: dict[int, int]) -> None:
+        """Update the display positions of already locked nodes.
+
+        Args:
+            positions: Changed node IDs and their new display positions.
+        """
+        table = self.table
+        ordering = display_position_changes(positions)
+        stmt = (
+            update(table)
+            .where(col(table.id) == ordering.c.id)
+            .values(
+                sort_order=ordering.c.sort_position,
+                updated_at=col(table.updated_at),
+            )
+            .execution_options(synchronize_session=False)
+        )
+        await self.uow.execute(stmt)
 
     async def lock_enabled(self, ids: tuple[int, ...]) -> dict[int, bool]:
         """Read and reserve existing targets in stable registry ID order.
@@ -156,7 +198,7 @@ class NodeRepository(PGPersistenceRepository[NodeModel]):
             is_enabled: Optional filter on the operator's enabled state.
 
         Returns:
-            Nodes ordered by descending ID, with the total filtered count.
+            Nodes in display order, with the total filtered count.
         """
         table = self.table
         where = []
@@ -171,7 +213,10 @@ class NodeRepository(PGPersistenceRepository[NodeModel]):
             where.append(col(table.is_enabled).is_(is_enabled))
         page = await self.get_page(
             where=where,
-            order_by=[col(table.id).desc()],
+            order_by=[
+                display_position(col(table.sort_order), col(table.id)),
+                col(table.id).asc(),
+            ],
             limit=limit,
             offset=offset,
         )

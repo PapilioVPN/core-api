@@ -7,7 +7,14 @@ from papilio.schemas.results import PagedType
 from papilio.tools.checks import IDChecks
 from pydantic import SecretStr
 
-from ...domain.dtos.records import NodeCreate, NodeList, NodeUpdate
+from src.shared.utils.order import changed_positions
+
+from ...domain.dtos.records import (
+    NodeCreate,
+    NodeList,
+    NodeOrderInput,
+    NodeUpdate,
+)
 from ...domain.models.records import NodeModel
 from ..interfaces.credentials import INodeCredentialCipher
 from ..interfaces.repositories import INodeRepository
@@ -78,7 +85,7 @@ class NodeService(IDChecks[NodeModel]):
             query: Validated paging, search and operator state filters.
 
         Returns:
-            Nodes newest by identity first, with the filtered count.
+            Nodes in display order, with the filtered count.
         """
         page = await self.repo.list(
             limit=query.per_page,
@@ -87,6 +94,25 @@ class NodeService(IDChecks[NodeModel]):
             is_enabled=query.is_enabled,
         )
         return page
+
+    @transactional
+    async def reorder(self, data: NodeOrderInput) -> None:
+        """Reassign the selected nodes' existing display positions.
+
+        Args:
+            data: Distinct node IDs in the operator's requested order.
+
+        Raises:
+            NotFoundException: An absent node rejects the entire reorder.
+        """
+        ids = tuple(data.ordered_ids)
+        current = await self.repo.lock_sort_positions(ids)
+        if len(current) != len(ids):
+            missing = next(id for id in ids if id not in current)
+            self._check_for_id_existence(missing, None)
+        requested = changed_positions(ids, current)
+        if requested:
+            await self.repo.set_sort_positions(requested)
 
     async def update(self, id: int, data: NodeUpdate) -> NodeModel:
         """Update selected registry fields without changing the node identity.

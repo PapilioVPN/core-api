@@ -10,6 +10,9 @@ class NodeTable(NodeModel, BaseTable, table=True):
     __table_args__ = (
         UniqueConstraint("address", "port", name="uq_nodes_endpoint"),
         Index(
+            "ix_nodes_display_order", text("coalesce(sort_order, -id)"), "id"
+        ),
+        Index(
             "ix_nodes_probe_due",
             text("probe_started_at NULLS FIRST"),
             "id",

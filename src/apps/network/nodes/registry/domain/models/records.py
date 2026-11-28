@@ -30,6 +30,7 @@ class NodeModel(PersistenceEntity):
         default=DEFAULT_TIMEOUT, server_default=text(str(DEFAULT_TIMEOUT))
     )
     is_enabled: bool = BoolField(default=True)
+    sort_order: int | None = BigIntField(default=None, nullable=True)
     connection_revision: int = BigIntField(default=1, server_default=text("1"))
     api_key_ciphertext: str | None = Field(
         nullable=True, default=None, repr=False, sa_type=Text

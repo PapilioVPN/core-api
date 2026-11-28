@@ -38,7 +38,8 @@ async def _node(
 
 
 async def test_reorder_preserves_nonselected_nodes_and_filtered_cursor(
-    app: FastAPI, client: AsyncClient,
+    app: FastAPI,
+    client: AsyncClient,
 ) -> None:
     headers = await admin_headers(
         app, client, mobile="09120000655", role_key="node-order"
@@ -54,8 +55,12 @@ async def test_reorder_preserves_nonselected_nodes_and_filtered_cursor(
     commands: list[str] = []
 
     def capture(
-        _connection: object, _cursor: object, statement: str,
-        _parameters: object, _context: object, _executemany: bool,
+        _connection: object,
+        _cursor: object,
+        statement: str,
+        _parameters: object,
+        _context: object,
+        _executemany: bool,
     ) -> None:
         sql = statement.strip().lower()
         if "tbl_nodes" in sql:
@@ -86,7 +91,9 @@ async def test_reorder_preserves_nonselected_nodes_and_filtered_cursor(
             _CHOICES,
             headers=headers,
             params={
-                "q": "Node order", "is_enabled": True, "per_page": 2,
+                "q": "Node order",
+                "is_enabled": True,
+                "per_page": 2,
                 "before_id": last["id"],
             },
         )
@@ -115,7 +122,8 @@ async def test_reorder_preserves_nonselected_nodes_and_filtered_cursor(
 
 
 async def test_overlap_uses_current_positions(
-    app: FastAPI, client: AsyncClient,
+    app: FastAPI,
+    client: AsyncClient,
 ) -> None:
     headers = await admin_headers(
         app, client, mobile="09120000656", role_key="node-order-overlap"
@@ -125,8 +133,12 @@ async def test_overlap_uses_current_positions(
         for label in ("first", "middle", "last")
     ]
     results = await gather(
-        client.put(_ORDER, headers=headers, json={"ordered_ids": [first, middle]}),
-        client.put(_ORDER, headers=headers, json={"ordered_ids": [first, last]}),
+        client.put(
+            _ORDER, headers=headers, json={"ordered_ids": [first, middle]}
+        ),
+        client.put(
+            _ORDER, headers=headers, json={"ordered_ids": [first, last]}
+        ),
     )
     assert [result.status_code for result in results] == [204, 204]
     picked = await client.get(

@@ -14,6 +14,8 @@ from papilio.types.aliases import (
 from pydantic import AfterValidator, Field, SecretStr, StringConstraints
 from pydantic_core import MISSING
 
+from src.shared.utils.order import require_distinct_ids
+
 from .validators.address import normalize_address
 from .validators.credentials import validate_api_key, validate_ca_pem
 
@@ -68,3 +70,11 @@ class NodeStateInput(BaseDTO):
         min_length=1, max_length=100
     )
     is_enabled: Annotated[bool, Field(strict=True)]
+
+
+class NodeOrderInput(BaseDTO):
+    ordered_ids: Annotated[
+        list[Annotated[IdType, Field(strict=True)]],
+        Field(min_length=2, max_length=10_000),
+        AfterValidator(require_distinct_ids),
+    ]

@@ -4,7 +4,12 @@ from typing import Protocol
 
 from papilio.schemas.results import PagedType
 
-from ...domain.dtos.records import NodeCreate, NodeList, NodeUpdate
+from ...domain.dtos.records import (
+    NodeCreate,
+    NodeList,
+    NodeOrderInput,
+    NodeUpdate,
+)
 from ...domain.models.records import NodeModel
 
 
@@ -16,3 +21,5 @@ class INodeService(Protocol):
     async def list(self, query: NodeList) -> PagedType[NodeModel]: ...
 
     async def update(self, id: int, data: NodeUpdate) -> NodeModel: ...
+
+    async def reorder(self, data: NodeOrderInput) -> None: ...
