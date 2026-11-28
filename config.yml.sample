@@ -2,7 +2,7 @@
 app:
   settings: src.settings.config.CoreSettings
   tables_path: infra.pg.tables
-  modules: [src.apps.core, src.apps.shop, src.apps.network]
+  modules: [src.apps.core, src.apps.shop, src.apps.finance, src.apps.network]
 run:
   entrypoint: src.entrypoints.api:app
   backend: uvicorn
@@ -20,7 +20,7 @@ db:
   pool_recycle: 1800
   pool_size: 5
   # The Outbox relay uses two connections per configured publication.
-  max_overflow: 10
+  max_overflow: 14
 crypto:
   encryption_key: replace-with-private-encryption-key
   password_salt: null
@@ -30,7 +30,6 @@ jwt:
   api_secret: replace-with-private-api-secret
   access_token_expire_minutes: 15
   refresh_token_expire_minutes: 20160
-# USD crypto pricing reads its latest rate from Redis.
 redis: null
 # Live Node host stats use the registered ID and the same management endpoint.
 # Enable management TLS and set the matching management.api_key on Node.
@@ -48,7 +47,6 @@ redis: null
 #       port: 8081
 #       api_key: replace-with-private-node-key
 #       # ca_pem: |  # Optional private CA PEM. Otherwise use default trust.
-# Configure hosted gateway accounts through the Shop admin API.
 cli:
   color: true
   theme:
@@ -59,11 +57,6 @@ cli:
 # Enable NATS for the optional Scheduler and Events processes.
 # nats:
 #   servers: [nats://127.0.0.1:4222]
-# The USD rate refreshes every 20 seconds by default.
-# Both scheduled and manual refreshes use the jobs worker and Redis.
-# Set the interval to null to disable automatic refresh.
-# scheduler:
-#   rate_refresh_interval: 20
 storage:
   path: var/media
   temp_dir: var/tmp

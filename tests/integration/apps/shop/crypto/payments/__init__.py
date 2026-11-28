@@ -1,1 +1,0 @@
-"""Crypto payment integration checks."""

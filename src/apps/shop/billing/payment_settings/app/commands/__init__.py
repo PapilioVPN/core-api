@@ -1,1 +1,0 @@
-"""Payment settings commands."""

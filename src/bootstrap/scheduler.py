@@ -17,7 +17,6 @@ from taskiq.schedule_sources import LabelScheduleSource
 from src.apps.network.nodes.infra.broker.config import (
     BrokerConfig as NodeBrokerConfig,
 )
-from src.apps.shop.crypto.rates.infra.broker.config import BrokerConfig
 from src.bootstrap.providers.infra import infra_providers
 from src.settings.config import CoreSettings
 from src.shared.jobs import create_job_transport
@@ -51,13 +50,6 @@ def create_scheduler(
         modules=settings.app.modules,
     )
     sources: list[SourceContract] = [Source(LabelScheduleSource(broker))]
-    interval = settings.scheduler.rate_refresh_interval
-    if (
-        interval is not None
-        and settings.redis is not None
-        and broker.find_task(BrokerConfig.refresh_task)
-    ):
-        sources.append(MemorySource([BrokerConfig.refresh_schedule(interval)]))
     probe_interval = settings.node_host.checks.interval_seconds
     if (
         probe_interval is not None

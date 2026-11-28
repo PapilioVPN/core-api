@@ -72,7 +72,6 @@ async def test_schedule_updates_registry(
         stream=f"node_probes_{suffix}",
         subject=f"node.probes.{suffix}",
         durable=f"node_probes_{suffix}",
-        rate_refresh_interval=None,
     )
     headers = await admin_headers(
         app, client, mobile="09120000917", role_key="node-probe-test"

@@ -31,12 +31,16 @@ class SchedulerConfig(BaseModel):
     stream: str = Field(default="papiliovpn_core_jobs", min_length=1)
     subject: str = Field(default="papiliovpn.core.jobs", min_length=1)
     durable: str = Field(default="papiliovpn_core_workers", min_length=1)
-    rate_refresh_interval: int | None = Field(default=20, gt=0, strict=True)
 
 
 class CoreSettings(Settings):
     app: AppConfig = AppConfig(
-        modules=["src.apps.core", "src.apps.shop", "src.apps.network"],
+        modules=[
+            "src.apps.core",
+            "src.apps.shop",
+            "src.apps.finance",
+            "src.apps.network",
+        ],
         tables_path="infra.pg.tables",
     )
     storage: FileStorageConfig  # pyright: ignore[reportIncompatibleVariableOverride]
