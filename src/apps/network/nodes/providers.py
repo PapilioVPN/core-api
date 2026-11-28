@@ -8,16 +8,19 @@ from dishka import Provider, Scope, provide
 from src.settings.config import CoreSettings
 
 from .app.executions.probe import NodeProbeExecution
+from .app.interfaces.endpoints import INodeEndpointQuery, INodeEndpointReader
 from .app.interfaces.host import IHostStatsQuery, INodeHostGateway
 from .app.interfaces.probe import INodeProbeRepository
 from .app.interfaces.repositories import INodeRepository
 from .app.interfaces.services import INodeService
 from .app.pipelines.probe import NodeProbePipeline
+from .app.queries.endpoints import NodeEndpointQuery
 from .app.queries.host import HostStatsQuery
 from .app.services.crud import NodeService
 from .config import NodeHostConfig
 from .infra.grpc.channels import NodeChannels
 from .infra.grpc.host import NodeHostGateway
+from .infra.pg.readers.endpoints import NodeEndpointReader
 from .infra.pg.repositories.crud import NodeRepository
 from .infra.pg.repositories.probe import NodeProbeRepository
 
@@ -27,6 +30,8 @@ class NodesProvider(Provider):
 
     repo = provide(NodeRepository, provides=INodeRepository)
     nodes = provide(NodeService, provides=INodeService)
+    endpoints = provide(NodeEndpointQuery, provides=INodeEndpointQuery)
+    endpoint_reader = provide(NodeEndpointReader, provides=INodeEndpointReader)
     stats = provide(HostStatsQuery, provides=IHostStatsQuery)
     probe_repo = provide(NodeProbeRepository, provides=INodeProbeRepository)
     probe_execution = provide(NodeProbeExecution, scope=Scope.APP)
