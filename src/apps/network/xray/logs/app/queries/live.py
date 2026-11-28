@@ -3,12 +3,13 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+from src.apps.network.nodes.observations.domain.enums.logs import LogStreamEnd
+from src.apps.network.nodes.observations.domain.results.logs import LogStream
 from src.apps.network.nodes.registry.app.interfaces.services import (
     INodeService,
 )
 
-from ...domain.enums.live import XrayLogEnd
-from ...domain.results.live import XrayLogFeed
+from ...domain.results.live import XrayLogLine
 from ..interfaces.live import IXrayLogsGateway
 
 
@@ -20,7 +21,7 @@ class XrayLogsQuery:
     @asynccontextmanager
     async def follow(
         self, node_id: int, instance_id: str
-    ) -> AsyncIterator[XrayLogFeed]:
+    ) -> AsyncIterator[LogStream[XrayLogLine]]:
         """Read the registry once and borrow the chosen log subscription.
 
         Args:
@@ -38,4 +39,4 @@ class XrayLogsQuery:
             async with self.gateway.follow(node, instance_id) as feed:
                 yield feed
         else:
-            yield XrayLogFeed(end=XrayLogEnd.DISABLED)
+            yield LogStream(end=LogStreamEnd.DISABLED)

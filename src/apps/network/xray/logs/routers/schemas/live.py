@@ -4,13 +4,8 @@ from typing import Self
 
 from papilio.schemas.outputs import BaseOutput
 
-from ...domain.enums.live import XrayLogEnd, XrayLogSource
+from ...domain.enums.live import XrayLogSource
 from ...domain.results.live import XrayLogLine
-
-
-class XrayLogReadyOutput(BaseOutput):
-    node_id: int
-    instance_id: str
 
 
 class XrayLogLineOutput(BaseOutput):
@@ -38,7 +33,3 @@ class XrayLogLineOutput(BaseOutput):
             if line.missed_before is not None
             else None,
         )
-
-
-class XrayLogEndOutput(BaseOutput):
-    status: XrayLogEnd

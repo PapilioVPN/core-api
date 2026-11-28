@@ -12,6 +12,7 @@ from .app.executions.probe import NodeProbeExecution
 from .app.interfaces.probe import INodeProbeRepository
 from .app.pipelines.probe import NodeProbePipeline
 from .infra.grpc.channels import NodeChannels
+from .infra.grpc.streams import NodeLogStreams
 from .infra.pg.repositories.probe import NodeProbeRepository
 
 
@@ -23,6 +24,7 @@ class NodeConnectionsProvider(Provider):
     )
     probe_execution = provide(NodeProbeExecution)
     probe = provide(NodeProbePipeline)
+    log_streams = provide(NodeLogStreams)
 
     @provide
     async def channels(

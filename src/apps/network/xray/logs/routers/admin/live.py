@@ -11,15 +11,16 @@ from papilio.types.aliases import IdType
 from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
+from src.apps.network.nodes.observations.domain.results.logs import LogStream
+from src.apps.network.nodes.observations.routers.streams import (
+    InstanceLogReadyOutput,
+    log_events,
+)
 from src.apps.network.xray.instances.domain.dtos.identity import XrayInstanceID
 
 from ...app.interfaces.live import IXrayLogsQuery
-from ...domain.results.live import XrayLogFeed
-from ..schemas.live import (
-    XrayLogEndOutput,
-    XrayLogLineOutput,
-    XrayLogReadyOutput,
-)
+from ...domain.results.live import XrayLogLine
+from ..schemas.live import XrayLogLineOutput
 
 router = APIRouter(
     prefix="/admin/nodes/{node_id:int}/xray/instances/{instance_id}",
@@ -34,7 +35,7 @@ async def _open_feed(
     instance_id: XrayInstanceID,
     query: FromDishka[IXrayLogsQuery],
     response: Response,
-) -> AsyncIterator[XrayLogFeed]:
+) -> AsyncIterator[LogStream[XrayLogLine]]:
     response.headers["Cache-Control"] = "private, no-store"
     async with query.follow(node_id, instance_id) as feed:
         yield feed
@@ -44,23 +45,8 @@ async def _open_feed(
 async def follow_logs(
     node_id: IdType,
     instance_id: XrayInstanceID,
-    feed: Annotated[XrayLogFeed, Depends(_open_feed)],
+    feed: Annotated[LogStream[XrayLogLine], Depends(_open_feed)],
 ) -> AsyncIterator[ServerSentEvent]:
-    if feed.end is not None:
-        yield ServerSentEvent(
-            event="end", data=XrayLogEndOutput(status=feed.end)
-        )
-    elif feed.events is not None:
-        yield ServerSentEvent(
-            event="ready",
-            data=XrayLogReadyOutput(node_id=node_id, instance_id=instance_id),
-        )
-        async for item in feed.events:
-            if item.end is not None:
-                yield ServerSentEvent(
-                    event="end", data=XrayLogEndOutput(status=item.end)
-                )
-            elif item.line is not None:
-                yield ServerSentEvent(
-                    event="log", data=XrayLogLineOutput.from_line(item.line)
-                )
+    ready = InstanceLogReadyOutput(node_id=node_id, instance_id=instance_id)
+    async for event in log_events(feed, ready, XrayLogLineOutput.from_line):
+        yield event
