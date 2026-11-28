@@ -1,0 +1,109 @@
+syntax = "proto3";
+
+package papiliovpn.node.v1;
+
+option go_package = "github.com/PapilioVPN/node/internal/engines/xray/stats/bridge/grpc/proto/v1;statsv1";
+
+enum XrayTrafficScope {
+  XRAY_TRAFFIC_SCOPE_UNSPECIFIED = 0;
+  XRAY_TRAFFIC_SCOPE_USER = 1;
+  XRAY_TRAFFIC_SCOPE_INBOUND = 2;
+  XRAY_TRAFFIC_SCOPE_OUTBOUND = 3;
+}
+
+message XrayTrafficRequest {
+  string id = 1;
+  XrayTrafficScope scope = 2;
+  string name = 3;
+}
+
+message XrayTrafficListRequest {
+  string id = 1;
+  XrayTrafficScope scope = 2;
+}
+
+message XrayTrafficUsage {
+  string name = 1;
+  optional int64 uplink_bytes = 2;
+  optional int64 downlink_bytes = 3;
+}
+
+message XrayTrafficList {
+  repeated XrayTrafficUsage entries = 1;
+}
+
+enum XrayTrafficDirection {
+  XRAY_TRAFFIC_DIRECTION_UNSPECIFIED = 0;
+  XRAY_TRAFFIC_DIRECTION_UPLINK = 1;
+  XRAY_TRAFFIC_DIRECTION_DOWNLINK = 2;
+}
+
+message XrayTrafficResetRequest {
+  string id = 1;
+  XrayTrafficScope scope = 2;
+  string name = 3;
+  XrayTrafficDirection direction = 4;
+}
+
+message XrayTrafficResetResult {
+  int64 previous_bytes = 1;
+}
+
+// A missing failure detail gives the client no evidence of the reset outcome.
+message XrayTrafficResetFailure {
+  enum Effect {
+    EFFECT_UNSPECIFIED = 0;
+    NOT_APPLIED = 1;
+    UNKNOWN = 2;
+  }
+  Effect effect = 1;
+}
+
+message XrayTrafficPairResetRequest {
+  string id = 1;
+  XrayTrafficScope scope = 2;
+  string name = 3;
+}
+
+// Also attached as a status detail when a failure interrupts a pair.
+message XrayTrafficPairResetResult {
+  XrayTrafficDirectionReset uplink = 1;
+  XrayTrafficDirectionReset downlink = 2;
+}
+
+message XrayTrafficDirectionReset {
+  enum Effect {
+    EFFECT_UNSPECIFIED = 0;
+    ACKNOWLEDGED = 1;
+    MISSING = 2;
+    NOT_APPLIED = 3;
+    UNKNOWN = 4;
+    NOT_ATTEMPTED = 5;
+  }
+  Effect effect = 1;
+  optional int64 previous_bytes = 2;
+}
+
+message XrayTrafficScopeResetRequest {
+  string id = 1;
+  XrayTrafficScope scope = 2;
+  // Required. A selection larger than this limit is not applied.
+  uint32 max_counters = 3;
+}
+
+message XrayTrafficScopeResetResult {
+  enum Outcome {
+    OUTCOME_UNSPECIFIED = 0;
+    COMPLETE = 1;
+    INTERRUPTED = 2;
+    UNKNOWN = 3;
+  }
+  Outcome outcome = 1;
+  repeated XrayTrafficScopedCounterReset counters = 2;
+}
+
+message XrayTrafficScopedCounterReset {
+  string name = 1;
+  XrayTrafficDirection direction = 2;
+  XrayTrafficDirectionReset result = 3;
+}
