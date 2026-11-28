@@ -9,7 +9,7 @@ from ....gateways.app.interfaces.configs import IGatewayConfigService
 from ...domain.dtos.records import PaymentCreate
 from ...domain.models.records import PaymentModel
 from ...domain.results.link import LinkRequest, PaymentLink, ProviderLink
-from ..services.crud import PaymentService
+from ..interfaces.services import IPaymentService
 
 
 class LinkExecution:
@@ -23,7 +23,7 @@ class LinkExecution:
         data: PaymentCreate,
         *,
         configs: IGatewayConfigService = Inject(),
-        payments: PaymentService = Inject(),
+        payments: IPaymentService = Inject(),
     ) -> LinkRequest:
         """Commit one payment before contacting the selected provider.
 
@@ -50,6 +50,7 @@ class LinkExecution:
                 gateway_id=merchant.gateway_id,
                 amount=data.amount,
                 description=data.description,
+                credential=merchant.token,
             )
         )
         return LinkRequest(
@@ -67,7 +68,7 @@ class LinkExecution:
         id: int,
         link: ProviderLink,
         *,
-        payments: PaymentService = Inject(),
+        payments: IPaymentService = Inject(),
     ) -> PaymentLink:
         """Commit the observed outcome and return it to the caller.
 
@@ -80,4 +81,7 @@ class LinkExecution:
             The stored issuance status and redirect URL if issued.
         """
         payment = await payments.save_link(id, link)
-        return PaymentLink(payment.id, payment.status, payment.pay_url)
+        result = PaymentLink(
+            payment.id, payment.status, payment.pay_url, payment.reference
+        )
+        return result

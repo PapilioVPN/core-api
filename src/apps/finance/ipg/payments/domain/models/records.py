@@ -1,5 +1,7 @@
 """Store IPG payment terms and provider link evidence."""
 
+from datetime import datetime
+
 from papilio.infra.db.schema.entity import PersistenceEntity
 from papilio.infra.db.schema.fields import (
     BigIntField,
@@ -7,6 +9,7 @@ from papilio.infra.db.schema.fields import (
     EnumField,
     ForeignKeyField,
     TextField,
+    TimestampField,
 )
 
 from ..enums.records import LinkStatus
@@ -21,3 +24,9 @@ class PaymentModel(PersistenceEntity):
     )
     reference: str | None = CharField(128, default=None, nullable=True)
     pay_url: str | None = TextField(default=None, nullable=True)
+    credential: str | None = TextField(default=None, nullable=True)
+    next_check_at: datetime | None = TimestampField(
+        nullable=True, default=None
+    )
+    tracking_code: str | None = CharField(128, default=None, nullable=True)
+    confirmed_at: datetime | None = TimestampField(nullable=True, default=None)

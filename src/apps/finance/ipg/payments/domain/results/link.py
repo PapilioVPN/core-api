@@ -28,3 +28,4 @@ class PaymentLink:
     id: int
     status: LinkStatus
     url: str | None
+    reference: str | None

@@ -1,6 +1,6 @@
 """Merchant credentials for a selected gateway."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from pydantic import SecretStr
 
@@ -9,3 +9,4 @@ from pydantic import SecretStr
 class Merchant:
     gateway_id: int
     id: SecretStr
+    token: str = field(repr=False)

@@ -30,9 +30,11 @@ class GatewayConfigService:
         merchant = None
         if gateway is not None and gateway.is_active:
             config = await self.configs.find(gateway.kind)
-            credential = (
-                self.codec.open(config.config) if config is not None else None
-            )
-            if credential is not None:
-                merchant = Merchant(gateway_id=gateway.id, id=credential)
+            if config is not None:
+                token = config.config.get("merchant_id")
+                credential = self.codec.open(config.config)
+                if credential is not None and token is not None:
+                    merchant = Merchant(
+                        gateway_id=gateway.id, id=credential, token=str(token)
+                    )
         return merchant

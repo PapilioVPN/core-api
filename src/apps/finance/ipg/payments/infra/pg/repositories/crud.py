@@ -1,5 +1,7 @@
 """Persist IPG payment attempts through the native PostgreSQL repository."""
 
+from datetime import datetime
+
 from papilio.infra.db.repositories.backends.postgresql import (
     PGPersistenceRepository,
 )
@@ -16,13 +18,14 @@ class PaymentRepository(PGPersistenceRepository[PaymentModel]):
     table = IPGPaymentTable
 
     async def save_link(
-        self, id: int, link: ProviderLink
+        self, id: int, link: ProviderLink, *, check_at: datetime | None
     ) -> PaymentModel | None:
         """Store the outcome only while the payment owns an open attempt.
 
         Args:
             id: Payment identity.
             link: Materialized provider evidence.
+            check_at: UTC time the scheduler may verify the link, if issued.
 
         Returns:
             The updated payment, or None if the attempt is absent or closed.
@@ -35,7 +38,10 @@ class PaymentRepository(PGPersistenceRepository[PaymentModel]):
                 col(table.status) == LinkStatus.ISSUING,
             )
             .values(
-                status=link.status, reference=link.reference, pay_url=link.url
+                status=link.status,
+                reference=link.reference,
+                pay_url=link.url,
+                next_check_at=check_at,
             )
             .returning(table)
         )

@@ -4,7 +4,7 @@ from typing import Annotated
 
 from papilio.schemas.inputs import BaseDTO
 from papilio.types.aliases import RialType
-from pydantic import AnyUrl, StringConstraints, UrlConstraints
+from pydantic import AnyUrl, Field, StringConstraints, UrlConstraints
 
 from ....gateways.domain.enums.records import GatewayKind
 
@@ -16,6 +16,6 @@ type CallbackURL = Annotated[AnyUrl, UrlConstraints(allowed_schemes=["https"])]
 
 class PaymentCreate(BaseDTO):
     kind: GatewayKind
-    amount: RialType
+    amount: Annotated[RialType, Field(gt=0, strict=True)]
     description: Description
     callback_url: CallbackURL
