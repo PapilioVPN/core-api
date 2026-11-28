@@ -13,7 +13,7 @@ from papilio.infra.db.transaction import transaction
 from papilio.infra.db.uow import PGUnitOfWork
 from papilio.types.constants import INT64_MAX
 from papilio.utils.dates import utc_now
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from src.apps.core.access.auth.domain.enums.permissions import AdminPermission
 from src.apps.core.access.auth.domain.results.identity import AdminIdentity
@@ -81,6 +81,12 @@ async def test_transfer_routes(app: FastAPI, client: AsyncClient) -> None:
         async with container() as scope:
             payments = await scope.get(CardPaymentRepository)
             count = await payments.count()
+            unit = await scope.get(PGUnitOfWork)
+            stmt = select(func.max(pending.c.id)).where(
+                pending.c.queue == CREATED
+            )
+            result = await unit.execute(stmt)
+            previous_event = result.scalar_one() or 0
             banks = await scope.get(BankRepository)
             cards = await scope.get(PaymentCardRepository)
             async with transaction():
@@ -225,7 +231,10 @@ async def test_transfer_routes(app: FastAPI, client: AsyncClient) -> None:
             unit = await scope.get(PGUnitOfWork)
             stmt = (
                 select(pending.c.payload)
-                .where(pending.c.queue == CREATED)
+                .where(
+                    pending.c.queue == CREATED,
+                    pending.c.id > previous_event,
+                )
                 .order_by(pending.c.id)
             )
             result = await unit.execute(stmt)
