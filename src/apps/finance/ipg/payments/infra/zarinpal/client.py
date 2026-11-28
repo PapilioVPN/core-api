@@ -1,69 +1,64 @@
-"""Issue a payment link using the ZarinPal v4 protocol."""
+"""Issue and verify payments with the ZarinPal SDK engine."""
 
-from httpx import ConnectError, ConnectTimeout, PoolTimeout, RequestError
-from papilio.infra.http.connection import HTTPConnection
-from papilio.infra.http.gateway import BaseGateway
-from pydantic import ValidationError
+from payment_gateways_sdk import (
+    ConfigurationError,
+    GatewayError,
+    PaymentError,
+    PaymentRequest,
+    PaymentVerification,
+    ZarinpalAsync,
+)
+from payment_gateways_sdk.gateways.zarinpal.constants import (
+    REQUEST_SUCCESS_CODE,
+)
 
 from ...domain.enums.records import LinkStatus
 from ...domain.results.link import LinkRequest, ProviderLink
-from .payload import ErrorData, LinkData, LinkPayload
-
-_PAY_URL = "https://payment.zarinpal.com/pg/StartPay"
-_ACCEPTED = 100
+from ...domain.results.verify import Verification
 
 
-class ZarinPalClient(BaseGateway):
-    __base_url__ = "https://payment.zarinpal.com/pg/v4/payment"
-
-    def __init__(self, connection: HTTPConnection) -> None:
-        super().__init__(connection)
-
+class ZarinPalClient:
     async def create(self, request: LinkRequest) -> ProviderLink:
-        """Request a redirect for the exact amount in whole rials.
-
-        Args:
-            request: Prepared payment with its merchant and callback URL.
-
-        Returns:
-            The provider link, a known failure, or an unresolved outcome.
-        """
+        """Issue a redirect for the stored rial amount using the SDK."""
         result = ProviderLink(LinkStatus.UNKNOWN)
         try:
-            response = await self.post(
-                "/request.json",
-                json={
-                    "merchant_id": request.merchant_id.get_secret_value(),
-                    "amount": request.amount,
-                    "currency": "IRR",
-                    "description": request.description,
-                    "callback_url": request.callback_url,
-                },
+            gateway = ZarinpalAsync(
+                merchant_id=request.merchant_id.get_secret_value()
             )
-            if response.is_success or 400 <= response.status_code < 500:
-                result = self._link(response.content, response.is_success)
-        except (ConnectError, ConnectTimeout, PoolTimeout):
+            issued = await gateway.make_payment_request(
+                PaymentRequest(
+                    amount=request.amount,
+                    callback_url=request.callback_url,
+                    order_id=str(request.payment_id),
+                    description=request.description,
+                )
+            )
+        except ConfigurationError:
             result = ProviderLink(LinkStatus.UNAVAILABLE)
-        except RequestError:
-            pass
-        return result
-
-    def _link(self, content: bytes, success: bool) -> ProviderLink:
-        """Translate a documented response without retaining provider data."""
-        result = ProviderLink(LinkStatus.UNKNOWN)
-        try:
-            payload = LinkPayload.model_validate_json(content)
-        except ValidationError:
+        except GatewayError as error:
+            if error.code is not None and error.code != REQUEST_SUCCESS_CODE:
+                result = ProviderLink(LinkStatus.REJECTED)
+        except PaymentError:
             pass
         else:
-            data, errors = payload.data, payload.errors
-            match data, errors:
-                case _, ErrorData(code=code) if code < 0:
-                    result = ProviderLink(LinkStatus.REJECTED)
-                case LinkData(code=code, authority=authority), _ if (
-                    code == _ACCEPTED and success and authority is not None
-                ):
-                    result = ProviderLink(
-                        LinkStatus.READY, authority, f"{_PAY_URL}/{authority}"
-                    )
+            result = ProviderLink(
+                LinkStatus.READY, issued.authority, issued.redirect_url
+            )
         return result
+
+    async def verify(self, request: Verification) -> str | None:
+        """Return the bank reference only when the SDK attests settlement."""
+        gateway = ZarinpalAsync(
+            merchant_id=request.merchant_id.get_secret_value()
+        )
+        data = PaymentVerification(
+            authority=request.reference,
+            amount=request.amount,
+            order_id=str(request.id),
+        )
+        result = await gateway.verify_payment(data)
+        code = result.reference if result.success else None
+        # The SDK uses the issue token if the bank has not returned ref_id.
+        if code == request.reference:
+            code = None
+        return code

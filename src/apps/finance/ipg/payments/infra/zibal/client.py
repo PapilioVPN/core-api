@@ -1,66 +1,67 @@
-"""Issue a payment link using Zibal's v1 protocol."""
+"""Issue and verify payments with the Zibal SDK engine."""
 
-from httpx import ConnectError, ConnectTimeout, PoolTimeout, RequestError
-from papilio.infra.http.connection import HTTPConnection
-from papilio.infra.http.gateway import BaseGateway
-from pydantic import ValidationError
+from payment_gateways_sdk import (
+    ConfigurationError,
+    GatewayError,
+    PaymentError,
+    PaymentInquiry,
+    PaymentInquiryStatus,
+    PaymentRequest,
+    PaymentVerification,
+    ZibalAsync,
+)
+from payment_gateways_sdk.gateways.zibal.constants import REQUEST_SUCCESS_CODE
 
 from ...domain.enums.records import LinkStatus
 from ...domain.results.link import LinkRequest, ProviderLink
-from .payload import LinkPayload
-
-_PAY_URL = "https://gateway.zibal.ir/start"
-_ACCEPTED = 100
+from ...domain.results.verify import Verification
 
 
-class ZibalClient(BaseGateway):
-    __base_url__ = "https://gateway.zibal.ir/v1"
-
-    def __init__(self, connection: HTTPConnection) -> None:
-        super().__init__(connection)
-
+class ZibalClient:
     async def create(self, request: LinkRequest) -> ProviderLink:
-        """Request a redirect for the exact amount in whole rials.
-
-        Args:
-            request: Prepared payment with its merchant and callback URL.
-
-        Returns:
-            The provider link, a known failure, or an unresolved outcome.
-        """
+        """Issue a redirect for the stored rial amount using the SDK."""
         result = ProviderLink(LinkStatus.UNKNOWN)
         try:
-            response = await self.post(
-                "/request",
-                json={
-                    "merchant": request.merchant_id.get_secret_value(),
-                    "amount": request.amount,
-                    "description": request.description,
-                    "callbackUrl": request.callback_url,
-                    "orderId": str(request.payment_id),
-                },
+            gateway = ZibalAsync(
+                merchant=request.merchant_id.get_secret_value()
             )
-            if response.is_success or 400 <= response.status_code < 500:
-                result = self._link(response.content, response.is_success)
-        except (ConnectError, ConnectTimeout, PoolTimeout):
+            issued = await gateway.make_payment_request(
+                PaymentRequest(
+                    amount=request.amount,
+                    callback_url=request.callback_url,
+                    order_id=str(request.payment_id),
+                    description=request.description,
+                )
+            )
+        except ConfigurationError:
             result = ProviderLink(LinkStatus.UNAVAILABLE)
-        except RequestError:
-            pass
-        return result
-
-    def _link(self, content: bytes, success: bool) -> ProviderLink:
-        """Translate a documented response without retaining provider data."""
-        result = ProviderLink(LinkStatus.UNKNOWN)
-        try:
-            payload = LinkPayload.model_validate_json(content)
-        except ValidationError:
+        except GatewayError as error:
+            if error.code is not None and error.code != REQUEST_SUCCESS_CODE:
+                result = ProviderLink(LinkStatus.REJECTED)
+        except PaymentError:
             pass
         else:
-            if payload.result != _ACCEPTED:
-                result = ProviderLink(LinkStatus.REJECTED)
-            elif success and payload.trackId is not None:
-                reference = str(payload.trackId)
-                result = ProviderLink(
-                    LinkStatus.READY, reference, f"{_PAY_URL}/{reference}"
-                )
+            result = ProviderLink(
+                LinkStatus.READY, issued.authority, issued.redirect_url
+            )
         return result
+
+    async def verify(self, request: Verification) -> str | None:
+        """Return the bank reference only when the SDK attests settlement."""
+        gateway = ZibalAsync(merchant=request.merchant_id.get_secret_value())
+        data = PaymentVerification(
+            authority=request.reference,
+            amount=request.amount,
+            order_id=str(request.id),
+        )
+        inquiry = await gateway.inquire_payment(
+            PaymentInquiry(data.authority, data.amount, data.order_id)
+        )
+        code = None
+        if inquiry.status is PaymentInquiryStatus.VERIFIED:
+            code = inquiry.reference
+        elif inquiry.status is PaymentInquiryStatus.PAID_UNVERIFIED:
+            result = await gateway.verify_payment(data)
+            if result.success:
+                code = result.reference
+        return code
