@@ -202,3 +202,16 @@ Regenerate from the Core root.
 python -m grpc_tools.protoc -I. --python_out=. --pyi_out=. --grpc_python_out=. \
   src/apps/network/hysteria/stats/infra/grpc/v1/hysteria_stats.proto
 ```
+
+## Hysteria logs
+
+The unmodified [Node schema](https://github.com/PapilioVPN/node/blob/01bc80696b1e56b7c65a47b7ab516df9b25bc99b/internal/engines/hysteria/logs/bridge/grpc/proto/v1/hysteria_logs.proto)
+is pinned to revision `01bc80696b1e56b7c65a47b7ab516df9b25bc99b`.
+SHA-256: `502edd4190cf3181e7fb02614b95838988c0007071042442b8e9e4a4330048dc`.
+
+Regenerate from the Core root.
+
+```sh
+python -m grpc_tools.protoc -I. --python_out=. --pyi_out=. --grpc_python_out=. \
+  src/apps/network/hysteria/logs/infra/grpc/v1/hysteria_logs.proto
+```

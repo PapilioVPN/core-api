@@ -224,6 +224,14 @@ async def test_engine_observations_over_real_node(
     reply = await client.get(wireguard, headers=headers)
     assert reply.json()["data"]["status"] == "target_not_found"
     for path, expected in (
+        (f"{base}/wireguard/interfaces/wg-missing/logs", "not_found"),
+        (f"{base}/openvpn/instances/edge/logs", "precondition_failed"),
+        (f"{base}/hysteria/instances/edge/logs", "not_running"),
+    ):
+        reply = await client.get(path, headers=headers)
+        assert reply.status_code == 200, reply.text
+        assert f'data: {{"status":"{expected}"}}' in reply.text
+    for path, expected in (
         (f"{wireguard}/runtime-stats", "unavailable"),
         (f"{wireguard}/egress-probe", "unavailable"),
         (
