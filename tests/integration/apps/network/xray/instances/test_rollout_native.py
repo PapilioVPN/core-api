@@ -45,7 +45,7 @@ async def test_real_rollout_recovers_after_worker_exit_and_halts_on_rejection(
     if not broker:
         pytest.skip("Set PAPILIOVPN_TEST_NATS_URL to isolated JetStream")
     headers = await admin_headers(
-        app, client, mobile="09120000766", role_key="xray-rollout-native"
+        app, client, mobile="09120000787", role_key="xray-rollout-native"
     )
     container = cast(AsyncContainer, app.state.dishka_container)
     targets = {}
