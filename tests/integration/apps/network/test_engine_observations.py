@@ -10,17 +10,40 @@ from pathlib import Path
 from shutil import which
 from typing import cast
 
+import grpc
 import pytest
 import trustme
 import yaml
 from dishka import AsyncContainer
 from fastapi import FastAPI
+from google.protobuf.timestamp_pb2 import Timestamp
+from grpc import aio
 from httpx import AsyncClient
 
-from src.apps.network.nodes.app.interfaces.services import INodeService
-from src.apps.network.nodes.config import NodeHostConfig
-from src.apps.network.nodes.domain.dtos.records import NodeCreate
+from src.apps.network.hysteria.stats.infra.grpc.v1 import (
+    hysteria_stats_pb2 as hysteria_pb2,
+)
+from src.apps.network.hysteria.stats.infra.grpc.v1 import (
+    hysteria_stats_pb2_grpc as hysteria_pb2_grpc,
+)
+from src.apps.network.nodes.registry.app.interfaces.services import (
+    INodeService,
+)
+from src.apps.network.nodes.registry.domain.dtos.records import NodeCreate
+from src.apps.network.openvpn.instances.infra.grpc.v1 import (
+    openvpn_instances_pb2 as openvpn_pb2,
+)
+from src.apps.network.openvpn.instances.infra.grpc.v1 import (
+    openvpn_instances_pb2_grpc as openvpn_pb2_grpc,
+)
+from src.apps.network.wireguard.diagnostics.infra.grpc.v1 import (
+    wireguard_diagnostics_pb2 as wireguard_pb2,
+)
+from src.apps.network.wireguard.diagnostics.infra.grpc.v1 import (
+    wireguard_diagnostics_pb2_grpc as wireguard_pb2_grpc,
+)
 from src.settings.config import CoreSettings
+from tests.integration.apps.network.nodes.credentials import enroll_nodes
 
 from .nodes.auth import admin_headers
 
@@ -65,6 +88,12 @@ async def test_engine_uses_configured_node_only(
     response = await client.get(base, headers=headers)
     assert response.status_code == 200, response.text
     assert response.json()["data"]["status"] == "not_configured"
+    observation = "sessions/count" if engine == "openvpn" else "runtime-stats"
+    observed = await client.get(f"{base}/{observation}", headers=headers)
+    assert observed.status_code == 200, observed.text
+    assert observed.json()["data"]["status"] == "not_configured"
+    assert observed.headers["Cache-Control"] == "private, no-store"
+    assert (await client.get(f"{base}/{observation}")).status_code == 401
 
     url = f"{base}/config-validations"
     no_source = await client.post(url, headers=headers, json={})
@@ -82,6 +111,8 @@ async def test_engine_uses_configured_node_only(
     assert disabled.status_code == 200, disabled.text
     response = await client.get(base, headers=headers)
     assert response.json()["data"]["status"] == "disabled"
+    observed = await client.get(f"{base}/{observation}", headers=headers)
+    assert observed.json()["data"]["status"] == "disabled"
     response = await client.post(url, headers=headers, json={field: proposed})
     assert response.json()["data"]["status"] == "disabled"
 
@@ -171,17 +202,11 @@ async def test_engine_observations_over_real_node(
         node = await nodes.create(
             NodeCreate(name="Isolated engines", address="127.0.0.1", port=port)
         )
-    pg.node_host = NodeHostConfig.model_validate(
+    await enroll_nodes(
+        app,
         {
-            "targets": {
-                node.id: {
-                    "address": node.address,
-                    "port": node.port,
-                    "api_key": _NODE_KEY,
-                    "ca_pem": ca.cert_pem.bytes().decode(),
-                }
-            }
-        }
+            node.id: (_NODE_KEY, ca.cert_pem.bytes().decode()),
+        },
     )
     base = f"/admin/nodes/{node.id}"
     for engine in ("openvpn", "hysteria"):
@@ -198,6 +223,21 @@ async def test_engine_observations_over_real_node(
     wireguard = f"{base}/wireguard/interfaces/wg-core-fixture"
     reply = await client.get(wireguard, headers=headers)
     assert reply.json()["data"]["status"] == "target_not_found"
+    for path, expected in (
+        (f"{wireguard}/runtime-stats", "unavailable"),
+        (f"{wireguard}/egress-probe", "unavailable"),
+        (
+            f"{base}/openvpn/instances/edge/sessions/count",
+            "precondition_failed",
+        ),
+        (
+            f"{base}/hysteria/instances/edge/runtime-stats",
+            "precondition_failed",
+        ),
+    ):
+        reply = await client.get(path, headers=headers)
+        assert reply.status_code == 200, reply.text
+        assert reply.json()["data"]["status"] == expected, reply.text
     key = b64encode(bytes(range(1, 33))).decode()
     wireguard_source = dumps(
         {"private_key": key, "addresses": ["192.0.2.8/32"]}
@@ -236,3 +276,173 @@ async def test_engine_observations_over_real_node(
         assert data["status"] == "observed", data
         assert data["validation"]["valid"] is False
         assert data["validation"]["issue"] == issue
+
+
+class RuntimeWireGuard(wireguard_pb2_grpc.WireGuardDiagnosticsServiceServicer):
+    async def GetRuntimeStats(
+        self,
+        request: wireguard_pb2.WireGuardDiagnosticsRequest,
+        context: aio.ServicerContext[
+            wireguard_pb2.WireGuardDiagnosticsRequest,
+            wireguard_pb2.WireGuardRuntimeStats,
+        ],
+    ) -> wireguard_pb2.WireGuardRuntimeStats:
+        if request.name not in {"wg-reported", "wg-absent"}:
+            await context.abort(grpc.StatusCode.NOT_FOUND)
+        reply = wireguard_pb2.WireGuardRuntimeStats(heap_bytes=(1 << 64) - 1)
+        if request.name == "wg-reported":
+            reply.uptime_seconds = 0
+        return reply
+
+    async def ProbeEgress(
+        self,
+        request: wireguard_pb2.WireGuardDiagnosticsRequest,
+        context: aio.ServicerContext[
+            wireguard_pb2.WireGuardDiagnosticsRequest,
+            wireguard_pb2.WireGuardEgressProbe,
+        ],
+    ) -> wireguard_pb2.WireGuardEgressProbe:
+        if request.name not in {"wg-reported", "wg-absent"}:
+            await context.abort(grpc.StatusCode.NOT_FOUND)
+        reachable = request.name == "wg-reported"
+        return wireguard_pb2.WireGuardEgressProbe(
+            reachable=reachable,
+            http_status=503 if reachable else 0,
+            elapsed_nanoseconds=10,
+            observed_at=Timestamp(seconds=1_760_010_020, nanos=3),
+        )
+
+
+class RuntimeHysteria(hysteria_pb2_grpc.HysteriaStatsServiceServicer):
+    async def GetRuntimeStats(
+        self,
+        request: hysteria_pb2.HysteriaStatsRequest,
+        context: aio.ServicerContext[
+            hysteria_pb2.HysteriaStatsRequest,
+            hysteria_pb2.HysteriaRuntimeStats,
+        ],
+    ) -> hysteria_pb2.HysteriaRuntimeStats:
+        if request.id == "incomplete":
+            return hysteria_pb2.HysteriaRuntimeStats()
+        if request.id != "edge":
+            await context.abort(grpc.StatusCode.NOT_FOUND)
+        return hysteria_pb2.HysteriaRuntimeStats(
+            execution=7,
+            ready_since_unix_nano=1_760_010_020_000_000_003,
+            uptime_seconds=0,
+        )
+
+
+class RuntimeOpenVPN(openvpn_pb2_grpc.OpenVPNOperationsServiceServicer):
+    async def ListSessions(
+        self,
+        request: openvpn_pb2.OpenVPNInstanceRequest,
+        context: aio.ServicerContext[
+            openvpn_pb2.OpenVPNInstanceRequest,
+            openvpn_pb2.OpenVPNSessionReport,
+        ],
+    ) -> openvpn_pb2.OpenVPNSessionReport:
+        if request.id not in {"edge", "empty"}:
+            await context.abort(grpc.StatusCode.NOT_FOUND)
+        sessions = (
+            [
+                openvpn_pb2.OpenVPNSession(
+                    id=1,
+                    common_name="private-subscriber",
+                    remote_address="198.51.100.31:5000",
+                ),
+            ]
+            if request.id == "edge"
+            else []
+        )
+        return openvpn_pb2.OpenVPNSessionReport(
+            execution_id="run-5", observed_at=1_760_010_020, sessions=sessions
+        )
+
+
+async def test_runtime_observations_preserve_presence_and_scope(
+    app: FastAPI, client: AsyncClient
+) -> None:
+    ca = trustme.CA()
+    cert = ca.issue_cert("127.0.0.1")
+    server = aio.server()
+    wireguard_pb2_grpc.add_WireGuardDiagnosticsServiceServicer_to_server(
+        RuntimeWireGuard(), server
+    )
+    hysteria_pb2_grpc.add_HysteriaStatsServiceServicer_to_server(
+        RuntimeHysteria(), server
+    )
+    openvpn_pb2_grpc.add_OpenVPNOperationsServiceServicer_to_server(
+        RuntimeOpenVPN(), server
+    )
+    port = server.add_secure_port(
+        "127.0.0.1:0",
+        grpc.ssl_server_credentials(
+            [(cert.private_key_pem.bytes(), cert.cert_chain_pems[0].bytes())]
+        ),
+    )
+    await server.start()
+    try:
+        headers = await admin_headers(
+            app, client, mobile="09120000805", role_key="runtime-observations"
+        )
+        created = await client.post(
+            "/admin/nodes",
+            headers=headers,
+            json={
+                "name": "Runtime fixture",
+                "address": "127.0.0.1",
+                "port": port,
+                "api_key": _NODE_KEY,
+                "ca_pem": ca.cert_pem.bytes().decode(),
+            },
+        )
+        assert created.status_code == 201, created.text
+        base = f"/admin/nodes/{created.json()['data']['id']}"
+
+        async def observe(relative_path: str) -> dict:
+            reply = await client.get(
+                f"{base}/{relative_path}", headers=headers
+            )
+            assert reply.status_code == 200, reply.text
+            assert reply.headers["Cache-Control"] == "private, no-store"
+            return reply.json()["data"]
+
+        for name, uptime in (("wg-reported", "0"), ("wg-absent", None)):
+            observed = await observe(
+                f"wireguard/interfaces/{name}/runtime-stats"
+            )
+            assert observed["name"] == name
+            assert observed["status"] == "observed"
+            assert observed["received_at"]
+            assert observed["runtime"]["heap_bytes"] == str((1 << 64) - 1)
+            assert observed["runtime"]["uptime_seconds"] == uptime
+            probe = await observe(f"wireguard/interfaces/{name}/egress-probe")
+            reachable = name == "wg-reported"
+            assert probe["status"] == "observed"
+            assert probe["egress"] == {
+                "reachable": reachable,
+                "http_status": 503 if reachable else None,
+                "elapsed_nanoseconds": "10",
+                "observed_at_unix_nanoseconds": "1760010020000000003",
+            }
+        observed = await observe("hysteria/instances/edge/runtime-stats")
+        assert observed["status"] == "observed"
+        assert observed["runtime"] == {
+            "execution": "7",
+            "ready_since_unix_nanoseconds": "1760010020000000003",
+            "uptime_seconds": "0",
+        }
+        observed = await observe("hysteria/instances/incomplete/runtime-stats")
+        assert observed["status"] == "failed"
+        assert observed["runtime"] is None
+        for id, count in (("edge", 1), ("empty", 0)):
+            observed = await observe(f"openvpn/instances/{id}/sessions/count")
+            assert observed["status"] == "observed"
+            assert observed["sessions"] == {
+                "execution_id": "run-5",
+                "observed_at_unix_seconds": "1760010020",
+                "session_count": count,
+            }
+    finally:
+        await server.stop(None)
