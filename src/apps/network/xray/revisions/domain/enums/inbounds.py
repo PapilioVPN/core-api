@@ -5,3 +5,4 @@ from enum import StrEnum
 
 class XrayRevisionInboundFailure(StrEnum):
     INVALID = "xray_revision_inbounds_invalid"
+    SOURCE_UNAVAILABLE = "revision_source_unavailable"

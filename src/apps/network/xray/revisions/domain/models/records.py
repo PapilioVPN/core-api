@@ -4,6 +4,7 @@ from datetime import datetime
 
 from papilio.infra.db.schema.entity import IdentifiedEntity
 from papilio.infra.db.schema.fields import (
+    BigIntField,
     CharField,
     IntField,
     TextField,
@@ -16,6 +17,7 @@ class XrayRevisionModel(IdentifiedEntity):
     config_sha256: str = CharField(64)
     size_bytes: int = IntField()
     ciphertext: str = TextField()
+    sort_order: int | None = BigIntField(default=None, nullable=True)
     created_at: datetime = TimestampField(
         server_default=func.current_timestamp()
     )

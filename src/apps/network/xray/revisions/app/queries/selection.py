@@ -15,10 +15,10 @@ class XrayRevisionSelectionQuery:
         """Read a page without counting or fetching source.
 
         Args:
-            data: Validated page size and optional exclusive ID cursor.
+            data: Validated page size and optional last visible revision ID.
 
         Returns:
-            The newest eligible choices and a cursor only if more are visible.
+            Choices in display order, with a cursor if more are visible.
         """
         rows = await self.reader.select_choices(
             before_id=data.before_id, limit=data.per_page + 1

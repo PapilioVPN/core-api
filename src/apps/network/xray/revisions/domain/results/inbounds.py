@@ -3,7 +3,6 @@
 from dataclasses import dataclass
 
 from ..enums.inbounds import XrayRevisionInboundFailure
-from .records import XraySourceFailure
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,8 +13,7 @@ class XrayRevisionInbound:
     security: str | None
 
 
-type XrayRevisionInbounds = (
-    tuple[XrayRevisionInbound, ...]
-    | XrayRevisionInboundFailure
-    | XraySourceFailure
-)
+@dataclass(frozen=True, slots=True)
+class XrayRevisionInbounds:
+    items: tuple[XrayRevisionInbound, ...] = ()
+    failure: XrayRevisionInboundFailure | None = None

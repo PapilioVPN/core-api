@@ -3,8 +3,8 @@
 from src.shared.utils.asyncio.threads import ThreadRunner
 
 from ...domain.dtos.inbounds import project_inbounds
+from ...domain.enums.inbounds import XrayRevisionInboundFailure
 from ...domain.results.inbounds import XrayRevisionInbounds
-from ...domain.results.records import XrayRevisionSource
 from ..interfaces.records import IXrayRevisionService
 
 
@@ -29,10 +29,12 @@ class XrayRevisionInboundsQuery:
         """
         source = await self.revisions.get_source(id)
         result: XrayRevisionInbounds
-        if isinstance(source, XrayRevisionSource):
+        if source is not None:
             result = await self.threads.run(
                 project_inbounds, source.config_json
             )
         else:
-            result = source
+            result = XrayRevisionInbounds(
+                failure=XrayRevisionInboundFailure.SOURCE_UNAVAILABLE
+            )
         return result

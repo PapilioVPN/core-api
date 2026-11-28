@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import StrEnum
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,7 +41,3 @@ class XraySealedSource:
 class XrayRevisionSource:
     config_sha256: str
     config_json: bytes = field(repr=False)
-
-
-class XraySourceFailure(StrEnum):
-    UNAVAILABLE = "revision_source_unavailable"

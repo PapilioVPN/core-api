@@ -24,7 +24,7 @@ from ...domain.dtos.records import (
     XrayRevisionList,
     XrayRevisionSelectionInput,
 )
-from ...domain.results.records import XraySourceFailure
+from ...domain.enums.inbounds import XrayRevisionInboundFailure
 from ..schemas.records import (
     XrayRevisionChoiceOutput,
     XrayRevisionInboundOutput,
@@ -46,7 +46,7 @@ async def post_revision(
     revisions: FromDishka[IXrayRevisionService],
 ) -> APIResponse[XrayRevisionOutput, None]:
     saved = await revisions.save(data)
-    if isinstance(saved, XraySourceFailure):
+    if saved is None:
         response.status_code = HTTPStatus.SERVICE_UNAVAILABLE
         body = APIResponse[XrayRevisionOutput, None](
             success=False,
@@ -93,19 +93,19 @@ async def get_revision_inbounds(
 ) -> APIResponse[XrayRevisionInboundOutput, None]:
     selected = await query.get(id)
     response.headers["Cache-Control"] = "private, no-store"
-    if isinstance(selected, tuple):
+    if selected.failure is None:
         body = APIResponse[XrayRevisionInboundOutput, None].from_data(
-            XrayRevisionInboundOutput.from_objs(selected)
+            XrayRevisionInboundOutput.from_objs(selected.items)
         )
     else:
-        if selected is XraySourceFailure.UNAVAILABLE:
+        if selected.failure is XrayRevisionInboundFailure.SOURCE_UNAVAILABLE:
             response.status_code = HTTPStatus.SERVICE_UNAVAILABLE
             message = "The Xray revision source is unavailable."
             message_code = "xray_revision_source_unavailable"
         else:
             response.status_code = HTTPStatus.UNPROCESSABLE_ENTITY
             message = "The Xray revision has invalid or duplicate inbounds."
-            message_code = selected.value
+            message_code = selected.failure.value
         body = APIResponse[XrayRevisionInboundOutput, None](
             success=False,
             error=BaseErrorOut(message=message, message_code=message_code),

@@ -8,7 +8,6 @@ from src.shared.utils.asyncio.threads import ThreadRunner
 from ...domain.results.records import (
     XrayRevisionSource,
     XraySealedSource,
-    XraySourceFailure,
 )
 from .digest import digest_hex
 
@@ -21,11 +20,11 @@ def _seal(source: bytes, key: str) -> XraySealedSource:
     return XraySealedSource(digest, ciphertext)
 
 
-def _open(ciphertext: str, key: str) -> XrayRevisionSource | XraySourceFailure:
+def _open(ciphertext: str, key: str) -> XrayRevisionSource | None:
     try:
         source = decrypt(ciphertext, key).encode("utf-8")
     except ValueError:
-        result = XraySourceFailure.UNAVAILABLE
+        result = None
     else:
         result = XrayRevisionSource(digest_hex(source), source)
     return result
@@ -43,9 +42,7 @@ class XrayRevisionSourceCodec:
         key = self.config.encryption_key if self.config is not None else ""
         return key if key.strip() and key != _SAMPLE_KEY else None
 
-    async def seal(
-        self, source: bytes
-    ) -> XraySealedSource | XraySourceFailure:
+    async def seal(self, source: bytes) -> XraySealedSource | None:
         """Encrypt and hash the exact source in one worker call.
 
         Args:
@@ -56,14 +53,12 @@ class XrayRevisionSourceCodec:
 
         """
         key = self._key()
-        sealed = XraySourceFailure.UNAVAILABLE
+        sealed = None
         if key is not None:
             sealed = await self.threads.run(_seal, source, key)
         return sealed
 
-    async def open(
-        self, ciphertext: str
-    ) -> XrayRevisionSource | XraySourceFailure:
+    async def open(self, ciphertext: str) -> XrayRevisionSource | None:
         """Recover and hash the exact source in one worker call.
 
         Args:
@@ -74,7 +69,7 @@ class XrayRevisionSourceCodec:
 
         """
         key = self._key()
-        source = XraySourceFailure.UNAVAILABLE
+        source = None
         if key is not None:
             source = await self.threads.run(_open, ciphertext, key)
         return source

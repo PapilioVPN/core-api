@@ -13,11 +13,8 @@ from sqlalchemy.engine import Engine
 from src.apps.network.xray.revisions.app.queries import (
     inbounds as query_module,
 )
-from src.apps.network.xray.revisions.domain.enums.inbounds import (
-    XrayRevisionInboundFailure,
-)
 from src.apps.network.xray.revisions.domain.results.inbounds import (
-    XrayRevisionInbound,
+    XrayRevisionInbounds,
 )
 
 from ...nodes.auth import admin_headers
@@ -67,9 +64,7 @@ async def test_revision_inbounds_return_only_safe_declared_fields(
     loop_thread = get_ident()
     project = query_module.project_inbounds
 
-    def project_in_worker(
-        source: bytes,
-    ) -> tuple[XrayRevisionInbound, ...] | XrayRevisionInboundFailure:
+    def project_in_worker(source: bytes) -> XrayRevisionInbounds:
         assert get_ident() != loop_thread
         assert active_transaction() is None
         return project(source)

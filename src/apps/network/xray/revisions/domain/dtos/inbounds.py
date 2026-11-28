@@ -5,7 +5,7 @@ from typing import Annotated
 from pydantic import BaseModel, Field, ValidationError
 
 from ..enums.inbounds import XrayRevisionInboundFailure
-from ..results.inbounds import XrayRevisionInbound
+from ..results.inbounds import XrayRevisionInbound, XrayRevisionInbounds
 
 
 class _StreamSettings(BaseModel):
@@ -25,9 +25,7 @@ class _Config(BaseModel):
     inbounds: list[_Inbound] | None = None
 
 
-def project_inbounds(
-    source: bytes,
-) -> tuple[XrayRevisionInbound, ...] | XrayRevisionInboundFailure:
+def project_inbounds(source: bytes) -> XrayRevisionInbounds:
     """Return only explicitly tagged choices in source order.
 
     Args:
@@ -39,7 +37,9 @@ def project_inbounds(
     try:
         config = _Config.model_validate_json(source, strict=True)
     except ValidationError:
-        result = XrayRevisionInboundFailure.INVALID
+        result = XrayRevisionInbounds(
+            failure=XrayRevisionInboundFailure.INVALID
+        )
     else:
         choices = tuple(
             XrayRevisionInbound(
@@ -56,8 +56,10 @@ def project_inbounds(
             if inbound.tag
         )
         result = (
-            choices
+            XrayRevisionInbounds(items=choices)
             if len({choice.tag for choice in choices}) == len(choices)
-            else XrayRevisionInboundFailure.INVALID
+            else XrayRevisionInbounds(
+                failure=XrayRevisionInboundFailure.INVALID
+            )
         )
     return result
