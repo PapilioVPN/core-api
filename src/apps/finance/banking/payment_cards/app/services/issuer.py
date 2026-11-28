@@ -2,7 +2,7 @@
 
 from papilio.errors.exceptions import ValidationException
 
-from src.apps.shop.banking.banks.app.interfaces.queries import IBankQuery
+from src.apps.finance.banking.banks.app.interfaces.queries import IBankQuery
 
 MAX_PREFIX_LENGTH = 8
 

@@ -3,7 +3,7 @@
 from papilio.infra.db.tools.decorators import transactional
 from pydantic_core import MISSING
 
-from src.apps.shop.banking.banks.app.interfaces.queries import IBankQuery
+from src.apps.finance.banking.banks.app.interfaces.queries import IBankQuery
 
 from ...domain.dtos.records import CardPrefixCreate, CardPrefixUpdate
 from ...domain.models.records import CardPrefixModel

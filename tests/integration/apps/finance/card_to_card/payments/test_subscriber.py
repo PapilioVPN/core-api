@@ -19,6 +19,16 @@ from nats.errors import TimeoutError as NatsTimeout
 from papilio.infra.db.transaction import transaction
 from papilio.utils.dates import utc_now
 
+from src.apps.finance.banking.banks.domain.models.records import BankModel
+from src.apps.finance.banking.banks.infra.pg.repositories.records import (
+    BankRepository,
+)
+from src.apps.finance.banking.payment_cards.domain.models.records import (
+    PaymentCardModel,
+)
+from src.apps.finance.banking.payment_cards.infra.pg.repositories.crud import (
+    PaymentCardRepository,
+)
 from src.apps.finance.card_to_card.api_keys.app.interfaces.services import (
     IAPIKeyService,
 )
@@ -61,16 +71,6 @@ from src.apps.finance.card_to_card.transfers.infra.broker.config import (
 )
 from src.apps.finance.card_to_card.transfers.infra.pg.repositories import (
     crud as transfer_records,
-)
-from src.apps.shop.banking.banks.domain.models.records import BankModel
-from src.apps.shop.banking.banks.infra.pg.repositories.records import (
-    BankRepository,
-)
-from src.apps.shop.banking.payment_cards.domain.models.records import (
-    PaymentCardModel,
-)
-from src.apps.shop.banking.payment_cards.infra.pg.repositories.crud import (
-    PaymentCardRepository,
 )
 from src.bootstrap.events import create_events
 from src.settings.config import CoreSettings, NatsConfig

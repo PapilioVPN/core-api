@@ -7,7 +7,7 @@ from papilio.infra.db.tools.decorators import transactional
 from papilio.types.constants import INT64_MAX
 from papilio.utils.dates import utc_now
 
-from src.apps.shop.banking.payment_cards.app.interfaces.services import (
+from src.apps.finance.banking.payment_cards.app.interfaces.services import (
     IPaymentCardService,
 )
 

@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import col
 
 from scripts.seeders.banking.data import BankSeed
-from src.apps.shop.banking.banks.infra.pg.tables import BankTable
+from src.apps.finance.banking.banks.infra.pg.tables import BankTable
 
 
 async def seed_banks(unit: PGUnitOfWork, *, banks: Sequence[BankSeed]) -> int:

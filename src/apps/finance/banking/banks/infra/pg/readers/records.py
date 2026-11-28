@@ -4,7 +4,9 @@ from papilio.infra.db.repositories.backends.postgresql import PGReader
 from sqlalchemy import select
 from sqlmodel import col
 
-from src.apps.shop.banking.card_prefixes.infra.pg.sql.match import match_prefix
+from src.apps.finance.banking.card_prefixes.infra.pg.sql.match import (
+    match_prefix,
+)
 
 from ....domain.results.prefix import BankMatch
 from ..tables import BankTable

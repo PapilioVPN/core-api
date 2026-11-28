@@ -6,8 +6,8 @@ from papilio.schemas.inputs import BaseDTO
 from papilio.types.aliases import IntType, MediaUrlType, MStrType
 from pydantic import Field
 
-from src.apps.shop.banking.banks.domain.types.records import BankCodeType
-from src.apps.shop.banking.card_prefixes.domain.types.records import (
+from src.apps.finance.banking.banks.domain.types.records import BankCodeType
+from src.apps.finance.banking.card_prefixes.domain.types.records import (
     CardPrefixType,
 )
 

@@ -6,7 +6,7 @@ from papilio.schemas.inputs import BaseDTO
 from papilio.types.aliases import IdType, PageType, PerPageType, RialType
 from pydantic import AwareDatetime, Field
 
-from src.apps.shop.banking.payment_cards.domain.types.records import (
+from src.apps.finance.banking.payment_cards.domain.types.records import (
     CardNumberType,
 )
 

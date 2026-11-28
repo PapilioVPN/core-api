@@ -9,8 +9,10 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import col
 
 from scripts.seeders.banking.data import BankSeed
-from src.apps.shop.banking.banks.infra.pg.tables import BankTable
-from src.apps.shop.banking.card_prefixes.infra.pg.tables import CardPrefixTable
+from src.apps.finance.banking.banks.infra.pg.tables import BankTable
+from src.apps.finance.banking.card_prefixes.infra.pg.tables import (
+    CardPrefixTable,
+)
 
 
 async def seed_card_prefixes(

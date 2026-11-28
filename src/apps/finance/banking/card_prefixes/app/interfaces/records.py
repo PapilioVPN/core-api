@@ -5,12 +5,12 @@ from typing import Protocol
 
 from papilio.schemas.results import PagedType
 
-from src.apps.shop.banking.card_prefixes.domain.dtos.records import (
+from src.apps.finance.banking.card_prefixes.domain.dtos.records import (
     CardPrefixCreate,
     CardPrefixList,
     CardPrefixUpdate,
 )
-from src.apps.shop.banking.card_prefixes.domain.models.records import (
+from src.apps.finance.banking.card_prefixes.domain.models.records import (
     CardPrefixModel,
 )
 

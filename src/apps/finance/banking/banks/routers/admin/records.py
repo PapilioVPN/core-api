@@ -11,7 +11,7 @@ from papilio.types.aliases import IdType, ListIdType
 from src.apps.core.access.auth.routers.dependencies.authorization import (
     require_admin,
 )
-from src.apps.shop.banking.card_prefixes.domain.types.records import (
+from src.apps.finance.banking.card_prefixes.domain.types.records import (
     CardPrefixType,
 )
 

@@ -9,10 +9,12 @@ from papilio.schemas.results import PagedType
 from sqlalchemy.sql import ColumnElement
 from sqlmodel import col
 
-from src.apps.shop.banking.card_prefixes.domain.models.records import (
+from src.apps.finance.banking.card_prefixes.domain.models.records import (
     CardPrefixModel,
 )
-from src.apps.shop.banking.card_prefixes.infra.pg.tables import CardPrefixTable
+from src.apps.finance.banking.card_prefixes.infra.pg.tables import (
+    CardPrefixTable,
+)
 
 
 class CardPrefixRepository(PGPersistenceRepository[CardPrefixModel]):

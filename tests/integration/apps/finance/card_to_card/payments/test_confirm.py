@@ -14,6 +14,16 @@ from papilio.infra.db.uow import PGUnitOfWork
 from papilio.utils.dates import utc_now
 from sqlalchemy import delete, select
 
+from src.apps.finance.banking.banks.domain.models.records import BankModel
+from src.apps.finance.banking.banks.infra.pg.repositories.records import (
+    BankRepository,
+)
+from src.apps.finance.banking.payment_cards.domain.models.records import (
+    PaymentCardModel,
+)
+from src.apps.finance.banking.payment_cards.infra.pg.repositories.crud import (
+    PaymentCardRepository,
+)
 from src.apps.finance.card_to_card.payments.app.interfaces import commands
 from src.apps.finance.card_to_card.payments.app.interfaces.services import (
     ICardPaymentService,
@@ -57,16 +67,6 @@ from src.apps.finance.card_to_card.transfers.domain.models.records import (
 )
 from src.apps.finance.card_to_card.transfers.infra.pg.repositories import (
     crud as transfer_records,
-)
-from src.apps.shop.banking.banks.domain.models.records import BankModel
-from src.apps.shop.banking.banks.infra.pg.repositories.records import (
-    BankRepository,
-)
-from src.apps.shop.banking.payment_cards.domain.models.records import (
-    PaymentCardModel,
-)
-from src.apps.shop.banking.payment_cards.infra.pg.repositories.crud import (
-    PaymentCardRepository,
 )
 from src.bootstrap.outbox import pending
 

@@ -15,10 +15,10 @@ from src.apps.core.access.users.app.interfaces.commands import (
     IUserCreateCommand,
 )
 from src.apps.core.access.users.domain.dtos.records import UserCreate
-from src.apps.shop.banking.payment_cards.app.interfaces.queries import (
+from src.apps.finance.banking.payment_cards.app.interfaces.queries import (
     ICardPickQuery,
 )
-from src.apps.shop.banking.payment_cards.domain.enums.records import (
+from src.apps.finance.banking.payment_cards.domain.enums.records import (
     PaymentMode,
 )
 from src.settings.config import CoreSettings

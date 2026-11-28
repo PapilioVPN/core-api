@@ -2,7 +2,7 @@
 
 from papilio.infra.db.tools.decorators import transactional
 
-from src.apps.shop.banking.payment_cards.app.interfaces.services import (
+from src.apps.finance.banking.payment_cards.app.interfaces.services import (
     IPaymentCardService,
 )
 

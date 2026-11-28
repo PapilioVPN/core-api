@@ -5,7 +5,7 @@ from papilio.infra.db.tools.decorators import transactional
 from papilio.utils.dates import utc_now
 from papilio_tasks.apps.outbox import OutboxWriter
 
-from src.apps.shop.banking.payment_cards.app.interfaces.services import (
+from src.apps.finance.banking.payment_cards.app.interfaces.services import (
     IPaymentCardService,
 )
 

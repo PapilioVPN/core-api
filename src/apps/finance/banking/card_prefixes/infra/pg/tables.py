@@ -2,7 +2,7 @@
 
 from papilio.infra.db.table import BaseTable
 
-from src.apps.shop.banking.card_prefixes.domain.models.records import (
+from src.apps.finance.banking.card_prefixes.domain.models.records import (
     CardPrefixModel,
 )
 
