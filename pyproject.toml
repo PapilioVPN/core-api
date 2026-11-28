@@ -12,6 +12,7 @@ dependencies = [
     "aiobotocore==3.10.0",
     "botocore==1.43.117",
     "faststream-outbox==0.21.0",
+    "googleapis-common-protos==1.76.0",
     "papilio[server,postgresql,redis,auth,passwords,http,crypto] @ https://codeload.github.com/amupouya/papilio/tar.gz/984bc18d789fdae37e35cd015a54d38175155c62",
     "papilio-tasks[events-nats,outbox-postgres] @ https://codeload.github.com/amupouya/papilio-tasks/tar.gz/5b3861bc1b2b6794c1030534c9d7eb92572225d5",
     "papiliovpn-py-bridge[grpc-client] @ https://codeload.github.com/PapilioVPN/py-bridge/tar.gz/933edd7a12ac13991a2fab935d7c618d6a6abe13",
@@ -61,7 +62,7 @@ line-length = 79
 target-version = "py313"
 extend-exclude = [
     "src/apps/network/nodes/infra/grpc/v1/*_pb2*",
-    "src/apps/network/engines/xray/infra/grpc/v1/*_pb2*",
+    "src/apps/network/*/*/infra/grpc/v1/*_pb2*",
 ]
 
 [tool.ruff.lint]
@@ -71,7 +72,7 @@ select = ["E", "F", "I", "W"]
 include = ["src", "tests"]
 ignore = [
     "src/apps/network/nodes/infra/grpc/v1/host_pb2_grpc.py",
-    "src/apps/network/engines/xray/infra/grpc/v1/*_pb2_grpc.py",
+    "src/apps/network/*/*/infra/grpc/v1/*_pb2_grpc.py",
 ]
 pythonVersion = "3.13"
 typeCheckingMode = "standard"

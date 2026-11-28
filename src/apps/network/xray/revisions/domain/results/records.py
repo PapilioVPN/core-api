@@ -1,0 +1,48 @@
+"""Immutable revision views that separate source from metadata."""
+
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import StrEnum
+
+
+@dataclass(frozen=True, slots=True)
+class XrayRevision:
+    id: int
+    config_sha256: str
+    size_bytes: int
+    created_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class XrayRevisionChoice:
+    id: int
+    config_sha256: str
+    created_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class XrayRevisionSelection:
+    items: tuple[XrayRevisionChoice, ...]
+    next_before_id: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class XrayRevisionSave:
+    revision: XrayRevision
+    created: bool
+
+
+@dataclass(frozen=True, slots=True)
+class XraySealedSource:
+    config_sha256: str
+    ciphertext: str = field(repr=False)
+
+
+@dataclass(frozen=True, slots=True)
+class XrayRevisionSource:
+    config_sha256: str
+    config_json: bytes = field(repr=False)
+
+
+class XraySourceFailure(StrEnum):
+    UNAVAILABLE = "revision_source_unavailable"
