@@ -79,8 +79,19 @@ async def test_selection_uses_one_projected_read_and_a_stable_cursor(
     )
     assert refreshed.json()["data"] == [inserted]
 
+    catalog = await client.get(
+        _REVISIONS, headers=headers, params={"per_page": 1}
+    )
+    assert catalog.status_code == 200, catalog.text
+    end = await client.get(
+        _REVISIONS,
+        headers=headers,
+        params={"page": catalog.json()["meta"]["total_items"], "per_page": 1},
+    )
+    assert end.status_code == 200, end.text
+    last_id = end.json()["data"][0]["id"]
     empty = await client.get(
-        _SELECTION, headers=headers, params={"before_id": 1}
+        _SELECTION, headers=headers, params={"before_id": last_id}
     )
     assert empty.status_code == 200, empty.text
     assert empty.json()["data"] == []
